@@ -7,11 +7,13 @@ import { PortfolioHeader } from '@/components/portfolio/PortfolioHeader';
 import { AssetAllocationChart } from '@/components/portfolio/AssetAllocationChart';
 import { AssetList } from '@/components/portfolio/AssetList';
 import { BlurOverlay } from '@/components/portfolio/BlurOverlay';
-import { ArrowLeft, Star, Copy } from 'lucide-react';
+import { PageHeader } from '@/components/navigation/PageHeader';
+import { Star, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { generateBrunoPortfolio } from '@/lib/mock-data';
+import { Competitor } from '@/types';
 
 export default function BrunoMethodPage() {
   const { brunoPortfolio, setBrunoPortfolio } = useRankingStore();
@@ -36,7 +38,7 @@ export default function BrunoMethodPage() {
   }
 
   // Criar objeto Competitor compatível para usar os componentes existentes
-  const brunoCompetitor = {
+  const brunoCompetitor: Competitor = {
     id: 'bruno-chimarelli',
     name: brunoPortfolio.name,
     avatar: undefined,
@@ -44,23 +46,21 @@ export default function BrunoMethodPage() {
     monthlyReturn: brunoPortfolio.monthlyReturn,
     annualReturn: brunoPortfolio.annualReturn,
     portfolio: brunoPortfolio.assets,
+    displayedPeriod: 'mensal',
   };
 
   return (
     <div className="min-h-screen pb-32 bg-gradient-to-br from-yellow-50/50 dark:from-yellow-950/10 to-background">
-      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-yellow-200 dark:border-yellow-900">
-        <div className="container mx-auto px-4 py-3 flex items-center gap-3 max-w-4xl">
-          <Link href="/ranking">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
+      <PageHeader 
+        title={
           <div className="flex items-center gap-2">
             <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-            <h1 className="text-lg font-semibold">MIC Method</h1>
+            <span>MIC Method</span>
           </div>
-        </div>
-      </div>
+        }
+        backHref="/ranking"
+        className="border-yellow-200 dark:border-yellow-900"
+      />
 
       <div className="bg-gradient-to-br from-yellow-100/50 dark:from-yellow-900/20 to-background border-b-2 border-yellow-300 dark:border-yellow-700">
         <div className="container mx-auto px-4 py-6 max-w-4xl">

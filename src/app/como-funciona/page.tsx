@@ -1,23 +1,18 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, TrendingUp, DollarSign, Calendar, AlertCircle, Info } from 'lucide-react';
+import { PageHeader } from '@/components/navigation/PageHeader';
+import { TrendingUp, DollarSign, Calendar, AlertCircle, Info } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
 export default function ComoFuncionaPage() {
   return (
     <div className="min-h-screen pb-32">
-      <div className="sticky top-0 z-20 bg-background border-b border-border">
-        <div className="container mx-auto px-4 py-3 flex items-center gap-3 max-w-4xl">
-          <Link href="/ranking">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <h1 className="text-lg font-semibold">Como Funciona</h1>
-        </div>
-      </div>
+      <PageHeader 
+        title="Como Funciona" 
+        backHref="/ranking"
+      />
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Introdução */}
@@ -57,7 +52,7 @@ export default function ComoFuncionaPage() {
                 <div>
                   <h3 className="font-semibold mb-1">Registre suas Transações</h3>
                   <p className="text-sm text-muted-foreground">
-                    Adicione suas compras e vendas de ativos através da tela "Minha Carteira". 
+                    Adicione suas compras e vendas de ativos através da tela &quot;Minha Carteira&quot;. 
                     Cada transação deve incluir o ticker do ativo, quantidade e o preço será obtido 
                     automaticamente do Yahoo Finance no momento da execução.
                   </p>

@@ -6,6 +6,8 @@ import { rankingService } from '@/lib/services/ranking-service';
  * Retorna o ranking já calculado (sem recalcular)
  * O cálculo deve ser feito apenas pelo cron em /api/prices/update
  */
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

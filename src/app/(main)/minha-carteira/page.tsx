@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { PortfolioSummary } from '@/components/portfolio/PortfolioSummary';
 import { TransactionList } from '@/components/portfolio/TransactionList';
 import { TransactionModal } from '@/components/portfolio/TransactionModal';
+import { PageHeader } from '@/components/navigation/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 
@@ -12,11 +13,10 @@ export default function MyPortfolioPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="sticky top-0 z-10 bg-background border-b border-border">
-        <div className="container mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold">Minha Carteira</h1>
-        </div>
-      </div>
+      <PageHeader 
+        title="Minha Carteira" 
+        backHref="/ranking"
+      />
       <PortfolioSummary />
       <TransactionList />
       

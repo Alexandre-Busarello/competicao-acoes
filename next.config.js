@@ -2,7 +2,8 @@ const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development', // Desabilita em dev
+  disable: false, // Habilitado em desenvolvimento para testar instalação
+  sw: 'sw.js',
   runtimeCaching: [
     {
       urlPattern: /^https?.*/,
@@ -15,6 +16,7 @@ const withPWA = require('next-pwa')({
       },
     },
   ],
+  buildExcludes: [/middleware-manifest\.json$/],
 });
 
 /** @type {import('next').NextConfig} */

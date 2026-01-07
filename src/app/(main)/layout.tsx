@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { BottomNav } from '@/components/navigation/BottomNav';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { UpdatePrompt } from '@/components/pwa/UpdatePrompt';
+import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration';
 import { useRankingStore } from '@/lib/store/rankingStore';
 import { initializeMockData } from '@/lib/mock-data';
 
@@ -23,9 +24,10 @@ export default function MainLayout({
 
   return (
     <div className="min-h-screen bg-background">
+      <ServiceWorkerRegistration />
+      <InstallPrompt />
       <main className="pb-16 md:pb-0 max-w-4xl mx-auto">{children}</main>
       <BottomNav />
-      <InstallPrompt />
       <UpdatePrompt />
     </div>
   );

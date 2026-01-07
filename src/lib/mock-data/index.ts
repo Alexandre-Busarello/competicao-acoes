@@ -120,6 +120,7 @@ function generateMockCompetitor(id: number, rank: number): Competitor {
     monthlyReturn: Number(monthlyReturn.toFixed(2)),
     annualReturn: monthlyReturn * 12, // Simplificado
     portfolio: assets,
+    displayedPeriod: 'mensal',
   };
 }
 
