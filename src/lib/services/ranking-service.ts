@@ -150,12 +150,13 @@ export class RankingService {
     const processUserTask = async (user: typeof users[0]) => {
       // Verificar timeout antes de processar
       if (Date.now() >= deadline) {
-        return null;
+        return { userId: user.id, skipped: true };
       }
 
       const userTransactions = userTransactionsMap.get(user.id);
       if (!userTransactions || userTransactions.length === 0) {
-        return null;
+        // Usuário sem transações - marcar como processado mas não adicionar ao ranking
+        return { userId: user.id, skipped: true };
       }
 
       // Calcular posições usando os mesmos preços
@@ -315,9 +316,15 @@ export class RankingService {
       }
 
       if (result.success && result.result) {
-        monthlyRankings.push(result.result.monthly);
-        annualRankings.push(result.result.annual);
-        processedUserIds.add(result.result.userId);
+        // Se foi pulado (sem transações), apenas marcar como processado
+        if ('skipped' in result.result && result.result.skipped) {
+          processedUserIds.add(result.result.userId);
+        } else if ('monthly' in result.result && 'annual' in result.result && result.result.monthly && result.result.annual) {
+          // Adicionar ao ranking e marcar como processado
+          monthlyRankings.push(result.result.monthly);
+          annualRankings.push(result.result.annual);
+          processedUserIds.add(result.result.userId);
+        }
 
         // Atualizar checkpoint periodicamente
         if (Date.now() - lastCheckpointUpdate >= CHECKPOINT_UPDATE_INTERVAL) {
@@ -331,8 +338,17 @@ export class RankingService {
       }
     }
 
-    // Verificar se completou
-    const completed = processedUserIds.size >= users.length || Date.now() >= deadline;
+    // Atualizar checkpoint final antes de verificar conclusão
+    // Garantir que todo progresso seja salvo
+    await checkpointService.updateCheckpoint(checkpoint.id, {
+      phase: 'ranking',
+      processedUserIds: Array.from(processedUserIds),
+      monthlyRankings,
+      annualRankings,
+    });
+
+    // Verificar se completou (apenas quando todos os usuários foram processados)
+    const completed = processedUserIds.size >= users.length;
 
     if (completed) {
       // 8. Ordenar e atribuir ranks
@@ -409,14 +425,7 @@ export class RankingService {
         totalCount: users.length,
       };
     } else {
-      // Salvar progresso parcial no checkpoint
-      await checkpointService.updateCheckpoint(checkpoint.id, {
-        phase: 'ranking',
-        processedUserIds: Array.from(processedUserIds),
-        monthlyRankings,
-        annualRankings,
-      });
-
+      // Progresso parcial já foi salvo acima, apenas retornar
       return {
         completed: false,
         processedCount: processedUserIds.size,

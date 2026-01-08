@@ -6,6 +6,7 @@ import { checkpointService } from '@/lib/services/checkpoint-service';
 const CRON_SECRET_TOKEN = process.env.CRON_SECRET_TOKEN || '';
 
 // Rate limiting para cron (máximo 1 request por minuto)
+// Mas permite continuação imediata de checkpoints em progresso
 const lastRequestTime = new Map<string, number>();
 const MIN_REQUEST_INTERVAL = 60000; // 1 minuto
 
@@ -20,7 +21,12 @@ function validateToken(request: NextRequest): boolean {
   return token === CRON_SECRET_TOKEN && CRON_SECRET_TOKEN !== '';
 }
 
-function checkRateLimit(): boolean {
+async function checkRateLimit(hasCheckpointInProgress: boolean): Promise<boolean> {
+  // Se há checkpoint em progresso, permite continuação imediata
+  if (hasCheckpointInProgress) {
+    return true;
+  }
+
   const now = Date.now();
   const lastTime = lastRequestTime.get('cron') || 0;
   
@@ -44,19 +50,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rate limiting
-    if (!checkRateLimit()) {
+    const startTime = Date.now();
+    const deadline = startTime + MAX_EXECUTION_TIME_MS;
+
+    // 1. Obter ou criar checkpoint (antes do rate limit para verificar se há checkpoint em progresso)
+    let checkpoint = await checkpointService.getOrCreateCheckpoint();
+    const hasCheckpointInProgress = checkpoint.status === 'in_progress' && checkpoint.processedUserIds.length > 0;
+
+    // Rate limiting (permite continuação imediata de checkpoints em progresso)
+    if (!(await checkRateLimit(hasCheckpointInProgress))) {
       return NextResponse.json(
         { error: 'Muitas requisições. Aguarde 1 minuto entre atualizações.' },
         { status: 429 }
       );
     }
-
-    const startTime = Date.now();
-    const deadline = startTime + MAX_EXECUTION_TIME_MS;
-
-    // 1. Obter ou criar checkpoint
-    let checkpoint = await checkpointService.getOrCreateCheckpoint();
 
     // 2. Se checkpoint está na fase de preços ou é novo, atualizar preços
     if (checkpoint.phase === 'prices' || !checkpoint.pricesLastUpdate) {
