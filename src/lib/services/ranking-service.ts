@@ -23,7 +23,10 @@ export interface RankingEntry {
 }
 
 // Tipo para salvar no banco (sem name e avatar, que são buscados da tabela User)
-export type RankingEntryForStorage = Omit<RankingEntry, 'name' | 'avatar'>;
+export type RankingEntryForStorage = Omit<RankingEntry, 'name' | 'avatar'> & {
+  lastTransactionDate?: Date; // Data da última transação (para critério de desempate)
+  accountCreatedAt?: Date; // Data de criação da conta (para critério de desempate)
+};
 
 export interface RankingResult {
   period: 'mensal' | 'anual';
@@ -248,6 +251,14 @@ export class RankingService {
         ? new Date(Math.min(...userTransactions.map(tx => tx.date.getTime())))
         : new Date();
       
+      // Calcular data da última transação (para critério de desempate)
+      const lastTransactionDate = userTransactions.length > 0
+        ? new Date(Math.max(...userTransactions.map(tx => tx.createdAt.getTime())))
+        : new Date();
+      
+      // Data de criação da conta (para critério de desempate)
+      const accountCreatedAt = user.createdAt;
+      
       // Calcular retornos para ambos os períodos usando os mesmos valores
       const { monthlyReturn, annualReturn: monthlyAnnualReturn } = calculateReturns(
         currentValue,
@@ -269,6 +280,8 @@ export class RankingService {
         totalInvested: Number(totalInvested.toFixed(2)),
         currentValue: Number(currentValue.toFixed(2)),
         portfolio: assets,
+        lastTransactionDate,
+        accountCreatedAt,
       };
 
       return {
@@ -351,13 +364,61 @@ export class RankingService {
     const completed = processedUserIds.size >= users.length;
 
     if (completed) {
-      // 8. Ordenar e atribuir ranks
-      monthlyRankings.sort((a, b) => b.monthlyReturn - a.monthlyReturn);
+      // 8. Ordenar e atribuir ranks com critério de desempate
+      // Critério 1: Rentabilidade (maior ganha)
+      // Critério 2: Número de ativos (mais ativos ganha)
+      // Critério 3: Data da última transação (mais recente ganha)
+      // Critério 4: Data de criação da conta (mais antiga ganha)
+      monthlyRankings.sort((a, b) => {
+        // Comparar por rentabilidade
+        if (Math.abs(b.monthlyReturn - a.monthlyReturn) > 0.01) {
+          return b.monthlyReturn - a.monthlyReturn;
+        }
+        // Desempate: número de ativos
+        const aAssetsCount = a.portfolio?.length || 0;
+        const bAssetsCount = b.portfolio?.length || 0;
+        if (aAssetsCount !== bAssetsCount) {
+          return bAssetsCount - aAssetsCount;
+        }
+        // Desempate: data da última transação (mais recente ganha)
+        const aLastDate = a.lastTransactionDate?.getTime() || 0;
+        const bLastDate = b.lastTransactionDate?.getTime() || 0;
+        if (aLastDate !== bLastDate) {
+          return bLastDate - aLastDate;
+        }
+        // Desempate: data de criação da conta (mais antiga ganha)
+        const aAccountDate = a.accountCreatedAt?.getTime() || 0;
+        const bAccountDate = b.accountCreatedAt?.getTime() || 0;
+        return aAccountDate - bAccountDate;
+      });
       monthlyRankings.forEach((entry, index) => {
         entry.rank = index + 1;
       });
 
-      annualRankings.sort((a, b) => (b.annualReturn || 0) - (a.annualReturn || 0));
+      annualRankings.sort((a, b) => {
+        const aReturn = a.annualReturn || 0;
+        const bReturn = b.annualReturn || 0;
+        // Comparar por rentabilidade
+        if (Math.abs(bReturn - aReturn) > 0.01) {
+          return bReturn - aReturn;
+        }
+        // Desempate: número de ativos
+        const aAssetsCount = a.portfolio?.length || 0;
+        const bAssetsCount = b.portfolio?.length || 0;
+        if (aAssetsCount !== bAssetsCount) {
+          return bAssetsCount - aAssetsCount;
+        }
+        // Desempate: data da última transação (mais recente ganha)
+        const aLastDate = a.lastTransactionDate?.getTime() || 0;
+        const bLastDate = b.lastTransactionDate?.getTime() || 0;
+        if (aLastDate !== bLastDate) {
+          return bLastDate - aLastDate;
+        }
+        // Desempate: data de criação da conta (mais antiga ganha)
+        const aAccountDate = a.accountCreatedAt?.getTime() || 0;
+        const bAccountDate = b.accountCreatedAt?.getTime() || 0;
+        return aAccountDate - bAccountDate;
+      });
       annualRankings.forEach((entry, index) => {
         entry.rank = index + 1;
       });
@@ -619,6 +680,14 @@ export class RankingService {
         ? new Date(Math.min(...userTransactions.map(tx => tx.date.getTime())))
         : new Date();
       
+      // Calcular data da última transação (para critério de desempate)
+      const lastTransactionDate = userTransactions.length > 0
+        ? new Date(Math.max(...userTransactions.map(tx => tx.createdAt.getTime())))
+        : new Date();
+      
+      // Data de criação da conta (para critério de desempate)
+      const accountCreatedAt = user.createdAt;
+      
       // Calcular retornos para ambos os períodos usando os mesmos valores
       const { monthlyReturn, annualReturn: monthlyAnnualReturn } = calculateReturns(
         currentValue,
@@ -641,6 +710,8 @@ export class RankingService {
         totalInvested: Number(totalInvested.toFixed(2)),
         currentValue: Number(currentValue.toFixed(2)),
         portfolio: assets,
+        lastTransactionDate,
+        accountCreatedAt,
       };
 
       return {
@@ -673,13 +744,61 @@ export class RankingService {
       }
     }
 
-    // 7. Ordenar e atribuir ranks
-    monthlyRankings.sort((a, b) => b.monthlyReturn - a.monthlyReturn);
+    // 7. Ordenar e atribuir ranks com critério de desempate
+    // Critério 1: Rentabilidade (maior ganha)
+    // Critério 2: Número de ativos (mais ativos ganha)
+    // Critério 3: Data da última transação (mais recente ganha)
+    // Critério 4: Data de criação da conta (mais antiga ganha)
+    monthlyRankings.sort((a, b) => {
+      // Comparar por rentabilidade
+      if (Math.abs(b.monthlyReturn - a.monthlyReturn) > 0.01) {
+        return b.monthlyReturn - a.monthlyReturn;
+      }
+      // Desempate: número de ativos
+      const aAssetsCount = a.portfolio?.length || 0;
+      const bAssetsCount = b.portfolio?.length || 0;
+      if (aAssetsCount !== bAssetsCount) {
+        return bAssetsCount - aAssetsCount;
+      }
+      // Desempate: data da última transação (mais recente ganha)
+      const aLastDate = a.lastTransactionDate?.getTime() || 0;
+      const bLastDate = b.lastTransactionDate?.getTime() || 0;
+      if (aLastDate !== bLastDate) {
+        return bLastDate - aLastDate;
+      }
+      // Desempate: data de criação da conta (mais antiga ganha)
+      const aAccountDate = a.accountCreatedAt?.getTime() || 0;
+      const bAccountDate = b.accountCreatedAt?.getTime() || 0;
+      return aAccountDate - bAccountDate;
+    });
     monthlyRankings.forEach((entry, index) => {
       entry.rank = index + 1;
     });
 
-    annualRankings.sort((a, b) => (b.annualReturn || 0) - (a.annualReturn || 0));
+    annualRankings.sort((a, b) => {
+      const aReturn = a.annualReturn || 0;
+      const bReturn = b.annualReturn || 0;
+      // Comparar por rentabilidade
+      if (Math.abs(bReturn - aReturn) > 0.01) {
+        return bReturn - aReturn;
+      }
+      // Desempate: número de ativos
+      const aAssetsCount = a.portfolio?.length || 0;
+      const bAssetsCount = b.portfolio?.length || 0;
+      if (aAssetsCount !== bAssetsCount) {
+        return bAssetsCount - aAssetsCount;
+      }
+      // Desempate: data da última transação (mais recente ganha)
+      const aLastDate = a.lastTransactionDate?.getTime() || 0;
+      const bLastDate = b.lastTransactionDate?.getTime() || 0;
+      if (aLastDate !== bLastDate) {
+        return bLastDate - aLastDate;
+      }
+      // Desempate: data de criação da conta (mais antiga ganha)
+      const aAccountDate = a.accountCreatedAt?.getTime() || 0;
+      const bAccountDate = b.accountCreatedAt?.getTime() || 0;
+      return aAccountDate - bAccountDate;
+    });
     annualRankings.forEach((entry, index) => {
       entry.rank = index + 1;
     });
@@ -933,6 +1052,14 @@ export class RankingService {
         ? new Date(Math.min(...userTransactions.map(tx => tx.date.getTime())))
         : new Date();
       
+      // Calcular data da última transação (para critério de desempate)
+      const lastTransactionDate = userTransactions.length > 0
+        ? new Date(Math.max(...userTransactions.map(tx => tx.createdAt.getTime())))
+        : new Date();
+      
+      // Data de criação da conta (para critério de desempate)
+      const accountCreatedAt = user.createdAt;
+      
       const { monthlyReturn, annualReturn } = calculateReturns(
         currentValue,
         totalInvested,
@@ -949,15 +1076,40 @@ export class RankingService {
         totalInvested: Number(totalInvested.toFixed(2)),
         currentValue: Number(currentValue.toFixed(2)),
         portfolio: assets,
+        lastTransactionDate,
+        accountCreatedAt,
       });
     }
 
-    // 5. Ordena por rentabilidade (decrescente)
+    // 5. Ordena por rentabilidade com critério de desempate
+    // Critério 1: Rentabilidade (maior ganha)
+    // Critério 2: Número de ativos (mais ativos ganha)
+    // Critério 3: Data da última transação (mais recente ganha)
+    // Critério 4: Data de criação da conta (mais antiga ganha)
     const returnField = period === 'anual' ? 'annualReturn' : 'monthlyReturn';
     userRankings.sort((a, b) => {
       const aReturn = a[returnField] || 0;
       const bReturn = b[returnField] || 0;
-      return bReturn - aReturn;
+      // Comparar por rentabilidade
+      if (Math.abs(bReturn - aReturn) > 0.01) {
+        return bReturn - aReturn;
+      }
+      // Desempate: número de ativos
+      const aAssetsCount = a.portfolio?.length || 0;
+      const bAssetsCount = b.portfolio?.length || 0;
+      if (aAssetsCount !== bAssetsCount) {
+        return bAssetsCount - aAssetsCount;
+      }
+      // Desempate: data da última transação (mais recente ganha)
+      const aLastDate = a.lastTransactionDate?.getTime() || 0;
+      const bLastDate = b.lastTransactionDate?.getTime() || 0;
+      if (aLastDate !== bLastDate) {
+        return bLastDate - aLastDate;
+      }
+      // Desempate: data de criação da conta (mais antiga ganha)
+      const aAccountDate = a.accountCreatedAt?.getTime() || 0;
+      const bAccountDate = b.accountCreatedAt?.getTime() || 0;
+      return aAccountDate - bAccountDate;
     });
 
     // 6. Atribui ranks

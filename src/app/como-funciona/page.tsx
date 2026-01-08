@@ -65,14 +65,33 @@ export default function ComoFuncionaPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">Cálculo da Rentabilidade</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground mb-2">
                     Sua rentabilidade é calculada comparando o valor atual da sua carteira (baseado nos 
                     preços de mercado) com o valor total investido. A fórmula é simples:
                   </p>
-                  <div className="mt-2 p-3 bg-muted rounded-md">
+                  <div className="mt-2 p-3 bg-muted rounded-md mb-3">
                     <code className="text-sm">
                       Rentabilidade = ((Valor Atual - Valor Investido) / Valor Investido) × 100%
                     </code>
+                  </div>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p className="font-semibold text-foreground">Como funciona com vendas e encerramento de posições:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li><strong>Valor Investido:</strong> Soma apenas das compras realizadas (não inclui vendas)</li>
+                      <li><strong>Valor Atual:</strong> Soma do valor atual das posições em carteira + dinheiro recebido em vendas</li>
+                      <li><strong>Vendas:</strong> Quando você vende ações, o dinheiro recebido é incluído no valor atual da carteira</li>
+                      <li><strong>Encerramento de posições:</strong> Quando você vende todas as ações de um ativo, o dinheiro recebido continua contando para o valor atual</li>
+                    </ul>
+                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
+                      <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Exemplo prático:</p>
+                      <p className="text-blue-800 dark:text-blue-200 text-xs">
+                        Você compra 100 ações de PETR4 a R$ 30,00 (investiu R$ 3.000,00). 
+                        Depois vende 50 ações a R$ 35,00 (recebeu R$ 1.750,00). 
+                        As 50 ações restantes valem R$ 1.750,00 (a preço atual de mercado). 
+                        Valor atual = R$ 1.750,00 (posições) + R$ 1.750,00 (vendas) = R$ 3.500,00. 
+                        Rentabilidade = ((R$ 3.500,00 - R$ 3.000,00) / R$ 3.000,00) × 100% = +16,67%
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -83,11 +102,50 @@ export default function ComoFuncionaPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">Posicionamento no Ranking</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground mb-2">
                     Os participantes são ordenados por rentabilidade (do maior para o menor). 
                     Quanto maior sua rentabilidade percentual, melhor sua posição. A quantidade investida 
                     não importa - apenas a rentabilidade proporcional é considerada.
                   </p>
+                  <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-md border border-purple-200 dark:border-purple-800">
+                    <p className="font-semibold text-purple-900 dark:text-purple-100 mb-2">Critério de Desempate:</p>
+                    <p className="text-sm text-purple-800 dark:text-purple-200 mb-2">
+                      Quando dois ou mais participantes têm a mesma rentabilidade (ou muito próxima), 
+                      o sistema usa os seguintes critérios de desempate, nesta ordem:
+                    </p>
+                    <ol className="list-decimal list-inside space-y-2 text-sm text-purple-800 dark:text-purple-200 ml-2">
+                      <li>
+                        <strong>Número de ativos:</strong> Quem tem mais ativos diferentes na carteira ganha
+                        <p className="text-xs text-purple-700 dark:text-purple-300 mt-1 ml-4">
+                          <strong>Motivo:</strong> Incentiva a diversificação da carteira, uma prática fundamental de investimento. 
+                          Uma carteira diversificada é geralmente mais resiliente e demonstra conhecimento sobre diferentes setores e ativos.
+                        </p>
+                      </li>
+                      <li>
+                        <strong>Última transação:</strong> Se ainda houver empate, quem lançou transações há menos tempo ganha
+                        <p className="text-xs text-purple-700 dark:text-purple-300 mt-1 ml-4">
+                          <strong>Motivo:</strong> Valoriza a atividade recente e o engajamento contínuo com a plataforma. 
+                          Participantes ativos demonstram maior interesse e dedicação à competição.
+                        </p>
+                      </li>
+                      <li>
+                        <strong>Data de criação da conta:</strong> Se ainda houver empate, quem tem a conta há mais tempo ganha
+                        <p className="text-xs text-purple-700 dark:text-purple-300 mt-1 ml-4">
+                          <strong>Motivo:</strong> Reconhece a fidelidade e o comprometimento de longo prazo dos participantes. 
+                          Usuários que estão na plataforma há mais tempo demonstram consistência e dedicação contínua à competição.
+                        </p>
+                      </li>
+                    </ol>
+                    <div className="mt-3 p-2 bg-purple-100 dark:bg-purple-900/30 rounded border border-purple-300 dark:border-purple-700">
+                      <p className="text-xs text-purple-800 dark:text-purple-200 font-semibold mb-1">Exemplo prático:</p>
+                      <p className="text-xs text-purple-700 dark:text-purple-300">
+                        Dois participantes têm +10,00% de rentabilidade e ambos têm 3 ativos. 
+                        O participante A lançou sua última transação há 2 horas, enquanto o participante B lançou há 1 hora. 
+                        O participante B fica à frente porque tem atividade mais recente. 
+                        Se ambos tivessem lançado transações no mesmo momento, quem tem a conta criada há mais tempo ficaria à frente.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
