@@ -15,34 +15,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const emailLower = email.trim().toLowerCase();
+
     // Verificar se já existe lead com esse email
     const existingLead = await prisma.lead.findUnique({
-      where: { email: email.trim().toLowerCase() },
+      where: { email: emailLower },
     });
 
     if (existingLead) {
-      // Atualizar lead existente
-      const updatedLead = await prisma.lead.update({
-        where: { email: email.trim().toLowerCase() },
-        data: {
-          name: name || existingLead.name,
-          source: source || existingLead.source,
-          checkoutStarted: true,
-          updatedAt: new Date(),
+      // Não atualizar o lead, apenas verificar status
+      // Verificar se existe usuário com esse email (lead convertido)
+      const user = await prisma.user.findUnique({
+        where: { email: emailLower },
+        include: {
+          subscription: true,
         },
       });
 
+      // Verificar se usuário é premium
+      const isPremium =
+        user?.isPremium ||
+        (user?.subscription?.status === 'active' &&
+          (!user.subscription.currentPeriodEnd ||
+            user.subscription.currentPeriodEnd > new Date()));
+
+      if (isPremium) {
+        // Lead já foi convertido e usuário é premium
+        return NextResponse.json({
+          success: true,
+          lead: existingLead,
+          userExists: true,
+          isPremium: true,
+          action: 'send_magic_link',
+          message: 'Você já possui uma conta premium. Um link de acesso será enviado para seu email.',
+        });
+      }
+
+      // Lead existe mas não é premium - redirecionar para checkout
       return NextResponse.json({
         success: true,
-        lead: updatedLead,
-        message: 'Lead atualizado com sucesso',
+        lead: existingLead,
+        userExists: false,
+        isPremium: false,
+        action: 'redirect_checkout',
+        message: 'Redirecionando para checkout...',
       });
     }
 
     // Criar novo lead
     const lead = await prisma.lead.create({
       data: {
-        email: email.trim().toLowerCase(),
+        email: emailLower,
         name: name?.trim() || null,
         source: source || 'checkout_cta',
         checkoutStarted: true,
@@ -52,6 +75,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       lead,
+      userExists: false,
+      isPremium: false,
+      action: 'redirect_checkout',
       message: 'Lead criado com sucesso',
     });
   } catch (error) {

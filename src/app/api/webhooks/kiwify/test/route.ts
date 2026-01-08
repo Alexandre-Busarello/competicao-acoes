@@ -151,11 +151,18 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Obter URL de redirecionamento
+    // Prioridade: APP_URL (server-side) > NEXT_PUBLIC_APP_URL (client-side) > localhost
+    const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const redirectUrl = `${appUrl}/auth/callback`;
+    
+    console.log('Magic link redirect URL:', redirectUrl);
+
     // Enviar magic link via Supabase Auth
     const { error: linkError } = await supabase.auth.signInWithOtp({
       email: emailLower,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback`,
+        emailRedirectTo: redirectUrl,
       },
     });
 

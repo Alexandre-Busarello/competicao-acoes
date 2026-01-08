@@ -7,4 +7,7 @@ ALLOW_TEST_WEBHOOK=true
 # KIWIFY_WEBHOOK_SECRET=...
 # NEXT_PUBLIC_KIWIFY_PRODUCT_URL=...
 NEXT_PUBLIC_APP_URL=https://competicao-acoes.vercel.app
+# APP_URL é usado em rotas de API (server-side) para magic links
+# Se não definido, usa NEXT_PUBLIC_APP_URL como fallback
+APP_URL=https://competicao-acoes.vercel.app
 CRON_SECRET_TOKEN=976e9574dcae240ec5faf68ca1550788a939b042a44566814211a2c93b5ac85a
