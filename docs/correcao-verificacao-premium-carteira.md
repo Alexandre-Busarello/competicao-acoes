@@ -116,3 +116,4 @@ const { user } = useUserStore();
 - A correção mantém a mesma funcionalidade, apenas corrige a forma como os dados do usuário são obtidos
 - O cache do React Query garante que múltiplas chamadas à API não sejam feitas desnecessariamente
 
+

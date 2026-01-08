@@ -1,5 +1,6 @@
 import YahooFinance from 'yahoo-finance2';
 import type { TickerValidationResult, BatchPriceResult } from '@/types/price';
+import { executeInParallel } from '@/lib/utils/parallel-executor';
 
 // Instanciar YahooFinance (requerido na v3)
 const yahooFinance = new YahooFinance();
@@ -209,54 +210,79 @@ export class YahooFinanceService {
   }
 
   /**
-   * Obtém preços de múltiplos tickers em batch (otimizado)
+   * Obtém preços de múltiplos tickers em batch (otimizado com paralelismo controlado)
    */
   async getBatchPrices(tickers: string[]): Promise<BatchPriceResult> {
     const normalizedTickers = tickers.map(normalizeTicker);
     const uniqueTickers = [...new Set(normalizedTickers)];
     const result: BatchPriceResult = {};
     
-    // v3: busca múltiplos tickers em paralelo com tratamento individual de erros
+    if (uniqueTickers.length === 0) {
+      return result;
+    }
+    
+    // Usa paralelismo controlado para evitar rate limiting e sobrecarga
+    // Concorrência de 15 para APIs externas (Yahoo Finance)
+    // Delay mínimo de 50ms entre requisições para evitar rate limiting
+    // Jitter de até 50ms para evitar sincronização
     try {
-      // Para múltiplos tickers, busca em paralelo com delay entre requisições
-      // para evitar rate limiting
-      const quotes = await Promise.allSettled(
-        uniqueTickers.map(async (ticker, index) => {
-          // Adiciona delay progressivo para evitar rate limiting
-          if (index > 0) {
-            await new Promise(resolve => setTimeout(resolve, 100 * index));
-          }
-          return await yahooFinance.quote(ticker);
-        })
-      );
-      
-      // Processa resultados
-      for (let i = 0; i < uniqueTickers.length; i++) {
-        const ticker = uniqueTickers[i];
-        const quoteResult = quotes[i];
-        
-        if (quoteResult.status === 'fulfilled' && quoteResult.value) {
-          const quote: any = quoteResult.value;
-          const price = quote.regularMarketPrice || quote.price || quote.currentPrice;
+      const tasks = uniqueTickers.map((ticker) => async () => {
+        try {
+          const quote: any = await retryWithBackoff(async () => {
+            return await yahooFinance.quote(ticker);
+          });
           
-          if (price && price > 0) {
-            const priceNum = typeof price === 'number' ? price : parseFloat(price);
-            result[ticker] = {
-              price: priceNum,
-              name: quote.longName || quote.shortName || quote.displayName || quote.symbol || ticker,
-            };
-          } else {
-            result[ticker] = {
-              price: 0,
-              error: 'Ticker sem preço disponível',
-            };
-          }
+          return { ticker, quote, error: null };
+        } catch (error) {
+          return {
+            ticker,
+            quote: null,
+            error: error instanceof Error ? error : new Error(String(error)),
+          };
+        }
+      });
+
+      const results = await executeInParallel(tasks, {
+        concurrency: 15, // Processa até 15 tickers simultaneamente
+        minDelay: 50, // Delay mínimo de 50ms entre requisições
+        maxJitter: 50, // Jitter aleatório de até 50ms
+      });
+      
+      // Processa resultados na ordem correta
+      for (let i = 0; i < results.length; i++) {
+        const taskResult = results[i];
+        const ticker = uniqueTickers[i];
+        
+        if (!taskResult.success || !taskResult.result) {
+          result[ticker] = {
+            price: 0,
+            error: taskResult.error?.message || 'Erro ao buscar ticker',
+          };
+          continue;
+        }
+
+        const { quote, error } = taskResult.result;
+        
+        if (error || !quote) {
+          result[ticker] = {
+            price: 0,
+            error: error?.message || 'Ticker não encontrado',
+          };
+          continue;
+        }
+
+        const price = quote.regularMarketPrice || quote.price || quote.currentPrice;
+        
+        if (price && price > 0) {
+          const priceNum = typeof price === 'number' ? price : parseFloat(price);
+          result[ticker] = {
+            price: priceNum,
+            name: quote.longName || quote.shortName || quote.displayName || quote.symbol || ticker,
+          };
         } else {
           result[ticker] = {
             price: 0,
-            error: quoteResult.status === 'rejected' 
-              ? (quoteResult.reason instanceof Error ? quoteResult.reason.message : 'Erro ao buscar ticker')
-              : 'Ticker não encontrado',
+            error: 'Ticker sem preço disponível',
           };
         }
       }

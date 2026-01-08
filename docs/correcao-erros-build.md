@@ -159,3 +159,4 @@ Após todas as correções, o build foi concluído com sucesso:
 3. Documentar o fluxo de atualização de status premium via webhook
 4. Adicionar tratamento de erro mais robusto para casos onde o ranking não está disponível
 
+

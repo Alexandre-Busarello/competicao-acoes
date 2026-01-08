@@ -226,3 +226,4 @@ Você NÃO deve:
 - `@prisma/client` - Para queries no banco
 - `@/lib/utils/portfolio-calculator` - Para `calculatePositions` e `normalizeTickerForGrouping`
 
+

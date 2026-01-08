@@ -160,3 +160,4 @@ Você NÃO deve:
 - `date-fns` - Para funções `startOfYear` e `endOfYear`
 - `@prisma/client` - Para queries com filtros de data
 
+

@@ -164,3 +164,4 @@ Isso permite identificar a origem das conversões e otimizar campanhas.
 - O fluxo de checkout é o mesmo usado em outras partes da aplicação (perfil, ações protegidas)
 - O source tracking permite identificar origem das conversões para análise posterior
 
+

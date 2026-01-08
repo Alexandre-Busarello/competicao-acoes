@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import type { Asset } from '@/types';
 import { formatPrice, isUSDCurrency } from '@/lib/utils/currency';
+import { getCategoryDisplayName } from '@/lib/data/etfs';
 
 interface AssetListProps {
   assets: Asset[];
@@ -36,8 +37,14 @@ export function AssetList({ assets, isPremium }: AssetListProps) {
                           ? 'Ação'
                           : asset.type === 'fii'
                           ? 'FII'
+                          : asset.type === 'etf'
+                          ? asset.etfCategory
+                            ? getCategoryDisplayName(asset.etfCategory)
+                            : 'ETF'
                           : asset.type === 'renda-fixa'
                           ? 'RF'
+                          : asset.type === 'cripto'
+                          ? 'Cripto'
                           : 'Outros'}
                       </span>
                     </div>

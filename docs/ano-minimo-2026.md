@@ -100,3 +100,4 @@ A documentação foi atualizada para refletir o ano mínimo de 2026:
 - Anos futuros (até ano atual + 1) são permitidos para permitir planejamento.
 - A validação de mês futuro já existente permanece inalterada.
 
+

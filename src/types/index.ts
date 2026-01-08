@@ -1,10 +1,13 @@
-export type AssetType = 'acao' | 'fii' | 'renda-fixa' | 'cripto' | 'outros';
+export type AssetType = 'acao' | 'fii' | 'etf' | 'renda-fixa' | 'cripto' | 'outros';
+
+export type ETFCategory = 'acoes' | 'crypto' | 'commodities' | 'dividendos' | 'internacional' | 'setorial' | 'sustentabilidade' | 'renda-fixa';
 
 export interface Asset {
   id: string;
   ticker: string;
   name: string;
   type: AssetType;
+  etfCategory?: ETFCategory; // Categoria do ETF (apenas quando type === 'etf')
   quantity: number;
   averagePrice: number;
   currentPrice: number;

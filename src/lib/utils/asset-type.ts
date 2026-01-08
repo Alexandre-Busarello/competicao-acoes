@@ -1,11 +1,13 @@
-import type { AssetType } from '@/types';
+import type { AssetType, ETFCategory } from '@/types';
+import { getETFInfo } from '@/lib/data/etfs';
 
 /**
  * Determina o tipo de ativo baseado no ticker
  * 
  * Padrões brasileiros:
  * - Ações: 4-5 letras + 1-2 números (PETR4, VALE3, ITUB4)
- * - FIIs: geralmente terminam com 11 (HGLG11, XPLG11, HGRU11)
+ * - ETFs: geralmente terminam com 11 (IVVB11, BOVA11, GOLD11, SMAL11)
+ * - FIIs: geralmente terminam com 11 mas têm padrões específicos (HGLG11, XPLG11, HGRU11)
  * - Renda Fixa: geralmente começam com TESOURO, NTN, LFT, etc.
  * - Criptomoedas: terminam com -USD ou são conhecidas (BTC, ETH, etc.)
  */
@@ -29,14 +31,43 @@ export function determineAssetType(ticker: string, quoteData?: any): AssetType {
     return 'cripto';
   }
   
+  // IMPORTANTE: Verificar ETFs conhecidos ANTES de usar quoteData
+  // porque o Yahoo Finance pode classificar ETFs como "equity" ou "stock"
+  // Remover sufixo .SA se presente para comparação
+  const baseTicker = upperTicker.replace('.SA', '');
+  
+  // Verificar se é ETF conhecido usando arquivo de dados
+  const etfInfo = getETFInfo(baseTicker);
+  if (etfInfo) {
+    return 'etf';
+  }
+  
   // Verificar se há dados do Yahoo Finance que possam ajudar
   if (quoteData) {
     const quoteType = quoteData.quoteType?.toLowerCase() || '';
     const longName = (quoteData.longName || quoteData.shortName || '').toLowerCase();
     
-    // Verificar se é FII (Fundos Imobiliários)
+    // Verificar se é ETF (Exchange Traded Fund)
+    // IMPORTANTE: Verificar ETF antes de FII, pois ETFs também podem ter "etf" no quoteType
     if (
       quoteType.includes('etf') ||
+      longName.includes('exchange traded fund') ||
+      longName.includes('índice') ||
+      longName.includes('index fund')
+    ) {
+      // Verificar se não é FII (Fundos Imobiliários)
+      if (
+        longName.includes('fundo imobiliário') ||
+        longName.includes('fii') ||
+        longName.includes('real estate')
+      ) {
+        return 'fii';
+      }
+      return 'etf';
+    }
+    
+    // Verificar se é FII (Fundos Imobiliários)
+    if (
       longName.includes('fundo imobiliário') ||
       longName.includes('fii') ||
       longName.includes('real estate')
@@ -44,15 +75,17 @@ export function determineAssetType(ticker: string, quoteData?: any): AssetType {
       return 'fii';
     }
     
-    // Verificar se é ação (stock)
+    // Verificar se é ação (stock) - mas só se não for ETF conhecido
     if (quoteType === 'equity' || quoteType === 'stock') {
       return 'acao';
     }
   }
   
   // Padrões brasileiros
-  // FIIs geralmente terminam com 11 (ex: HGLG11, XPLG11, HGRU11)
-  if (/11$/.test(upperTicker)) {
+  // Tickers que terminam com 11 podem ser ETFs ou FIIs
+  // FIIs geralmente têm padrões específicos (ex: HGLG11, XPLG11, HGRU11)
+  // Se não está na lista de ETFs conhecidos e termina com 11, assumir FII
+  if (/11$/.test(baseTicker)) {
     return 'fii';
   }
   
@@ -85,14 +118,9 @@ export function determineAssetType(ticker: string, quoteData?: any): AssetType {
     return 'acao';
   }
   
-  // Tickers com sufixo .SA (Brasil) - geralmente são ações
+  // Tickers com sufixo .SA (Brasil) - já processado acima (baseTicker)
+  // Se chegou aqui e tem .SA mas não termina com 11, é ação
   if (upperTicker.endsWith('.SA')) {
-    const baseTicker = upperTicker.replace('.SA', '');
-    // Se termina com 11, é FII
-    if (/11$/.test(baseTicker)) {
-      return 'fii';
-    }
-    // Caso contrário, é ação
     return 'acao';
   }
   
@@ -101,9 +129,27 @@ export function determineAssetType(ticker: string, quoteData?: any): AssetType {
 }
 
 /**
+ * Obtém a categoria do ETF se o ativo for um ETF conhecido
+ */
+export function getETFCategory(ticker: string): ETFCategory | undefined {
+  const upperTicker = ticker.toUpperCase().trim();
+  const baseTicker = upperTicker.replace('.SA', '');
+  const etfInfo = getETFInfo(baseTicker);
+  return etfInfo?.category;
+}
+
+/**
  * Obtém o nome do ativo, tentando usar dados do Yahoo Finance ou gerando um nome padrão
  */
 export function getAssetName(ticker: string, quoteData?: any): string {
+  // Primeiro tentar buscar nome do arquivo de ETFs
+  const upperTicker = ticker.toUpperCase().trim();
+  const baseTicker = upperTicker.replace('.SA', '');
+  const etfInfo = getETFInfo(baseTicker);
+  if (etfInfo) {
+    return etfInfo.name;
+  }
+  
   if (quoteData) {
     return (
       quoteData.longName ||

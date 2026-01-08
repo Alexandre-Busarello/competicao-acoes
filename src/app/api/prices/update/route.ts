@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { priceService } from '@/lib/services/price-service';
 import { rankingService } from '@/lib/services/ranking-service';
+import { checkpointService } from '@/lib/services/checkpoint-service';
 
 const CRON_SECRET_TOKEN = process.env.CRON_SECRET_TOKEN || '';
 
@@ -31,6 +32,8 @@ function checkRateLimit(): boolean {
   return true;
 }
 
+const MAX_EXECUTION_TIME_MS = 60000; // 60 segundos
+
 export async function POST(request: NextRequest) {
   try {
     // Valida token
@@ -50,50 +53,91 @@ export async function POST(request: NextRequest) {
     }
 
     const startTime = Date.now();
+    const deadline = startTime + MAX_EXECUTION_TIME_MS;
 
-    // 1. Coleta tickers de todas as transações
-    // (No MVP usa localStorage, no futuro será query ao banco)
-    if (typeof window === 'undefined') {
-      // Server-side: precisamos acessar dados de outra forma
-      // Por enquanto, vamos usar os tickers já no cache
+    // 1. Obter ou criar checkpoint
+    let checkpoint = await checkpointService.getOrCreateCheckpoint();
+
+    // 2. Se checkpoint está na fase de preços ou é novo, atualizar preços
+    if (checkpoint.phase === 'prices' || !checkpoint.pricesLastUpdate) {
+      const priceUpdateResult = await priceService.updatePrices();
+      const pricesLastUpdate = new Date();
+
+      if (!priceUpdateResult.success) {
+        await checkpointService.failCheckpoint(checkpoint.id);
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Falha ao atualizar preços',
+            errors: priceUpdateResult.errors,
+          },
+          { status: 500 }
+        );
+      }
+
+      // Atualizar checkpoint para fase de ranking
+      await checkpointService.updateCheckpoint(checkpoint.id, {
+        phase: 'ranking',
+        pricesLastUpdate,
+      });
+
+      // Recarregar checkpoint atualizado
+      checkpoint = await checkpointService.getOrCreateCheckpoint();
     }
 
-    // 2. Atualiza preços
-    const priceUpdateResult = await priceService.updatePrices();
-    const pricesLastUpdate = new Date();
+    // 3. Calcular rankings com checkpoint e timeout
+    const rankingResult = await rankingService.calculateBothRankingsWithCheckpoint(
+      checkpoint,
+      deadline - Date.now()
+    );
 
-    if (!priceUpdateResult.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Falha ao atualizar preços',
-          errors: priceUpdateResult.errors,
-        },
-        { status: 500 }
-      );
-    }
-
-    // 3. Calcula ranking completo (mensal e anual) usando os mesmos preços
-    const { monthly: monthlyRanking, annual: annualRanking } = 
-      await rankingService.calculateBothRankings();
-
-    const rankingLastUpdate = new Date();
     const duration = Date.now() - startTime;
 
-    return NextResponse.json({
-      success: true,
-      tickersUpdated: priceUpdateResult.tickersUpdated,
-      pricesLastUpdate: pricesLastUpdate.toISOString(),
-      rankingCalculated: true,
-      rankingLastUpdate: rankingLastUpdate.toISOString(),
-      usersRanked: monthlyRanking.ranking.length,
-      monthlyRankingCount: monthlyRanking.ranking.length,
-      annualRankingCount: annualRanking.ranking.length,
-      durationMs: duration,
-      errors: priceUpdateResult.errors.length > 0 ? priceUpdateResult.errors : undefined,
-    });
+    // 4. Limpar checkpoints antigos periodicamente
+    await checkpointService.cleanupOldCheckpoints();
+
+    if (rankingResult.completed) {
+      return NextResponse.json({
+        success: true,
+        tickersUpdated: checkpoint.pricesLastUpdate ? 'já atualizado' : 'atualizado',
+        pricesLastUpdate: checkpoint.pricesLastUpdate?.toISOString() || new Date().toISOString(),
+        rankingCalculated: true,
+        rankingLastUpdate: new Date().toISOString(),
+        usersRanked: rankingResult.monthly?.ranking.length || 0,
+        monthlyRankingCount: rankingResult.monthly?.ranking.length || 0,
+        annualRankingCount: rankingResult.annual?.ranking.length || 0,
+        durationMs: duration,
+        checkpointUsed: checkpoint.processedUserIds.length > 0,
+        processedUsers: rankingResult.processedCount,
+        totalUsers: rankingResult.totalCount,
+      });
+    } else {
+      // Execução não completou dentro do timeout
+      return NextResponse.json({
+        success: true,
+        partial: true,
+        tickersUpdated: checkpoint.pricesLastUpdate ? 'já atualizado' : 'atualizado',
+        pricesLastUpdate: checkpoint.pricesLastUpdate?.toISOString() || new Date().toISOString(),
+        rankingCalculated: false,
+        message: 'Processamento parcial. Próxima execução continuará de onde parou.',
+        durationMs: duration,
+        checkpointId: checkpoint.id,
+        processedUsers: rankingResult.processedCount,
+        totalUsers: rankingResult.totalCount,
+        progress: Math.round((rankingResult.processedCount / rankingResult.totalCount) * 100),
+      });
+    }
   } catch (error) {
     console.error('Erro ao atualizar preços e calcular ranking:', error);
+    
+    // Tentar marcar checkpoint como falho
+    try {
+      const checkpoint = await checkpointService.getOrCreateCheckpoint();
+      await checkpointService.failCheckpoint(checkpoint.id);
+    } catch (checkpointError) {
+      console.error('Erro ao atualizar checkpoint:', checkpointError);
+    }
+
     return NextResponse.json(
       {
         success: false,

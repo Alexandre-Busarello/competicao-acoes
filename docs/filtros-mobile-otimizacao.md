@@ -136,3 +136,4 @@ Todas as páginas que usavam `PeriodSelector` e `PeriodIndicator` separadamente 
 - O delay de 100ms antes de fechar o Dialog garante que a navegação seja processada antes do fechamento
 - O componente `PeriodSelector` mantém compatibilidade com código existente (prop `onSelect` é opcional)
 
+

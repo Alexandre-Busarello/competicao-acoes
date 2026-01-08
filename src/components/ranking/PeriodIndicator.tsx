@@ -28,3 +28,4 @@ export function PeriodIndicator({ period, year, month }: PeriodIndicatorProps) {
   );
 }
 
+

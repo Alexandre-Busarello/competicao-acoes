@@ -99,3 +99,4 @@ O loading utiliza o mesmo padrão visual da página de ranking para manter consi
 - Após o carregamento, se o competidor não existir no ranking, a mensagem de erro é exibida corretamente
 - O mesmo padrão pode ser aplicado em outras páginas que dependem de dados do ranking
 
+

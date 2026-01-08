@@ -141,3 +141,4 @@ const { competitors, isLoading, lastUpdate } = useRankingStore();
 
 A implementação garante que os rankings mensal e anual sejam sempre calculados com os mesmos preços, eliminando inconsistências e melhorando a experiência do usuário com loading adequado.
 
+
