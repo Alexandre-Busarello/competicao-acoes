@@ -19,11 +19,22 @@ export interface RankingEntry {
   portfolio?: any[]; // Portfolio do competidor
 }
 
+// Tipo para salvar no banco (sem name e avatar, que são buscados da tabela User)
+export type RankingEntryForStorage = Omit<RankingEntry, 'name' | 'avatar'>;
+
 export interface RankingResult {
   period: 'mensal' | 'anual';
   lastUpdate: Date;
   ranking: RankingEntry[];
   totalParticipants: number; // Total real de participantes no ranking completo
+}
+
+// Tipo para salvar no banco (sem name e avatar)
+export interface RankingResultForStorage {
+  period: 'mensal' | 'anual';
+  lastUpdate: Date;
+  ranking: RankingEntryForStorage[];
+  totalParticipants: number;
 }
 
 export class RankingService {
@@ -112,8 +123,8 @@ export class RankingService {
     }
 
     // 6. Calcular portfolios e rankings usando os mesmos preços
-    const monthlyRankings: RankingEntry[] = [];
-    const annualRankings: RankingEntry[] = [];
+    const monthlyRankings: RankingEntryForStorage[] = [];
+    const annualRankings: RankingEntryForStorage[] = [];
 
     for (const user of users) {
       const userTransactions = userTransactionsMap.get(user.id);
@@ -225,11 +236,10 @@ export class RankingService {
 
       const baseEntry = {
         userId: user.id,
-        name: user.name,
+        // name e avatar não são salvos aqui - serão buscados da tabela User ao listar
         rank: 0, // Será atribuído após ordenação
         totalInvested: Number(totalInvested.toFixed(2)),
         currentValue: Number(currentValue.toFixed(2)),
-        // Avatar não é salvo aqui - será buscado da tabela User ao listar
         portfolio: assets,
       };
 
@@ -257,38 +267,42 @@ export class RankingService {
       entry.rank = index + 1;
     });
 
-    // 8. Criar resultados
-    const monthlyResult: RankingResult = {
+    // 8. Criar resultados para salvar no banco (sem name e avatar)
+    const monthlyResultForStorage: RankingResultForStorage = {
       period: 'mensal',
       lastUpdate: new Date(),
       ranking: monthlyRankings,
       totalParticipants: monthlyRankings.length,
     };
 
-    const annualResult: RankingResult = {
+    const annualResultForStorage: RankingResultForStorage = {
       period: 'anual',
       lastUpdate: new Date(),
       ranking: annualRankings,
       totalParticipants: annualRankings.length,
     };
 
-    // 9. Salvar ambos no banco
+    // 9. Enriquecer com dados do usuário antes de retornar
+    const monthlyResult = await this.enrichRankingWithUserData(monthlyResultForStorage as RankingResult);
+    const annualResult = await this.enrichRankingWithUserData(annualResultForStorage as RankingResult);
+
+    // 10. Salvar ambos no banco (sem name e avatar)
     try {
       await Promise.all([
         prisma.rankingCalculation.create({
           data: {
             period: 'mensal',
-            rankingData: monthlyResult as any,
-            totalParticipants: monthlyResult.totalParticipants,
-            calculatedAt: monthlyResult.lastUpdate,
+            rankingData: monthlyResultForStorage as any,
+            totalParticipants: monthlyResultForStorage.totalParticipants,
+            calculatedAt: monthlyResultForStorage.lastUpdate,
           },
         }),
         prisma.rankingCalculation.create({
           data: {
             period: 'anual',
-            rankingData: annualResult as any,
-            totalParticipants: annualResult.totalParticipants,
-            calculatedAt: annualResult.lastUpdate,
+            rankingData: annualResultForStorage as any,
+            totalParticipants: annualResultForStorage.totalParticipants,
+            calculatedAt: annualResultForStorage.lastUpdate,
           },
         }),
       ]);
@@ -296,7 +310,7 @@ export class RankingService {
       console.error('Erro ao salvar rankings no banco:', error);
     }
 
-    // 10. Atualizar cache
+    // 11. Atualizar cache (com dados enriquecidos)
     RankingCache.setRanking('mensal', monthlyResult);
     RankingCache.setRanking('anual', annualResult);
 
@@ -362,7 +376,7 @@ export class RankingService {
     );
 
     // 4. Calcula portfolio de cada usuário
-    const userRankings: RankingEntry[] = [];
+    const userRankings: RankingEntryForStorage[] = [];
 
     for (const user of users) {
       const userTransactions = transactions
@@ -488,13 +502,12 @@ export class RankingService {
       
       userRankings.push({
         userId: user.id,
-        name: user.name,
+        // name e avatar não são salvos aqui - serão buscados da tabela User ao listar
         rank: 0, // Será atribuído após ordenação
         monthlyReturn,
         annualReturn,
         totalInvested: Number(totalInvested.toFixed(2)),
         currentValue: Number(currentValue.toFixed(2)),
-        // Avatar não é salvo aqui - será buscado da tabela User ao listar
         portfolio: assets,
       });
     }
@@ -512,21 +525,21 @@ export class RankingService {
       entry.rank = index + 1;
     });
 
-    const result: RankingResult = {
+    const resultForStorage: RankingResultForStorage = {
       period,
       lastUpdate: new Date(),
       ranking: userRankings,
       totalParticipants: userRankings.length, // Total real de participantes com transações
     };
 
-    // Salvar cálculo na tabela RankingCalculation
+    // Salvar cálculo na tabela RankingCalculation (sem name e avatar)
     try {
       await prisma.rankingCalculation.create({
         data: {
           period,
-          rankingData: result as any, // Serializa o resultado completo como JSON
-          totalParticipants: result.totalParticipants,
-          calculatedAt: result.lastUpdate,
+          rankingData: resultForStorage as any, // Serializa sem name e avatar
+          totalParticipants: resultForStorage.totalParticipants,
+          calculatedAt: resultForStorage.lastUpdate,
         },
       });
     } catch (error) {
@@ -534,54 +547,60 @@ export class RankingService {
       // Continua mesmo se falhar ao salvar - não quebra o fluxo
     }
 
-    // Armazenar no cache também (para compatibilidade)
+    // Enriquecer com dados do usuário antes de retornar
+    const result = await this.enrichRankingWithUserData(resultForStorage as RankingResult);
+
+    // Armazenar no cache também (para compatibilidade) - com dados enriquecidos
     RankingCache.setRanking(period, result);
 
     return result;
   }
 
   /**
-   * Enriquece ranking com avatares atualizados da tabela User
-   * @param ranking - Ranking sem avatares
-   * @returns Ranking enriquecido com avatares
+   * Enriquece ranking com dados atualizados da tabela User (nome e avatar)
+   * @param ranking - Ranking sem nome e avatar (pode ser RankingResult ou RankingResultForStorage)
+   * @returns Ranking enriquecido com nome e avatar atualizados
    */
-  private async enrichRankingWithAvatars(ranking: RankingResult): Promise<RankingResult> {
+  private async enrichRankingWithUserData(ranking: RankingResult | RankingResultForStorage): Promise<RankingResult> {
     const userIds = ranking.ranking.map(entry => entry.userId);
     
     if (userIds.length === 0) {
-      return ranking;
+      return ranking as RankingResult;
     }
 
-    // Buscar avatares atualizados da tabela User
+    // Buscar nome e avatar atualizados da tabela User
     const users = await prisma.user.findMany({
       where: {
         id: { in: userIds },
       },
       select: {
         id: true,
+        name: true,
         avatarUrl: true,
       },
     });
 
-    // Criar mapa de userId -> avatarUrl
+    // Criar mapas de userId -> dados do usuário
+    const nameMap = new Map(users.map(u => [u.id, u.name]));
     const avatarMap = new Map(users.map(u => [u.id, u.avatarUrl || undefined]));
 
-    // Enriquecer ranking com avatares atualizados
-    const enrichedRanking = ranking.ranking.map(entry => ({
+    // Enriquecer ranking com nome e avatar atualizados
+    const enrichedRanking: RankingEntry[] = ranking.ranking.map(entry => ({
       ...entry,
+      name: nameMap.get(entry.userId) || 'Usuário',
       avatar: avatarMap.get(entry.userId),
     }));
 
     return {
       ...ranking,
       ranking: enrichedRanking,
-    };
+    } as RankingResult;
   }
 
   /**
    * Obtém ranking mais recente do banco de dados
    * Busca o último cálculo salvo para o período especificado
-   * Enriquece com avatares atualizados da tabela User
+   * Enriquece com nome e avatar atualizados da tabela User
    */
   async getRanking(period: 'mensal' | 'anual' = 'mensal'): Promise<RankingResult | null> {
     try {
@@ -599,22 +618,22 @@ export class RankingService {
         // Se não há cálculo no banco, tentar buscar do cache (fallback)
         const cachedRanking = RankingCache.getRanking(period);
         if (cachedRanking) {
-          return this.enrichRankingWithAvatars(cachedRanking);
+          return this.enrichRankingWithUserData(cachedRanking);
         }
         return null;
       }
 
-      // Converter dados do banco para RankingResult
+      // Converter dados do banco para RankingResultForStorage (sem name e avatar)
       const rankingData = lastCalculation.rankingData as any;
-      const baseResult: RankingResult = {
+      const baseResult: RankingResultForStorage = {
         period: rankingData.period || period,
         lastUpdate: lastCalculation.calculatedAt,
         ranking: rankingData.ranking || [],
         totalParticipants: lastCalculation.totalParticipants,
       };
 
-      // Enriquecer com avatares atualizados
-      const result = await this.enrichRankingWithAvatars(baseResult);
+      // Enriquecer com nome e avatar atualizados da tabela User
+      const result = await this.enrichRankingWithUserData(baseResult);
 
       // Atualizar cache com dados do banco (para performance)
       RankingCache.setRanking(period, result);
@@ -625,7 +644,7 @@ export class RankingService {
       // Fallback para cache em caso de erro
       const cachedRanking = RankingCache.getRanking(period);
       if (cachedRanking) {
-        return this.enrichRankingWithAvatars(cachedRanking);
+        return this.enrichRankingWithUserData(cachedRanking);
       }
       return null;
     }

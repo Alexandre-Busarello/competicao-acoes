@@ -1,5 +1,6 @@
 /**
  * Redireciona para checkout Kiwify
+ * Se a URL não estiver configurada, redireciona para página fake de simulação
  * @param email - Email do usuário (opcional, para pré-preencher)
  * @param source - Origem do checkout (para tracking)
  */
@@ -7,7 +8,20 @@ export function redirectToKiwifyCheckout(email?: string, source?: string) {
   const kiwifyProductUrl = process.env.NEXT_PUBLIC_KIWIFY_PRODUCT_URL;
   
   if (!kiwifyProductUrl) {
-    console.error('KIWIFY_PRODUCT_URL not configured');
+    // Se não houver URL configurada, redirecionar para página fake
+    const fakeUrl = new URL('/checkout/fake', window.location.origin);
+    
+    if (email) {
+      fakeUrl.searchParams.set('email', email);
+    }
+    
+    if (source) {
+      fakeUrl.searchParams.set('source', source);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.location.href = fakeUrl.toString();
+    }
     return;
   }
 
