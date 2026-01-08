@@ -6,8 +6,13 @@
 
 O magic link do Supabase estava sendo enviado com URL `localhost` mesmo com `NEXT_PUBLIC_APP_URL` configurado corretamente. Isso acontece porque:
 
-1. **Variáveis `NEXT_PUBLIC_*`**: São expostas ao client-side, mas em rotas de API (server-side) podem não estar disponíveis da mesma forma
-2. **Configuração do Supabase Dashboard**: O Supabase usa as URLs configuradas no dashboard para validar redirecionamentos. Mesmo passando `emailRedirectTo` no código, o Supabase só aceita URLs que estão na lista de "Redirect URLs" permitidas
+1. **`{{ .ConfirmationURL }}` no template do email**: O Supabase usa a **Site URL** configurada no dashboard para gerar o link inicial no email. O `emailRedirectTo` no código só afeta o redirecionamento APÓS a confirmação, não o link inicial.
+
+2. **Variáveis `NEXT_PUBLIC_*`**: São expostas ao client-side, mas em rotas de API (server-side) podem não estar disponíveis da mesma forma
+
+3. **Configuração do Supabase Dashboard**: O Supabase usa as URLs configuradas no dashboard para validar redirecionamentos. Mesmo passando `emailRedirectTo` no código, o Supabase só aceita URLs que estão na lista de "Redirect URLs" permitidas
+
+**IMPORTANTE**: O template do email usa `{{ .ConfirmationURL }}` que é gerado baseado na **Site URL** do dashboard, não no `emailRedirectTo`!
 
 ## Solução Implementada
 
@@ -75,9 +80,11 @@ Adicionados logs para facilitar debug:
    - Menu lateral: Authentication
    - Submenu: URL Configuration
 
-3. **Configure Site URL**
+3. **Configure Site URL** ⚠️ **CRÍTICO**
    - **Site URL**: `https://competicao-acoes.vercel.app`
-   - Esta é a URL principal da aplicação
+   - **Esta é a URL usada para gerar o `{{ .ConfirmationURL }}` no template do email!**
+   - Se estiver como `http://localhost:3000`, o link no email sempre será localhost
+   - Esta é a URL principal da aplicação e DEVE ser a URL de produção
 
 4. **Adicione Redirect URLs Permitidas**
    - **Redirect URLs**: Adicione as seguintes URLs (uma por linha):
@@ -105,18 +112,25 @@ http://localhost:3000/auth/callback
 1. **Usuário solicita magic link**
    - Endpoint: `/api/auth/magic-link`
    - Sistema obtém URL de redirecionamento usando `APP_URL` ou `NEXT_PUBLIC_APP_URL`
+   - Passa `emailRedirectTo` para o Supabase
 
-2. **Supabase valida a URL**
+2. **Supabase gera o link no email**
+   - **O `{{ .ConfirmationURL }}` no template do email usa a Site URL do dashboard!**
+   - Se a Site URL estiver como `localhost`, o link será `localhost`
+   - O `emailRedirectTo` não afeta o link inicial, apenas o redirecionamento final
+
+3. **Supabase valida a URL**
    - Supabase verifica se a URL está na lista de "Redirect URLs" permitidas
    - Se não estiver, o magic link pode não funcionar ou redirecionar para localhost
 
-3. **Email é enviado**
+4. **Email é enviado**
    - Supabase envia email com link de autenticação
-   - O link contém a URL de redirecionamento especificada
+   - O link inicial (`ConfirmationURL`) usa a Site URL do dashboard
+   - O redirecionamento após confirmação usa o `emailRedirectTo` (se configurado)
 
-4. **Usuário clica no link**
+5. **Usuário clica no link**
    - Supabase autentica o usuário
-   - Redireciona para a URL especificada (ex: `/auth/callback`)
+   - Redireciona para a URL especificada em `emailRedirectTo` (ex: `/auth/callback`)
 
 ## Variáveis de Ambiente
 
@@ -165,19 +179,26 @@ APP_URL=http://localhost:3000
 
 **Soluções**:
 
-1. **Verifique variáveis de ambiente**
+1. **⚠️ VERIFIQUE A SITE URL NO SUPABASE DASHBOARD** (Mais Importante!)
+   - Vá em Authentication → URL Configuration
+   - **Site URL DEVE ser**: `https://competicao-acoes.vercel.app`
+   - **NÃO pode ser**: `http://localhost:3000`
+   - O `{{ .ConfirmationURL }}` no template do email usa esta URL!
+
+2. **Verifique variáveis de ambiente**
    ```bash
    # No servidor (Vercel)
    # Verifique se APP_URL está configurado corretamente
    ```
 
-2. **Verifique configuração do Supabase**
-   - Site URL está configurada?
+3. **Verifique configuração do Supabase**
+   - Site URL está configurada corretamente? (URL de produção)
    - Redirect URLs incluem a URL de produção?
 
-3. **Verifique logs**
+4. **Verifique logs**
    - Os logs mostram qual URL está sendo usada?
    - Se mostrar localhost, a variável não está sendo lida corretamente
+   - Os logs agora mostram avisos sobre a Site URL
 
 ### Problema: Erro "Invalid redirect URL"
 

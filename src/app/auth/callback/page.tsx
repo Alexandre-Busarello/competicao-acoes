@@ -16,9 +16,15 @@ function AuthCallbackContent() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
+        console.log('=== Auth Callback Processing ===');
+        console.log('Full URL:', window.location.href);
+        console.log('Hash:', window.location.hash);
+        console.log('Search:', window.location.search);
+        
         // Verificar se há erro na query string primeiro
         const urlError = searchParams.get('error');
         if (urlError) {
+          console.error('Error in URL:', urlError);
           setError('Erro ao processar link de acesso. Tente solicitar um novo link.');
           setIsProcessing(false);
           return;
@@ -30,6 +36,12 @@ function AuthCallbackContent() {
         const refreshToken = hashParams.get('refresh_token');
         const errorParam = hashParams.get('error');
         const errorDescription = hashParams.get('error_description');
+        
+        console.log('Tokens in hash:', { 
+          hasAccessToken: !!accessToken, 
+          hasRefreshToken: !!refreshToken,
+          errorParam 
+        });
 
         if (errorParam) {
           setError(errorDescription || errorParam || 'Erro ao processar link de acesso.');
@@ -61,20 +73,58 @@ function AuthCallbackContent() {
 
           console.log('Session set successfully:', sessionData.session.user.email);
 
-          // Nota: A sincronização com cookies será feita automaticamente pelo hook useAuth()
-          // através do onAuthStateChange que será disparado pelo setSession()
+          // Sincronizar sessão com cookies do servidor
+          try {
+            const syncResponse = await fetch('/api/auth/sync-session', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                access_token: sessionData.session.access_token,
+                refresh_token: sessionData.session.refresh_token,
+                expires_at: sessionData.session.expires_at,
+              }),
+            });
+
+            if (!syncResponse.ok) {
+              console.warn('Failed to sync session to server, but continuing...');
+            } else {
+              console.log('Session synced to server successfully');
+            }
+          } catch (syncError) {
+            console.warn('Error syncing session to server:', syncError);
+            // Continuar mesmo se a sincronização falhar
+          }
 
           // Limpar hash da URL
           window.history.replaceState(null, '', window.location.pathname + window.location.search);
           
-          // Aguardar um pouco para garantir que a sessão foi salva
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Aguardar um pouco para garantir que a sessão foi salva e sincronizada
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Verificar se a sessão ainda está ativa antes de redirecionar
+          const { data: { session: verifySession } } = await supabase.auth.getSession();
+          if (!verifySession) {
+            setError('Sessão não foi salva corretamente. Tente solicitar um novo link.');
+            setIsProcessing(false);
+            return;
+          }
+
+          console.log('Session verified, redirecting...');
           
           // Redirecionar para ranking
           const next = searchParams.get('next') || '/ranking';
           router.push(next);
         } else {
           // Tentar obter sessão atual (pode ter sido processada automaticamente pelo Supabase)
+          // Isso pode acontecer se o Supabase detectou automaticamente a sessão na URL
+          // O Supabase client tem detectSessionInUrl: true, então pode processar automaticamente
+          console.log('No tokens in hash, waiting for Supabase auto-detection...');
+          
+          // Aguardar um pouco para o Supabase processar automaticamente (se detectSessionInUrl estiver ativo)
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
           const { data: { session }, error: sessionError } = await supabase.auth.getSession();
           
           if (sessionError) {
@@ -85,6 +135,47 @@ function AuthCallbackContent() {
           }
 
           if (!session) {
+            // Tentar processar tokens da query string (caso o Supabase tenha redirecionado diferente)
+            const queryToken = searchParams.get('access_token');
+            const queryRefresh = searchParams.get('refresh_token');
+            
+            if (queryToken && queryRefresh) {
+              console.log('Found tokens in query string, processing...');
+              const { data: sessionData, error: sessionSetError } = await supabase.auth.setSession({
+                access_token: queryToken,
+                refresh_token: queryRefresh,
+              });
+
+              if (sessionSetError || !sessionData.session) {
+                setError('Erro ao processar link de acesso. Tente solicitar um novo link.');
+                setIsProcessing(false);
+                return;
+              }
+
+              // Sincronizar com servidor
+              try {
+                await fetch('/api/auth/sync-session', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    access_token: sessionData.session.access_token,
+                    refresh_token: sessionData.session.refresh_token,
+                    expires_at: sessionData.session.expires_at,
+                  }),
+                });
+              } catch (e) {
+                console.warn('Failed to sync session:', e);
+              }
+
+              // Limpar query string e redirecionar
+              window.history.replaceState(null, '', window.location.pathname);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              const next = searchParams.get('next') || '/ranking';
+              router.push(next);
+              return;
+            }
+
             setError('Nenhuma sessão encontrada. Tente solicitar um novo link.');
             setIsProcessing(false);
             return;
@@ -92,8 +183,26 @@ function AuthCallbackContent() {
 
           console.log('Session found:', session.user.email);
 
+          // Sincronizar sessão com servidor se ainda não foi sincronizada
+          try {
+            await fetch('/api/auth/sync-session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                access_token: session.access_token,
+                refresh_token: session.refresh_token,
+                expires_at: session.expires_at,
+              }),
+            });
+          } catch (e) {
+            console.warn('Failed to sync session:', e);
+          }
+
           // Limpar hash da URL
           window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          
+          // Aguardar sincronização
+          await new Promise(resolve => setTimeout(resolve, 500));
           
           // Redirecionar para ranking
           const next = searchParams.get('next') || '/ranking';

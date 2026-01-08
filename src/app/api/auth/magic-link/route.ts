@@ -40,9 +40,14 @@ export async function POST(request: NextRequest) {
     const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const redirectUrl = `${appUrl}/auth/callback`;
     
-    console.log('Magic link redirect URL:', redirectUrl);
+    console.log('=== Magic Link Configuration ===');
+    console.log('Redirect URL (emailRedirectTo):', redirectUrl);
     console.log('APP_URL:', process.env.APP_URL);
     console.log('NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL);
+    console.log('⚠️ IMPORTANTE: O ConfirmationURL no email usa a Site URL do Supabase Dashboard!');
+    console.log('⚠️ Configure a Site URL em: Authentication → URL Configuration → Site URL');
+    console.log('⚠️ Site URL deve ser:', appUrl);
+    console.log('================================');
 
     // Enviar magic link via Supabase Auth
     const supabase = createServerClient();
