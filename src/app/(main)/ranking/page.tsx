@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import { RankingHeader } from '@/components/ranking/RankingHeader';
 import { UserRankCard } from '@/components/ranking/UserRankCard';
 import { RankingList } from '@/components/ranking/RankingList';
+import { ConversionBanner } from '@/components/ranking/ConversionBanner';
 import { useRankingStore } from '@/lib/store/rankingStore';
 import { useUserStore } from '@/lib/store/userStore';
+import { useAuth } from '@/lib/auth/client';
 import { useRouter, usePathname } from 'next/navigation';
 import { Info, Trophy } from 'lucide-react';
 import type { Competitor, RankingPeriod } from '@/types';
@@ -15,6 +17,7 @@ import { SHOW_MIC_METHOD } from '@/lib/config/features';
 export default function RankingPage() {
   const { period, competitors, setPeriod, totalParticipants, lastUpdate, isLoading } = useRankingStore();
   const { user } = useUserStore();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -68,6 +71,8 @@ export default function RankingPage() {
         </div>
       ) : (
         <>
+          {/* Banner de conversão para usuários não logados quando há competidores */}
+          {hasCompetitors && !isAuthenticated && <ConversionBanner />}
           {/* Disclaimer sobre delay de atualização - só mostra se há competidores */}
           {hasCompetitors && (
           <div className="container mx-auto px-4 py-2 max-w-4xl">

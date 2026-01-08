@@ -4,12 +4,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Check, Trophy, Eye, Star } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
+import { useAuth } from '@/lib/auth/client';
 import { useState } from 'react';
 import { SHOW_MIC_METHOD } from '@/lib/config/features';
 import { redirectToKiwifyCheckout } from '@/lib/utils/checkout';
+import { CheckoutCTA } from '@/components/checkout/CheckoutCTA';
 
 export function CheckoutSection() {
   const { user } = useUserStore();
+  const { isAuthenticated } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleSubscribe = () => {
@@ -73,14 +76,26 @@ export function CheckoutSection() {
             <p className="text-3xl font-bold">R$ 29,90</p>
             <p className="text-sm text-muted-foreground">por mês</p>
           </div>
-          <Button
-            className="w-full"
-            size="lg"
-            onClick={handleSubscribe}
-            disabled={isProcessing}
-          >
-            {isProcessing ? 'Processando...' : 'Assinar Agora'}
-          </Button>
+          {!isAuthenticated ? (
+            // Se não estiver autenticado, usar CheckoutCTA que abre modal
+            <CheckoutCTA
+              source="profile_page"
+              buttonText="Assinar Agora"
+              size="lg"
+              variant="default"
+              className="w-full"
+            />
+          ) : (
+            // Se estiver autenticado, usar redirecionamento direto
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={handleSubscribe}
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Processando...' : 'Assinar Agora'}
+            </Button>
+          )}
           <p className="text-xs text-center text-muted-foreground mt-3">
             Cancele a qualquer momento. Sem compromisso.
           </p>

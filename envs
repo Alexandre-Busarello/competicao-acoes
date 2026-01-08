@@ -1,0 +1,10 @@
+NEXT_PUBLIC_SUPABASE_URL=https://gkciedlgmbrrxlpxhlae.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_TYQdipWdfHosDJ4YN6IXfw_h6OoqusL
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_NgyX1YKRHM9W2G_ua1QqWw_LBP8To6J
+DATABASE_URL=postgresql://postgres.gkciedlgmbrrxlpxhlae:Ght%24%24%401234%26%26T@aws-1-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+DIRECT_DATABASE_URL=postgresql://postgres:Ght%24%24%401234%26%26T@db.gkciedlgmbrrxlpxhlae.supabase.co:5432/postgres
+ALLOW_TEST_WEBHOOK=true
+# KIWIFY_WEBHOOK_SECRET=...
+# NEXT_PUBLIC_KIWIFY_PRODUCT_URL=...
+NEXT_PUBLIC_APP_URL=https://competicao-acoes.vercel.app
+CRON_SECRET_TOKEN=976e9574dcae240ec5faf68ca1550788a939b042a44566814211a2c93b5ac85a

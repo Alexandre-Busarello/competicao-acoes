@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Mail, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Mail, Loader2, CheckCircle2, AlertCircle, Trophy, Sparkles } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth/client';
+import { CheckoutCTA } from '@/components/checkout/CheckoutCTA';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -164,6 +165,37 @@ function LoginForm() {
                 </p>
               </div>
             </form>
+          )}
+          
+          {/* CTA de Checkout */}
+          {!success && (
+            <div className="mt-6 pt-6 border-t border-border">
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+                      <Trophy className="h-5 w-5 text-white" />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Sparkles className="h-4 w-4 text-yellow-500" />
+                      <h3 className="text-sm font-semibold">Comece a pontuar agora</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Participe da comunidade, competa no ranking e concorra a prêmios mensais.
+                    </p>
+                    <CheckoutCTA
+                      source="login_page"
+                      buttonText="Criar conta e participar"
+                      size="sm"
+                      variant="default"
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
