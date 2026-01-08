@@ -32,6 +32,8 @@ export const ETFS: ETFInfo[] = [
   { ticker: 'BRAX11', name: 'iShares IBrX-50 Fundo de Índice', category: 'acoes', exchange: 'B3' },
   { ticker: 'BOVS11', name: 'iShares Ibovespa Setorial', category: 'acoes', exchange: 'B3' },
   { ticker: 'BOVH11', name: 'iShares Ibovespa High Dividend', category: 'acoes', exchange: 'B3' },
+  { ticker: 'BBOV11', name: 'BB ETF Ibovespa', category: 'acoes', exchange: 'B3' },
+  { ticker: 'TRIG11', name: 'Trígono ETF Ações Micro Caps', category: 'acoes', exchange: 'B3' },
   
   // ===== ETFs DE CRIPTOMOEDAS =====
   { ticker: 'HASH11', name: 'Hashdex Bitcoin', category: 'crypto', exchange: 'B3' },
@@ -42,6 +44,10 @@ export const ETFS: ETFInfo[] = [
   { ticker: 'BCHG11', name: 'Hashdex Bitcoin Cash', category: 'crypto', exchange: 'B3' },
   { ticker: 'BLCK11', name: 'Hashdex Blockchain', category: 'crypto', exchange: 'B3' },
   { ticker: 'DEFI11', name: 'Hashdex DeFi', category: 'crypto', exchange: 'B3' },
+  { ticker: 'ETHE11', name: 'Hashdex Ethereum', category: 'crypto', exchange: 'B3' },
+  { ticker: 'NFTS11', name: 'Hashdex NFTs', category: 'crypto', exchange: 'B3' },
+  { ticker: 'QDFI11', name: 'QR Asset DeFi', category: 'crypto', exchange: 'B3' },
+  { ticker: 'COIN11', name: 'Buena Vista Neos Bitcoin High Income ETF', category: 'crypto', exchange: 'B3' },
   
   // ===== ETFs DE COMMODITIES =====
   { ticker: 'GOLD11', name: 'iShares Ouro', category: 'commodities', exchange: 'B3' },
@@ -49,22 +55,29 @@ export const ETFS: ETFInfo[] = [
   { ticker: 'GLD', name: 'SPDR Gold Trust', category: 'commodities', exchange: 'NYSE' },
   { ticker: 'SLV', name: 'iShares Silver Trust', category: 'commodities', exchange: 'NYSE' },
   { ticker: 'USO', name: 'United States Oil Fund', category: 'commodities', exchange: 'NYSE' },
+  { ticker: 'BBOI11', name: 'BB ETF Boi Gordo', category: 'commodities', exchange: 'B3' },
+  { ticker: 'CORN11', name: 'BB ETF Milho', category: 'commodities', exchange: 'B3' },
   
   // ===== ETFs DE DIVIDENDOS =====
   { ticker: 'DIVO11', name: 'iShares Dividendos', category: 'dividendos', exchange: 'B3' },
   { ticker: 'FIND11', name: 'iShares Índice de Dividendos', category: 'dividendos', exchange: 'B3' },
   { ticker: 'DVFI11', name: 'iShares Dividendos FIIs', category: 'dividendos', exchange: 'B3' },
   { ticker: 'RDIV11', name: 'iShares Dividendos Reais', category: 'dividendos', exchange: 'B3' },
+  { ticker: 'HIGH11', name: 'iShares High Dividend', category: 'dividendos', exchange: 'B3' },
   
   // ===== ETFs INTERNACIONAIS =====
   { ticker: 'ISUS11', name: 'iShares S&P 500 (USD)', category: 'internacional', exchange: 'B3' },
+  { ticker: 'WRLD11', name: 'iShares MSCI World', category: 'internacional', exchange: 'B3' },
   { ticker: 'SPY', name: 'SPDR S&P 500 ETF Trust', category: 'internacional', exchange: 'NYSE' },
   { ticker: 'QQQ', name: 'Invesco QQQ Trust', category: 'internacional', exchange: 'NASDAQ' },
   { ticker: 'VTI', name: 'Vanguard Total Stock Market ETF', category: 'internacional', exchange: 'NYSE' },
+  { ticker: 'VOO', name: 'Vanguard S&P 500 ETF', category: 'internacional', exchange: 'NYSE' },
   { ticker: 'VEA', name: 'Vanguard FTSE Developed Markets ETF', category: 'internacional', exchange: 'NYSE' },
   { ticker: 'VWO', name: 'Vanguard FTSE Emerging Markets ETF', category: 'internacional', exchange: 'NYSE' },
   { ticker: 'IEMG', name: 'iShares Core MSCI Emerging Markets ETF', category: 'internacional', exchange: 'NYSE' },
   { ticker: 'EFA', name: 'iShares MSCI EAFE ETF', category: 'internacional', exchange: 'NYSE' },
+  { ticker: 'IWM', name: 'iShares Russell 2000 ETF', category: 'internacional', exchange: 'NYSE' },
+  { ticker: 'DIA', name: 'SPDR Dow Jones Industrial Average ETF', category: 'internacional', exchange: 'NYSE' },
   
   // ===== ETFs SETORIAIS =====
   { ticker: 'WEB311', name: 'iShares Web 3.0', category: 'setorial', exchange: 'B3' },
@@ -92,6 +105,12 @@ export const ETFS: ETFInfo[] = [
   { ticker: 'AGTB11', name: 'iShares Renda Fixa', category: 'renda-fixa', exchange: 'B3' },
   { ticker: 'B5P211', name: 'iShares Renda Fixa IPCA+', category: 'renda-fixa', exchange: 'B3' },
   { ticker: 'B5MB11', name: 'iShares Renda Fixa CDI', category: 'renda-fixa', exchange: 'B3' },
+  { ticker: 'LFTS11', name: 'iShares Renda Fixa LFT', category: 'renda-fixa', exchange: 'B3' },
+  { ticker: 'LFTBETF11', name: 'iShares Renda Fixa LFT B', category: 'renda-fixa', exchange: 'B3' },
+  { ticker: 'BDAP11', name: 'iShares Renda Fixa DAP', category: 'renda-fixa', exchange: 'B3' },
+  { ticker: 'DEBB11', name: 'Trígono ETF Debêntures', category: 'renda-fixa', exchange: 'B3' },
+  { ticker: 'FIXA11', name: 'iShares Renda Fixa DI', category: 'renda-fixa', exchange: 'B3' },
+  { ticker: 'AREA11', name: 'Raul Senna ETF IPCA Rendimento', category: 'renda-fixa', exchange: 'B3' },
 ];
 
 /**
