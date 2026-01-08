@@ -127,10 +127,13 @@ model BrunoPortfolioAsset {
 model RankingCalculation {
   id                String   @id @default(uuid())
   period            String
+  year              Int
+  month             Int?
   rankingData       Json
   totalParticipants Int
   calculatedAt      DateTime @default(now())
 
+  @@index([period, year, month, calculatedAt])
   @@index([period, calculatedAt])
   @@index([calculatedAt])
 }

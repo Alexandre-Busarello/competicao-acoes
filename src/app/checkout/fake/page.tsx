@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, CreditCard, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
 import { PageHeader } from '@/components/navigation/PageHeader';
 
-export default function FakeKiwifyCheckoutPage() {
+function FakeKiwifyCheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState(searchParams.get('email') || '');
@@ -171,6 +171,27 @@ export default function FakeKiwifyCheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function FakeKiwifyCheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen pb-4">
+        <PageHeader title="Checkout" backHref="/ranking" />
+        <div className="max-w-2xl mx-auto px-4 mt-4">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    }>
+      <FakeKiwifyCheckoutContent />
+    </Suspense>
   );
 }
 

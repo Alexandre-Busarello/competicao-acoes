@@ -10,9 +10,12 @@ import type { Competitor } from '@/types';
 
 interface CompetitorCardProps {
   competitor: Competitor;
+  period?: 'mensal' | 'anual';
+  year?: number;
+  month?: number;
 }
 
-export function CompetitorCard({ competitor }: CompetitorCardProps) {
+export function CompetitorCard({ competitor, period, year, month }: CompetitorCardProps) {
   const { user } = useUserStore();
   const isPremium = user?.isPremium ?? false;
   const monthlyReturn = competitor.monthlyReturn ?? 0;
@@ -39,8 +42,20 @@ export function CompetitorCard({ competitor }: CompetitorCardProps) {
     return null;
   };
 
+  // Construir URL da carteira com período se disponível
+  const getCarteiraUrl = () => {
+    if (period && year !== undefined) {
+      if (period === 'mensal' && month !== undefined) {
+        return `/carteira/${competitor.id}/mensal/${year}/${month.toString().padStart(2, '0')}`;
+      } else if (period === 'anual') {
+        return `/carteira/${competitor.id}/anual/${year}`;
+      }
+    }
+    return `/carteira/${competitor.id}`;
+  };
+
   return (
-    <Link href={`/carteira/${competitor.id}`}>
+    <Link href={getCarteiraUrl()}>
       <Card className="mx-4 mb-3 transition-all hover:shadow-md active:scale-[0.98]">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">

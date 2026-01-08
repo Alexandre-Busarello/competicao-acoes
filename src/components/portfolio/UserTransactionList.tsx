@@ -5,7 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
-import { format, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
+import { format, startOfYear, endOfYear, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { getPeriodRange } from '@/lib/utils/period-utils';
 import { ptBR } from 'date-fns/locale';
 import { formatPrice } from '@/lib/utils/currency';
 import type { Transaction } from '@/types';
@@ -19,6 +20,9 @@ const monthNames = [
 interface UserTransactionListProps {
   userId: string;
   isPremium?: boolean;
+  period?: 'mensal' | 'anual';
+  year?: number;
+  month?: number;
 }
 
 interface GroupedTransactions {
@@ -27,7 +31,13 @@ interface GroupedTransactions {
   };
 }
 
-export function UserTransactionList({ userId, isPremium = false }: UserTransactionListProps) {
+export function UserTransactionList({ 
+  userId, 
+  isPremium = false,
+  period,
+  year,
+  month
+}: UserTransactionListProps) {
   const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
     queryKey: ['transactions', userId],
     queryFn: async () => {
@@ -49,8 +59,16 @@ export function UserTransactionList({ userId, isPremium = false }: UserTransacti
     staleTime: 30 * 1000, // 30 segundos
   });
 
-  // Filtrar apenas transações do ano atual
-  const currentYearTransactions = useMemo(() => {
+  // Filtrar transações por período específico se fornecido, senão usar ano atual
+  const filteredTransactions = useMemo(() => {
+    if (period && year !== undefined) {
+      const { start, end } = getPeriodRange(period, year, month);
+      return transactions.filter((transaction) => {
+        return isWithinInterval(transaction.date, { start, end });
+      });
+    }
+    
+    // Fallback: filtrar apenas transações do ano atual
     const now = new Date();
     const yearStart = startOfYear(now);
     const yearEnd = endOfYear(now);
@@ -58,11 +76,11 @@ export function UserTransactionList({ userId, isPremium = false }: UserTransacti
     return transactions.filter((transaction) => {
       return isWithinInterval(transaction.date, { start: yearStart, end: yearEnd });
     });
-  }, [transactions]);
+  }, [transactions, period, year, month]);
 
   // Agrupar transações por mês e dia
   const groupedTransactions = useMemo(() => {
-    const sorted = [...currentYearTransactions].sort((a, b) => b.date.getTime() - a.date.getTime());
+    const sorted = [...filteredTransactions].sort((a, b) => b.date.getTime() - a.date.getTime());
     const grouped: GroupedTransactions = {};
 
     sorted.forEach((transaction) => {
@@ -79,7 +97,7 @@ export function UserTransactionList({ userId, isPremium = false }: UserTransacti
     });
 
     return grouped;
-  }, [currentYearTransactions]);
+  }, [filteredTransactions]);
 
   // Obter meses ordenados (mais recentes primeiro) e definir tab inicial
   const monthKeys = useMemo(() => {
@@ -109,13 +127,15 @@ export function UserTransactionList({ userId, isPremium = false }: UserTransacti
     );
   }
 
-  if (currentYearTransactions.length === 0) {
+  if (filteredTransactions.length === 0) {
     return (
       <div className="px-4 py-4">
         <Card>
           <CardContent className="p-8 text-center">
             <p className="text-muted-foreground">
-              Nenhuma transação registrada no ano atual.
+              {period && year 
+                ? `Nenhuma transação registrada no período selecionado.`
+                : 'Nenhuma transação registrada no ano atual.'}
             </p>
           </CardContent>
         </Card>

@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma/client';
 import { RankingCache } from '@/lib/cache/ranking-cache';
 import { determineAssetType, getAssetName } from '@/lib/utils/asset-type';
 import { yahooFinanceService } from './yahoo-finance-service';
-import { startOfYear, endOfYear } from 'date-fns';
+import { startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
+import { getCurrentPeriod, getPeriodRange, isValidPeriod } from '@/lib/utils/period-utils';
 import type { Asset } from '@/types';
 
 export interface RankingEntry {
@@ -287,23 +288,29 @@ export class RankingService {
     const annualResult = await this.enrichRankingWithUserData(annualResultForStorage as RankingResult);
 
     // 10. Salvar ambos no banco (sem name e avatar)
+    // Usar período vigente para calculateBothRankings
+    const current = getCurrentPeriod();
     try {
       await Promise.all([
         prisma.rankingCalculation.create({
           data: {
             period: 'mensal',
+            year: current.year,
+            month: current.month,
             rankingData: monthlyResultForStorage as any,
             totalParticipants: monthlyResultForStorage.totalParticipants,
             calculatedAt: monthlyResultForStorage.lastUpdate,
-          },
+          } as any,
         }),
         prisma.rankingCalculation.create({
           data: {
             period: 'anual',
+            year: current.year,
+            month: null,
             rankingData: annualResultForStorage as any,
             totalParticipants: annualResultForStorage.totalParticipants,
             calculatedAt: annualResultForStorage.lastUpdate,
-          },
+          } as any,
         }),
       ]);
     } catch (error) {
@@ -321,20 +328,35 @@ export class RankingService {
   }
 
   /**
-   * Calcula ranking completo para um período
+   * Calcula ranking completo para um período específico
+   * Se year e month não forem fornecidos, usa o período vigente
    */
-  async calculateRanking(period: 'mensal' | 'anual' = 'mensal'): Promise<RankingResult> {
-    // 1. Carrega transações e usuários do banco
-    // Filtrar apenas transações do ano atual
-    const now = new Date();
-    const yearStart = startOfYear(now);
-    const yearEnd = endOfYear(now);
+  async calculateRanking(
+    period: 'mensal' | 'anual' = 'mensal',
+    year?: number,
+    month?: number
+  ): Promise<RankingResult> {
+    // Se não especificado, usar período vigente
+    if (!year) {
+      const current = getCurrentPeriod();
+      year = current.year;
+      month = period === 'mensal' ? current.month : undefined;
+    }
     
+    // Validar período
+    if (!isValidPeriod(year, month)) {
+      throw new Error(`Período inválido: ${period} ${year}${month ? `/${month}` : ''}`);
+    }
+    
+    // 1. Obter intervalo de datas para o período
+    const { start, end } = getPeriodRange(period, year, month);
+    
+    // 2. Carrega transações do período específico
     const transactions = await prisma.transaction.findMany({
       where: {
         date: {
-          gte: yearStart,
-          lte: yearEnd,
+          gte: start,
+          lte: end,
         },
       },
       include: {
@@ -537,10 +559,12 @@ export class RankingService {
       await prisma.rankingCalculation.create({
         data: {
           period,
+          year,
+          month: period === 'mensal' ? month : null,
           rankingData: resultForStorage as any, // Serializa sem name e avatar
           totalParticipants: resultForStorage.totalParticipants,
           calculatedAt: resultForStorage.lastUpdate,
-        },
+        } as any,
       });
     } catch (error) {
       console.error(`Erro ao salvar ranking ${period} no banco:`, error);
@@ -600,15 +624,36 @@ export class RankingService {
   /**
    * Obtém ranking mais recente do banco de dados
    * Busca o último cálculo salvo para o período especificado
+   * Se year e month não forem fornecidos, usa o período vigente
    * Enriquece com nome e avatar atualizados da tabela User
    */
-  async getRanking(period: 'mensal' | 'anual' = 'mensal'): Promise<RankingResult | null> {
+  async getRanking(
+    period: 'mensal' | 'anual' = 'mensal',
+    year?: number,
+    month?: number
+  ): Promise<RankingResult | null> {
     try {
-      // Buscar o último cálculo do período no banco
+      // Se não especificado, usar período vigente
+      if (!year) {
+        const current = getCurrentPeriod();
+        year = current.year;
+        month = period === 'mensal' ? current.month : undefined;
+      }
+      
+      // Buscar o último cálculo do período específico no banco
+      const whereClause: any = {
+        period,
+        year,
+      };
+      
+      if (period === 'mensal' && month) {
+        whereClause.month = month;
+      } else {
+        whereClause.month = null;
+      }
+      
       const lastCalculation = await prisma.rankingCalculation.findFirst({
-        where: {
-          period,
-        },
+        where: whereClause,
         orderBy: {
           calculatedAt: 'desc',
         },

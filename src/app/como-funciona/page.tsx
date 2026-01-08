@@ -154,6 +154,84 @@ export default function ComoFuncionaPage() {
           </CardContent>
         </Card>
 
+        {/* Regras de Reset e Premiação */}
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Regras de Reset e Premiação
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold mb-2 text-lg">Ranking Mensal</h3>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    <strong className="text-foreground">Rentabilidade resetada mensalmente:</strong> No primeiro dia de cada mês, 
+                    a rentabilidade é resetada automaticamente. Isso significa que cada mês é uma nova competição.
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Considera apenas operações do mês:</strong> A rentabilidade mensal considera 
+                    apenas as transações realizadas dentro do mês específico. Transações de meses anteriores não são consideradas 
+                    no cálculo da rentabilidade mensal.
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Premiação:</strong> A premiação não acontece exatamente no reset do mês. 
+                    Nossa equipe analisa os resultados e entra em contato com os vencedores após análise completa dos dados.
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-2 text-lg">Ranking Anual</h3>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    <strong className="text-foreground">Considera todas as transações do ano:</strong> A rentabilidade anual considera 
+                    todas as transações realizadas dentro do ano específico, desde o primeiro dia do ano até a data atual (ou data de corte).
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Retorno acumulado:</strong> O ranking anual mostra o retorno acumulado de todos 
+                    os meses do ano. É a soma de todas as operações realizadas durante o ano, não uma projeção anualizada.
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Data de encerramento flexível:</strong> O ranking anual não necessariamente encerra 
+                    apenas no fim do ano. Nossa equipe pode decidir encerrar antes e criar uma data de corte específica. Os participantes 
+                    serão informados sobre qualquer mudança na data de encerramento.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Visualização de Períodos Anteriores */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Visualização de Períodos Anteriores</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Você pode visualizar rankings e carteiras de períodos anteriores usando os seletores de mês e ano disponíveis 
+                nas páginas de ranking e carteira (disponível para usuários premium).
+              </p>
+              <div>
+                <h3 className="font-semibold mb-2">URLs Compartilháveis</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Cada visualização de período tem uma URL única que pode ser compartilhada:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-2">
+                  <li>Ranking mensal: <code className="bg-muted px-1 rounded">/ranking/mensal/2025/02</code></li>
+                  <li>Ranking anual: <code className="bg-muted px-1 rounded">/ranking/anual/2025</code></li>
+                  <li>Carteira mensal: <code className="bg-muted px-1 rounded">/carteira/[id]/mensal/2025/02</code></li>
+                  <li>Carteira anual: <code className="bg-muted px-1 rounded">/carteira/[id]/anual/2025</code></li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Outras Regras */}
         <Card>
           <CardHeader>

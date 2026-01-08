@@ -1,0 +1,177 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { PortfolioHeader } from '@/components/portfolio/PortfolioHeader';
+import { AssetAllocationChart } from '@/components/portfolio/AssetAllocationChart';
+import { AssetList } from '@/components/portfolio/AssetList';
+import { UserTransactionList } from '@/components/portfolio/UserTransactionList';
+import { BlurOverlay } from '@/components/portfolio/BlurOverlay';
+import { PeriodSelector } from '@/components/ranking/PeriodSelector';
+import { PeriodIndicator } from '@/components/ranking/PeriodIndicator';
+import { PageHeader } from '@/components/navigation/PageHeader';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Edit, Info, Wallet } from 'lucide-react';
+import { isValidPeriod, getCurrentPeriod } from '@/lib/utils/period-utils';
+import { useUserStore } from '@/lib/store/userStore';
+import type { Competitor } from '@/types';
+
+export default function PortfolioMensalPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = params.id as string;
+  const year = parseInt(params.year as string, 10);
+  const month = parseInt(params.month as string, 10);
+
+  const [competitor, setCompetitor] = useState<Competitor | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Validar parâmetros e redirecionar se inválidos
+  useEffect(() => {
+    if (!isValidPeriod(year, month)) {
+      const current = getCurrentPeriod();
+      router.replace(`/carteira/${id}/mensal/${current.year}/${current.month.toString().padStart(2, '0')}`);
+      return;
+    }
+  }, [year, month, id, router]);
+
+  // Buscar dados do competidor do período específico
+  useEffect(() => {
+    if (!isValidPeriod(year, month)) return;
+
+    const fetchCompetitor = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/ranking?period=mensal&year=${year}&month=${month}`);
+        if (!response.ok) {
+          throw new Error('Erro ao buscar ranking');
+        }
+        const data = await response.json();
+        
+        const found = data.ranking.find((entry: any) => entry.userId === id);
+        
+        if (found) {
+          setCompetitor({
+            id: found.userId,
+            name: found.name,
+            avatar: found.avatar,
+            rank: found.rank,
+            monthlyReturn: found.monthlyReturn,
+            annualReturn: found.annualReturn,
+            displayedPeriod: 'mensal' as const,
+            portfolio: found.portfolio || [],
+          });
+        } else {
+          setCompetitor(null);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar competidor:', error);
+        setCompetitor(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCompetitor();
+  }, [id, year, month]);
+
+  const { user } = useUserStore();
+  const isPremium = user?.isPremium ?? false;
+  const isOwner = user?.id === id;
+
+  if (!isValidPeriod(year, month)) {
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 mb-4 shadow-lg animate-pulse">
+            <Wallet className="h-8 w-8 text-white" />
+          </div>
+          <p className="text-muted-foreground">Carregando carteira...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!competitor) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Competidor não encontrado</h1>
+          <Link href={`/ranking/mensal/${year}/${month.toString().padStart(2, '0')}`}>
+            <Button variant="outline">Voltar ao Ranking</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen pb-32 max-w-4xl mx-auto">
+      <PageHeader 
+        title="Detalhes da Carteira" 
+        backHref={`/ranking/mensal/${year}/${month.toString().padStart(2, '0')}`}
+      />
+      
+      {/* Seletor de Período e Indicador */}
+      {isPremium && (
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+            <PeriodIndicator period="mensal" year={year} month={month} />
+            <PeriodSelector period="mensal" year={year} month={month} basePath={`/carteira/${id}`} />
+          </div>
+        </div>
+      )}
+
+      <PortfolioHeader competitor={competitor} />
+      
+      {/* Disclaimer sobre delay de atualização */}
+      <div className="container mx-auto px-4 py-2">
+        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+          <p className="text-xs text-blue-800 dark:text-blue-200 flex items-start gap-2">
+            <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+            <span>
+              <strong>Atenção:</strong> O cálculo da carteira e rentabilidade no ranking é atualizado automaticamente a cada 15 minutos. 
+              Transações recém-cadastradas podem levar até 15 minutos para serem contabilizadas nas posições e rentabilidade exibidas.
+            </span>
+          </p>
+        </div>
+      </div>
+      
+      <AssetAllocationChart assets={competitor.portfolio} />
+      <AssetList assets={competitor.portfolio} isPremium={isPremium} />
+      <UserTransactionList userId={competitor.id} isPremium={isPremium} period="mensal" year={year} month={month} />
+      {!isPremium && <BlurOverlay competitorName={competitor.name} />}
+      
+      {/* Botão de edição para o dono da carteira */}
+      {isOwner && (
+        <>
+          {/* FAB para mobile */}
+          <Link href="/minha-carteira">
+            <Button
+              className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg z-40 md:hidden"
+              size="icon"
+            >
+              <Edit className="h-6 w-6" />
+            </Button>
+          </Link>
+
+          {/* Botão para desktop */}
+          <div className="hidden md:block container mx-auto px-4 py-4">
+            <Link href="/minha-carteira">
+              <Button className="w-full">
+                <Edit className="h-5 w-5 mr-2" />
+                Editar Minha Carteira
+              </Button>
+            </Link>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+

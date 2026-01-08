@@ -6,10 +6,25 @@ import { TrendingUp, ArrowUp } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
 import { useRankingStore } from '@/lib/store/rankingStore';
 import Link from 'next/link';
+import type { Competitor } from '@/types';
 
-export function UserRankCard() {
+interface UserRankCardProps {
+  competitors?: Competitor[];
+  totalParticipants?: number;
+  displayedPeriod?: 'mensal' | 'anual';
+}
+
+export function UserRankCard({ 
+  competitors: propCompetitors,
+  totalParticipants: propTotalParticipants,
+  displayedPeriod = 'mensal'
+}: UserRankCardProps = {}) {
   const { user } = useUserStore();
-  const { competitors, totalParticipants } = useRankingStore();
+  const { competitors: storeCompetitors, totalParticipants: storeTotalParticipants } = useRankingStore();
+
+  // Usar props se fornecidas, senão usar do store
+  const competitors = propCompetitors ?? storeCompetitors;
+  const totalParticipants = propTotalParticipants ?? storeTotalParticipants;
 
   if (!user) return null;
   
@@ -39,6 +54,8 @@ export function UserRankCard() {
       : Math.max(competitors.length, displayRank);
   }
 
+  const periodLabel = displayedPeriod === 'anual' ? 'este ano' : 'este mês';
+
   return (
     <Card className="mx-4 mt-4 mb-4 border-primary/20 bg-gradient-to-br from-primary/5 to-background">
       <CardContent className="p-4">
@@ -63,7 +80,7 @@ export function UserRankCard() {
                 {isPositive ? '+' : ''}
                 {monthlyReturn.toFixed(2)}%
               </span>
-              <span className="text-xs text-muted-foreground">este mês</span>
+              <span className="text-xs text-muted-foreground">{periodLabel}</span>
             </div>
           </div>
           <Link href="/minha-carteira">
