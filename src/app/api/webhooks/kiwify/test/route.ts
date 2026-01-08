@@ -119,20 +119,24 @@ export async function POST(request: NextRequest) {
     });
     console.log('✅ Usuário criado/atualizado no banco');
 
+    // Gerar IDs únicos baseados no userId para evitar conflitos de constraint única
+    const testKiwifyId = `test-subscription-${user.id}`;
+    const testKiwifyOrderId = `test-order-${user.id}-${Date.now()}`;
+
     // Criar ou atualizar assinatura
     const subscription = await prisma.subscription.upsert({
       where: { userId: user.id },
       update: {
-        kiwifyId: 'test-subscription-id',
-        kiwifyOrderId: `test-order-${Date.now()}`,
+        kiwifyId: testKiwifyId,
+        kiwifyOrderId: testKiwifyOrderId,
         status: 'active',
         currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dias
         updatedAt: new Date(),
       },
       create: {
         userId: user.id,
-        kiwifyId: 'test-subscription-id',
-        kiwifyOrderId: `test-order-${Date.now()}`,
+        kiwifyId: testKiwifyId,
+        kiwifyOrderId: testKiwifyOrderId,
         status: 'active',
         currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dias
       },
