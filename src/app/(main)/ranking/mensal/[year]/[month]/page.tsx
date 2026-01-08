@@ -6,8 +6,7 @@ import { RankingHeader } from '@/components/ranking/RankingHeader';
 import { UserRankCard } from '@/components/ranking/UserRankCard';
 import { RankingList } from '@/components/ranking/RankingList';
 import { ConversionBanner } from '@/components/ranking/ConversionBanner';
-import { PeriodSelector } from '@/components/ranking/PeriodSelector';
-import { PeriodIndicator } from '@/components/ranking/PeriodIndicator';
+import { PeriodFilters } from '@/components/ranking/PeriodFilters';
 import { useRankingStore } from '@/lib/store/rankingStore';
 import { useUserStore } from '@/lib/store/userStore';
 import { useAuth } from '@/lib/auth/client';
@@ -110,10 +109,7 @@ export default function RankingMensalPage() {
       
       {/* Seletor de Período e Indicador */}
       <div className="container mx-auto px-4 py-4 max-w-4xl">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-          <PeriodIndicator period="mensal" year={year} month={month} />
-          <PeriodSelector period="mensal" year={year} month={month} basePath="/ranking" />
-        </div>
+        <PeriodFilters period="mensal" year={year} month={month} basePath="/ranking" />
       </div>
 
       {/* Mostrar loading ou conteúdo baseado no estado */}

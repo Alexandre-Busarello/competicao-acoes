@@ -7,8 +7,7 @@ import { AssetAllocationChart } from '@/components/portfolio/AssetAllocationChar
 import { AssetList } from '@/components/portfolio/AssetList';
 import { UserTransactionList } from '@/components/portfolio/UserTransactionList';
 import { BlurOverlay } from '@/components/portfolio/BlurOverlay';
-import { PeriodSelector } from '@/components/ranking/PeriodSelector';
-import { PeriodIndicator } from '@/components/ranking/PeriodIndicator';
+import { PeriodFilters } from '@/components/ranking/PeriodFilters';
 import { PageHeader } from '@/components/navigation/PageHeader';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -119,10 +118,7 @@ export default function PortfolioAnualPage() {
       {/* Seletor de Período e Indicador */}
       {isPremium && (
         <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-            <PeriodIndicator period="anual" year={year} />
-            <PeriodSelector period="anual" year={year} basePath={`/carteira/${id}`} />
-          </div>
+          <PeriodFilters period="anual" year={year} basePath={`/carteira/${id}`} />
         </div>
       )}
 

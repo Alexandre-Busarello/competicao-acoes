@@ -22,9 +22,10 @@ interface PeriodSelectorProps {
   year: number;
   month?: number;
   basePath: string; // Ex: '/ranking' ou '/carteira/[id]'
+  onSelect?: () => void; // Callback opcional chamado quando uma seleção é feita
 }
 
-export function PeriodSelector({ period, year, month, basePath }: PeriodSelectorProps) {
+export function PeriodSelector({ period, year, month, basePath, onSelect }: PeriodSelectorProps) {
   const router = useRouter();
   const current = getCurrentPeriod();
   const availableYears = getAvailableYears();
@@ -40,11 +41,13 @@ export function PeriodSelector({ period, year, month, basePath }: PeriodSelector
     } else {
       router.push(`${basePath}/anual/${yearNum}`);
     }
+    onSelect?.();
   };
 
   const handleMonthChange = (newMonth: string) => {
     const monthNum = parseInt(newMonth, 10);
     router.push(`${basePath}/mensal/${year}/${monthNum.toString().padStart(2, '0')}`);
+    onSelect?.();
   };
 
   return (
