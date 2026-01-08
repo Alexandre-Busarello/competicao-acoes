@@ -3,25 +3,59 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
-import { useTransactionStore } from '@/lib/store/transactionStore';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { useQuery } from '@tanstack/react-query';
 
 export function PortfolioSummary() {
   const { user } = useUserStore();
-  const { getTransactionsByUser } = useTransactionStore();
+
+  // Buscar portfolio do usuário da API
+  // Busca ranking mensal para monthlyReturn e ranking anual para annualReturn acumulado
+  const { data: portfolioData } = useQuery({
+    queryKey: ['user-portfolio', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      // Buscar ambos os rankings em paralelo
+      const [monthlyResponse, annualResponse] = await Promise.all([
+        fetch(`/api/ranking?period=mensal`),
+        fetch(`/api/ranking?period=anual`),
+      ]);
+      
+      if (!monthlyResponse.ok) return null;
+      
+      const monthlyData = await monthlyResponse.json();
+      const userInMonthlyRanking = monthlyData.ranking?.find((entry: any) => entry.userId === user.id);
+      
+      // Buscar retorno acumulado anual do ranking anual
+      let annualAccumulatedReturn = 0;
+      if (annualResponse.ok) {
+        const annualData = await annualResponse.json();
+        const userInAnnualRanking = annualData.ranking?.find((entry: any) => entry.userId === user.id);
+        if (userInAnnualRanking) {
+          // No ranking anual, o annualReturn é o retorno acumulado real
+          annualAccumulatedReturn = userInAnnualRanking.annualReturn || 0;
+        }
+      }
+      
+      return userInMonthlyRanking ? {
+        monthlyReturn: userInMonthlyRanking.monthlyReturn || 0,
+        annualReturn: annualAccumulatedReturn, // Retorno acumulado do ranking anual
+        totalValue: userInMonthlyRanking.currentValue || 0,
+      } : null;
+    },
+    enabled: !!user?.id,
+    staleTime: 2 * 60 * 1000, // 2 minutos
+  });
 
   if (!user) return null;
 
-  const transactions = getTransactionsByUser(user.id);
-  
-  // Calcular valores baseados nas transações (simplificado para MVP)
-  const totalValue = 50000; // Mock
-  const todayReturn = user.monthlyReturn * 0.1; // Mock - 10% do mensal
-  const monthlyReturn = user.monthlyReturn;
+  // Usar dados do portfolio ou valores padrão
+  const monthlyReturn = portfolioData?.monthlyReturn ?? 0;
+  const annualReturn = portfolioData?.annualReturn ?? 0;
+  const totalValue = portfolioData?.totalValue ?? 0;
 
-  const isTodayPositive = todayReturn >= 0;
   const isMonthlyPositive = monthlyReturn >= 0;
+  const isAnnualPositive = annualReturn >= 0;
 
   return (
     <div className="container mx-auto px-4 py-4 space-y-4">
@@ -35,31 +69,13 @@ export function PortfolioSummary() {
           </div>
           <p className="text-3xl font-bold mb-6">
             R${' '}
-            {totalValue.toLocaleString('pt-BR', {
+            {(totalValue || 0).toLocaleString('pt-BR', {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
           </p>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Hoje</p>
-              <div className="flex items-center gap-1">
-                {isTodayPositive ? (
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-red-500" />
-                )}
-                <span
-                  className={`font-semibold ${
-                    isTodayPositive ? 'text-green-500' : 'text-red-500'
-                  }`}
-                >
-                  {isTodayPositive ? '+' : ''}
-                  {todayReturn.toFixed(2)}%
-                </span>
-              </div>
-            </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Este Mês</p>
               <div className="flex items-center gap-1">
@@ -74,7 +90,25 @@ export function PortfolioSummary() {
                   }`}
                 >
                   {isMonthlyPositive ? '+' : ''}
-                  {monthlyReturn.toFixed(2)}%
+                  {(monthlyReturn || 0).toFixed(2)}%
+                </span>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Anual</p>
+              <div className="flex items-center gap-1">
+                {isAnnualPositive ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+                <span
+                  className={`font-semibold ${
+                    isAnnualPositive ? 'text-green-500' : 'text-red-500'
+                  }`}
+                >
+                  {isAnnualPositive ? '+' : ''}
+                  {(annualReturn || 0).toFixed(2)}%
                 </span>
               </div>
             </div>

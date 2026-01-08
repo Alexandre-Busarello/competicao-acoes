@@ -2,6 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import { formatUserNameWithId, getNameWithoutId } from '@/lib/utils/format-user-name';
 import type { Competitor } from '@/types';
 
 interface PortfolioHeaderProps {
@@ -9,8 +10,11 @@ interface PortfolioHeaderProps {
 }
 
 export function PortfolioHeader({ competitor }: PortfolioHeaderProps) {
-  const isPositive = competitor.monthlyReturn >= 0;
-  const initials = competitor.name
+  const monthlyReturn = competitor.monthlyReturn ?? 0;
+  const isPositive = monthlyReturn >= 0;
+  // Remover ID do nome para gerar iniciais corretamente
+  const nameWithoutId = getNameWithoutId(competitor.name);
+  const initials = nameWithoutId
     .split(' ')
     .map((n) => n[0])
     .join('')
@@ -25,7 +29,9 @@ export function PortfolioHeader({ competitor }: PortfolioHeaderProps) {
             <AvatarImage src={competitor.avatar} alt={competitor.name} />
             <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
           </Avatar>
-          <h1 className="text-2xl font-bold mb-2">{competitor.name}</h1>
+          <h1 className="text-2xl font-bold mb-2">
+            {formatUserNameWithId(competitor.name, competitor.id)}
+          </h1>
           <div className="flex items-center gap-2">
             {isPositive ? (
               <TrendingUp className="h-5 w-5 text-green-500" />
@@ -38,7 +44,7 @@ export function PortfolioHeader({ competitor }: PortfolioHeaderProps) {
               }`}
             >
               {isPositive ? '+' : ''}
-              {competitor.monthlyReturn.toFixed(2)}%
+              {monthlyReturn.toFixed(2)}%
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-1">Rentabilidade Mensal</p>

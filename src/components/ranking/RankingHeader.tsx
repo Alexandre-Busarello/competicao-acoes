@@ -7,6 +7,7 @@ import { ptBR } from 'date-fns/locale';
 import type { RankingPeriod } from '@/types';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { SHOW_MIC_METHOD } from '@/lib/config/features';
 
 interface RankingHeaderProps {
   period: RankingPeriod;
@@ -31,7 +32,7 @@ export function RankingHeader({ period, onPeriodChange, lastUpdate, isLoading }:
   return (
     <div className="sticky top-0 z-10 bg-background border-b border-border safe-area-top">
       <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-center mb-2 gap-2">
+        <div className="flex items-center justify-center mb-4 gap-2">
           <Trophy className="h-8 w-8 text-primary mr-2" />
           <h1 className="text-2xl font-bold">Ranking</h1>
           <Link href="/como-funciona">
@@ -54,13 +55,15 @@ export function RankingHeader({ period, onPeriodChange, lastUpdate, isLoading }:
           </div>
         )}
         <Tabs value={period} onValueChange={(value) => onPeriodChange(value as RankingPeriod)}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className={`grid w-full ${SHOW_MIC_METHOD ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger value="mensal">Mensal</TabsTrigger>
             <TabsTrigger value="anual">Anual</TabsTrigger>
-            <TabsTrigger value="bruno-method" className="relative">
-              MIC Method
-              <span className="ml-1 text-xs">⭐</span>
-            </TabsTrigger>
+            {SHOW_MIC_METHOD && (
+              <TabsTrigger value="bruno-method" className="relative">
+                MIC Method
+                <span className="ml-1 text-xs">⭐</span>
+              </TabsTrigger>
+            )}
           </TabsList>
         </Tabs>
       </div>

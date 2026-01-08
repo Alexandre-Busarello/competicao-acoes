@@ -1,0 +1,12 @@
+-- Esta migration apenas marca que RLS foi habilitado
+-- As políticas RLS devem ser criadas executando o script supabase-rls.sql
+-- diretamente no Supabase SQL Editor, pois o Prisma não suporta o schema 'auth' do Supabase
+-- 
+-- Para aplicar RLS:
+-- 1. Acesse Supabase Dashboard > SQL Editor
+-- 2. Execute o arquivo prisma/supabase-rls.sql
+-- 
+-- Este arquivo existe apenas para manter o histórico de migrations do Prisma
+
+-- RLS será habilitado via script SQL direto no Supabase
+-- Ver arquivo: prisma/supabase-rls.sql

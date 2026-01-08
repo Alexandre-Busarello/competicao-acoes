@@ -21,7 +21,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ranking = await rankingService.calculateRanking(period);
+    const calculatedRanking = await rankingService.calculateRanking(period);
+    
+    // Buscar via getRanking para enriquecer com avatares atualizados
+    const ranking = await rankingService.getRanking(period) || calculatedRanking;
 
     return NextResponse.json(ranking);
   } catch (error) {

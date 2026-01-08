@@ -1,41 +1,86 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+'use client';
+
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { Competitor, RankingPeriod, BrunoPortfolio } from '@/types';
+import { SHOW_MIC_METHOD } from '@/lib/config/features';
 
-interface RankingState {
-  period: RankingPeriod;
-  competitors: Competitor[];
-  brunoPortfolio: BrunoPortfolio | null;
-  totalParticipants: number;
-  setPeriod: (period: RankingPeriod) => void;
-  setCompetitors: (competitors: Competitor[]) => void;
-  setBrunoPortfolio: (portfolio: BrunoPortfolio) => void;
-  setTotalParticipants: (total: number) => void;
-  reset: () => void;
-}
+/**
+ * Hook para gerenciar ranking usando React Query
+ */
+export function useRankingStore() {
+  const [period, setPeriod] = useState<RankingPeriod>('mensal');
 
-export const useRankingStore = create<RankingState>()(
-  persist(
-    (set) => ({
-      period: 'mensal',
-      competitors: [],
-      brunoPortfolio: null,
-      totalParticipants: 0,
-      setPeriod: (period) => set({ period }),
-      setCompetitors: (competitors) => set({ competitors }),
-      setBrunoPortfolio: (brunoPortfolio) => set({ brunoPortfolio }),
-      setTotalParticipants: (totalParticipants) => set({ totalParticipants }),
-      reset: () =>
-        set({
-          period: 'mensal',
+  // Query para buscar ranking
+  const { data: rankingData, isLoading } = useQuery({
+    queryKey: ['ranking', period === 'bruno-method' ? 'mensal' : period],
+    queryFn: async () => {
+      if (period === 'bruno-method' && SHOW_MIC_METHOD) {
+        // Buscar portfolio do Bruno
+        const response = await fetch('/api/bruno-portfolio');
+        if (!response.ok) {
+          throw new Error('Erro ao buscar portfolio do Bruno');
+        }
+        const data = await response.json();
+        return {
           competitors: [],
-          brunoPortfolio: null,
+          brunoPortfolio: data.portfolio,
           totalParticipants: 0,
-        }),
-    }),
-    {
-      name: 'competicao_competitors',
-    }
-  )
-);
+        };
+      }
 
+      const response = await fetch(`/api/ranking?period=${period}`);
+      if (!response.ok) {
+        throw new Error('Erro ao buscar ranking');
+      }
+
+      const data = await response.json();
+      
+      // Converter ranking para formato Competitor
+      const competitors: Competitor[] = data.ranking.map((entry: any) => ({
+        id: entry.userId,
+        name: entry.name,
+        avatar: entry.avatar,
+        rank: entry.rank,
+        monthlyReturn: entry.monthlyReturn,
+        annualReturn: entry.annualReturn,
+        displayedPeriod: period === 'anual' ? 'anual' : 'mensal',
+        portfolio: entry.portfolio || [],
+      }));
+
+      return {
+        competitors,
+        brunoPortfolio: null,
+        totalParticipants: data.totalParticipants || 0,
+        lastUpdate: data.lastUpdate ? new Date(data.lastUpdate) : new Date(),
+      };
+    },
+    enabled: period !== 'bruno-method' || SHOW_MIC_METHOD,
+    staleTime: 2 * 60 * 1000, // 2 minutos
+  });
+
+  // Query para buscar portfolio do Bruno
+  const { data: brunoData } = useQuery({
+    queryKey: ['bruno-portfolio'],
+    queryFn: async () => {
+      const response = await fetch('/api/bruno-portfolio');
+      if (!response.ok) {
+        return null;
+      }
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutos
+  });
+
+  return {
+    period,
+    setPeriod,
+    competitors: rankingData?.competitors || [],
+    brunoPortfolio: period === 'bruno-method' && SHOW_MIC_METHOD
+      ? (brunoData?.portfolio || null)
+      : (rankingData?.brunoPortfolio || null),
+    totalParticipants: rankingData?.totalParticipants || 0,
+    lastUpdate: rankingData?.lastUpdate,
+    isLoading,
+  };
+}

@@ -46,10 +46,20 @@ export function AssetList({ assets, isPremium }: AssetListProps) {
                         Qtd: {isVisible ? asset.quantity.toLocaleString('pt-BR') : '•••'}
                       </p>
                       <p>
-                        Preço Médio:{' '}
-                        {isVisible
-                          ? formatPrice(asset.averagePrice, asset.ticker)
-                          : '•••'}
+                        <span className="text-muted-foreground">Preço Médio:</span>{' '}
+                        <span className="font-semibold text-blue-600 dark:text-blue-400">
+                          {isVisible
+                            ? formatPrice(asset.averagePrice, asset.ticker)
+                            : '•••'}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Preço Atual:</span>{' '}
+                        <span className="font-semibold text-purple-600 dark:text-purple-400">
+                          {isVisible
+                            ? formatPrice(asset.currentPrice, asset.ticker)
+                            : '•••'}
+                        </span>
                       </p>
                     </div>
                   </div>

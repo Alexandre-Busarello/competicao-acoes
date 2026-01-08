@@ -12,15 +12,17 @@ export function UserRankCard() {
   const { competitors, totalParticipants } = useRankingStore();
 
   if (!user) return null;
-
-  const isPositive = user.monthlyReturn >= 0;
   
   // Encontrar o usuário atual na lista de competidores
   const userInRanking = competitors.find(c => c.id === user.id);
   
+  // Usar monthlyReturn do ranking se disponível, senão do userStore, senão 0
+  const monthlyReturn = userInRanking?.monthlyReturn ?? (user as any).monthlyReturn ?? 0;
+  const isPositive = monthlyReturn >= 0;
+  
   // Se o usuário está na lista, usar o rank dele de lá
   // Caso contrário, usar o rank do userStore
-  const displayRank = userInRanking?.rank ?? user.rank;
+  const displayRank = userInRanking?.rank ?? (user as any).rank ?? 0;
   
   // Usar o total de participantes do backend (total real do ranking completo)
   // Se não estiver disponível ainda, usar fallback baseado nos competidores exibidos
@@ -59,7 +61,7 @@ export function UserRankCard() {
                 }`}
               >
                 {isPositive ? '+' : ''}
-                {user.monthlyReturn.toFixed(2)}%
+                {monthlyReturn.toFixed(2)}%
               </span>
               <span className="text-xs text-muted-foreground">este mês</span>
             </div>

@@ -10,13 +10,37 @@ import { formatPrice, isUSDCurrency } from '@/lib/utils/currency';
 
 export function TransactionList() {
   const { user } = useUserStore();
-  const { getTransactionsByUser } = useTransactionStore();
+  const { transactions, isLoading } = useTransactionStore();
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-muted-foreground">
+              Faça login para ver suas transações.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  const transactions = getTransactionsByUser(user.id);
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-muted-foreground">Carregando transações...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  if (transactions.length === 0) {
+  const userTransactions = transactions.filter(t => t.userId === user.id);
+
+  if (userTransactions.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card>
@@ -37,7 +61,7 @@ export function TransactionList() {
     <div className="container mx-auto px-4 py-4">
       <h2 className="text-lg font-semibold mb-4">Histórico de Transações</h2>
       <div className="space-y-3">
-        {transactions
+        {userTransactions
           .sort((a, b) => b.date.getTime() - a.date.getTime())
           .map((transaction) => {
             const isCompra = transaction.type === 'compra';

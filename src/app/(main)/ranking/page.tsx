@@ -7,84 +7,26 @@ import { RankingList } from '@/components/ranking/RankingList';
 import { useRankingStore } from '@/lib/store/rankingStore';
 import { useUserStore } from '@/lib/store/userStore';
 import { useRouter, usePathname } from 'next/navigation';
-import { Info } from 'lucide-react';
+import { Info, Trophy } from 'lucide-react';
 import type { Competitor, RankingPeriod } from '@/types';
 import type { RankingResult } from '@/lib/services/ranking-service';
+import { SHOW_MIC_METHOD } from '@/lib/config/features';
 
 export default function RankingPage() {
-  const { period, competitors, setPeriod, setCompetitors, setTotalParticipants } = useRankingStore();
-  const { user, setUser } = useUserStore();
+  const { period, competitors, setPeriod, totalParticipants, lastUpdate, isLoading } = useRankingStore();
+  const { user } = useUserStore();
   const router = useRouter();
   const pathname = usePathname();
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   // Resetar período para 'mensal' se estiver em 'bruno-method' ao entrar na página de ranking
   useEffect(() => {
-    if (pathname === '/ranking' && period === 'bruno-method') {
+    if (pathname === '/ranking' && period === 'bruno-method' && !SHOW_MIC_METHOD) {
       setPeriod('mensal');
     }
   }, [pathname, period, setPeriod]);
 
-  // Buscar ranking da API quando o período mudar (apenas leitura, sem calcular)
-  useEffect(() => {
-    const fetchRanking = async () => {
-      setIsLoading(true);
-      try {
-        // Usa /api/ranking que apenas retorna dados já calculados
-        const response = await fetch(`/api/ranking?period=${period}`);
-        if (response.ok) {
-          const data: RankingResult = await response.json();
-          // Converter ranking para formato Competitor
-          const competitorsData: Competitor[] = data.ranking.map(entry => ({
-            id: entry.userId,
-            name: entry.name,
-            avatar: entry.avatar, // Avatar vindo da API
-            rank: entry.rank,
-            monthlyReturn: entry.monthlyReturn,
-            annualReturn: entry.annualReturn,
-            displayedPeriod: (period === 'anual' ? 'anual' : 'mensal') as 'mensal' | 'anual',
-            portfolio: entry.portfolio || [], // Portfolio vindo da API
-          }));
-          setCompetitors(competitorsData);
-          // Armazenar total de participantes do backend
-          setTotalParticipants(data.totalParticipants || competitorsData.length);
-          
-          // Atualizar rank do usuário atual se ele estiver na lista de competidores
-          if (user) {
-            const userInRanking = competitorsData.find(c => c.id === user.id);
-            if (userInRanking) {
-              // Atualizar o rank do usuário com o valor real do ranking
-              setUser({
-                ...user,
-                rank: userInRanking.rank,
-                monthlyReturn: userInRanking.monthlyReturn,
-                annualReturn: userInRanking.annualReturn,
-              });
-            }
-          }
-          
-          // Usar a data do lastUpdate que vem da API (data real do cálculo)
-          const updateDate = data.lastUpdate instanceof Date 
-            ? data.lastUpdate 
-            : new Date(data.lastUpdate);
-          setLastUpdate(updateDate);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar ranking:', error);
-        // Em caso de erro, mantém dados mockados
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (period !== 'bruno-method') {
-      fetchRanking();
-    }
-  }, [period, setCompetitors, setTotalParticipants, user, setUser]);
-
   const handlePeriodChange = (newPeriod: RankingPeriod) => {
-    if (newPeriod === 'bruno-method') {
+    if (newPeriod === 'bruno-method' && SHOW_MIC_METHOD) {
       router.push('/bruno-method');
     } else {
       setPeriod(newPeriod);
@@ -95,7 +37,7 @@ export default function RankingPage() {
   const displayedCompetitors = period === 'anual' 
     ? competitors.map(c => ({
         ...c,
-        monthlyReturn: c.annualReturn ?? c.monthlyReturn * 12,
+        monthlyReturn: c.annualReturn ?? c.monthlyReturn, // Usa annualReturn se disponível, senão mantém monthlyReturn
         displayedPeriod: 'anual',
       })) as Competitor[]
     : competitors.map(c => ({
@@ -103,6 +45,8 @@ export default function RankingPage() {
         monthlyReturn: c.monthlyReturn,
         displayedPeriod: 'mensal',
       })) as Competitor[];
+
+  const hasCompetitors = displayedCompetitors.length > 0;
 
   return (
     <div className="min-h-screen">
@@ -112,20 +56,37 @@ export default function RankingPage() {
         lastUpdate={lastUpdate}
         isLoading={isLoading}
       />
-      {/* Disclaimer sobre delay de atualização */}
-      <div className="container mx-auto px-4 py-2 max-w-4xl">
-        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
-          <p className="text-xs text-blue-800 dark:text-blue-200 flex items-start gap-2">
-            <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
-            <span>
-              <strong>Atenção:</strong> O ranking é atualizado automaticamente a cada 15 minutos. 
-              Transações recém-cadastradas podem levar até 15 minutos para aparecer no ranking.
-            </span>
-          </p>
+      {/* Mostrar loading ou conteúdo baseado no estado */}
+      {isLoading ? (
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 mb-4 shadow-lg animate-pulse">
+              <Trophy className="h-8 w-8 text-white" />
+            </div>
+            <p className="text-muted-foreground">Carregando ranking...</p>
+          </div>
         </div>
-      </div>
-      <UserRankCard />
-      <RankingList competitors={displayedCompetitors} />
+      ) : (
+        <>
+          {/* Disclaimer sobre delay de atualização - só mostra se há competidores */}
+          {hasCompetitors && (
+          <div className="container mx-auto px-4 py-2 max-w-4xl">
+            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+              <p className="text-xs text-blue-800 dark:text-blue-200 flex items-start gap-2">
+                <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                <span>
+                  <strong>Atenção:</strong> O ranking é atualizado automaticamente a cada 15 minutos. 
+                  Transações recém-cadastradas podem levar até 15 minutos para aparecer no ranking.
+                </span>
+              </p>
+            </div>
+          </div>
+          )}
+          {/* UserRankCard só aparece se há competidores e usuário está logado */}
+          {hasCompetitors && <UserRankCard />}
+          <RankingList competitors={displayedCompetitors} />
+        </>
+      )}
     </div>
   );
 }

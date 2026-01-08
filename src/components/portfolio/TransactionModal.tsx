@@ -14,10 +14,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTransactionStore } from '@/lib/store/transactionStore';
 import { useUserStore } from '@/lib/store/userStore';
+import { CheckoutCTA } from '@/components/checkout/CheckoutCTA';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Loader2, CheckCircle2, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { getCurrencySymbol, isUSDCurrency } from '@/lib/utils/currency';
+import { allowsFractionalQuantity } from '@/lib/utils/asset-type';
 
 interface TransactionModalProps {
   open: boolean;
@@ -176,6 +178,12 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
     e.preventDefault();
     if (!user || !ticker || !quantity) return;
     
+    // Verificar se tem assinatura premium
+    if (!user.isPremium) {
+      setSubmitError('Assinatura premium necessária para cadastrar transações');
+      return;
+    }
+    
     // Bloquear submit se ticker não for válido
     if (!validation.valid) {
       setSubmitError('Valide o ticker antes de continuar');
@@ -192,35 +200,14 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
     setSubmitError(null);
 
     try {
-      // Enviar para API que buscará o preço no backend
-      const response = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user.id,
+      // Usar mutation do store que já faz a chamada à API
+      // O preço será obtido no backend via Yahoo Finance
+      await addTransaction({
           ticker: validation.ticker || ticker.toUpperCase(),
           type,
           quantity: numQuantity,
-          date: today.toISOString(),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao criar transação');
-      }
-
-      // Adicionar transação ao store local (MVP)
-      addTransaction({
-        userId: user.id,
-        ticker: data.transaction.ticker,
-        type: data.transaction.type,
-        quantity: data.transaction.quantity,
-        price: data.transaction.price, // Preço obtido do backend
-        date: new Date(data.transaction.date),
+        price: currentMarketPrice || 0, // Preço atual do mercado ou 0 (será obtido no backend)
+        date: today,
       });
 
       // Reset form
@@ -232,18 +219,35 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
       setValidation({ valid: false, ticker: '', loading: false });
       onOpenChange(false);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Erro ao criar transação');
+      // Tratar erro de quantidade insuficiente com mensagem detalhada
+      if (error instanceof Error && 'availableQuantity' in error) {
+        const customError = error as Error & {
+          availableQuantity?: number;
+          requestedQuantity?: number;
+          ticker?: string;
+        };
+        const availableQty = customError.availableQuantity ?? 0;
+        const requestedQty = customError.requestedQuantity ?? numQuantity;
+        const tickerName = customError.ticker || validation.ticker || ticker;
+        
+        setSubmitError(
+          `Quantidade insuficiente para venda. Você possui ${availableQty.toLocaleString('pt-BR')} unidades de ${tickerName}, mas está tentando vender ${requestedQty.toLocaleString('pt-BR')} unidades.`
+        );
+      } else {
+        setSubmitError(error instanceof Error ? error.message : 'Erro ao criar transação');
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const canSubmit = validation.valid && ticker && quantity && user && !isSubmitting;
+  const canSubmit = validation.valid && ticker && quantity && user && user.isPremium && !isSubmitting;
 
   // Detectar moeda baseada no ticker validado
   const detectedTicker = validation.ticker || ticker.toUpperCase();
   const isUSD = isUSDCurrency(detectedTicker);
   const currencySymbol = getCurrencySymbol(detectedTicker);
+  const allowsFractions = allowsFractionalQuantity(detectedTicker);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -254,6 +258,21 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
             Registre uma nova transação para atualizar sua carteira.
           </DialogDescription>
         </DialogHeader>
+        {user && !user.isPremium && (
+          <div className="px-4 sm:px-6 pb-4">
+            <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-4">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-3">
+                Você precisa de uma assinatura premium para cadastrar transações.
+              </p>
+              <CheckoutCTA
+                source="transaction_modal"
+                buttonText="Fazer Checkout"
+                size="sm"
+                className="w-full"
+              />
+            </div>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="grid gap-4 px-4 sm:px-6 pb-4 overflow-y-auto flex-1">
             <div className="grid gap-2">
@@ -347,13 +366,18 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
               <Input
                 id="quantity"
                 type="number"
-                min="1"
-                step="1"
-                placeholder="100"
+                min={allowsFractions ? "0.00000001" : "1"}
+                step={allowsFractions ? "0.00000001" : "1"}
+                placeholder={allowsFractions ? "0.5" : "100"}
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 required
               />
+              {allowsFractions && (
+                <p className="text-xs text-muted-foreground">
+                  Este ativo permite quantidades fracionadas (ex: 0.5, 0.001)
+                </p>
+              )}
             </div>
 
             {validation.valid && currentMarketPrice && (

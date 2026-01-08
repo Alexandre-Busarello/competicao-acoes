@@ -73,11 +73,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Calcula ranking completo (mensal e anual)
-    const [monthlyRanking, annualRanking] = await Promise.all([
-      rankingService.calculateRanking('mensal'),
-      rankingService.calculateRanking('anual'),
-    ]);
+    // 3. Calcula ranking completo (mensal e anual) usando os mesmos preços
+    const { monthly: monthlyRanking, annual: annualRanking } = 
+      await rankingService.calculateBothRankings();
 
     const rankingLastUpdate = new Date();
     const duration = Date.now() - startTime;

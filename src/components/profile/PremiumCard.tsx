@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Crown, Check } from 'lucide-react';
+import { SHOW_MIC_METHOD } from '@/lib/config/features';
 
 export function PremiumCard() {
   return (
@@ -19,10 +20,12 @@ export function PremiumCard() {
             <Check className="h-4 w-4 text-green-500" />
             <span>Acesso a todas as carteiras</span>
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Check className="h-4 w-4 text-green-500" />
-            <span>Carteira oficial do Bruno</span>
-          </div>
+          {SHOW_MIC_METHOD && (
+            <div className="flex items-center gap-2 text-sm">
+              <Check className="h-4 w-4 text-green-500" />
+              <span>Carteira oficial do Bruno</span>
+            </div>
+          )}
           <div className="flex items-center gap-2 text-sm">
             <Check className="h-4 w-4 text-green-500" />
             <span>Participação nos prêmios</span>

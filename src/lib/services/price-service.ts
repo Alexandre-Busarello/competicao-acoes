@@ -107,9 +107,13 @@ export class PriceService {
     
     transactions.forEach(tx => {
       if (tx.ticker) {
-        // Normaliza ticker (adiciona .SA se necessário)
-        const normalized = tx.ticker.toUpperCase().trim();
-        uniqueTickers.add(normalized);
+        const ticker = tx.ticker.toUpperCase().trim();
+        // Adiciona tanto o ticker original quanto o normalizado (.SA)
+        uniqueTickers.add(ticker);
+        // Se não termina com .SA e parece ser brasileiro, adiciona também com .SA
+        if (!ticker.endsWith('.SA') && /^[A-Z]{4,5}\d{1,2}$/.test(ticker)) {
+          uniqueTickers.add(`${ticker}.SA`);
+        }
       }
     });
     

@@ -11,6 +11,7 @@ const COLORS = {
   acao: '#3b82f6',
   fii: '#10b981',
   'renda-fixa': '#f59e0b',
+  cripto: '#f97316',
   outros: '#8b5cf6',
 };
 
@@ -37,6 +38,8 @@ export function AssetAllocationChart({ assets }: AssetAllocationChartProps) {
         ? 'FIIs'
         : item.name === 'renda-fixa'
         ? 'Renda Fixa'
+        : item.name === 'cripto'
+        ? 'Criptomoedas'
         : 'Outros',
     value: Number(item.value.toFixed(2)),
   }));

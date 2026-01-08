@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 
@@ -12,58 +12,101 @@ interface BeforeInstallPromptEvent extends Event {
 const DISMISSED_KEY = 'pwa-install-dismissed';
 
 export function InstallPrompt() {
+  // Usar ref para armazenar o prompt sem causar re-renderizações
+  const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
-  const [canInstall, setCanInstall] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
-  // Garantir que só executa no cliente
+  // Garantir que só executa no cliente - não bloqueante
   useEffect(() => {
     setIsClient(true);
   }, []);
 
+  // useEffect principal - executado apenas uma vez, não bloqueante
   useEffect(() => {
     // Não executar nada se não estiver no cliente
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' || !isClient) {
       return;
     }
-    // Verificar se já está instalado
-    const checkStandalone = () => {
-      const standalone = 
-        window.matchMedia('(display-mode: standalone)').matches ||
-        (window.navigator as any).standalone === true ||
-        document.referrer.includes('android-app://');
-      
-      setIsStandalone(standalone);
-      setIsInstalled(standalone);
-      
-      if (standalone) {
-        console.log('🔵 App já está instalado (standalone mode)');
-        setShowPrompt(false);
-        setCanInstall(false);
+
+    // Verificar se já está instalado de forma assíncrona e não bloqueante
+    const checkStandalone = (): boolean => {
+      try {
+        const standalone = 
+          window.matchMedia('(display-mode: standalone)').matches ||
+          (window.navigator as any).standalone === true ||
+          document.referrer.includes('android-app://');
+        
+        if (standalone) {
+          setIsInstalled(true);
+          setShowPrompt(false);
+          console.log('🔵 App já está instalado (standalone mode)');
+          return true;
+        }
+        return false;
+      } catch (error) {
+        // Em caso de erro, não bloquear a aplicação
+        console.warn('Erro ao verificar standalone mode:', error);
+        return false;
       }
-      
-      return standalone;
     };
 
-    // Verificar imediatamente
-    if (checkStandalone()) {
-      return;
-    }
-
-    // Verificar se o usuário já dispensou o banner
-    const dismissed = localStorage.getItem(DISMISSED_KEY);
-    if (dismissed) {
-      const dismissedTime = parseInt(dismissed, 10);
-      const daysSinceDismiss = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
-      // Mostrar novamente após 7 dias
-      if (daysSinceDismiss < 7) {
-        console.log('🔵 Banner foi dispensado recentemente');
-        return;
+    // Verificar standalone de forma assíncrona usando requestIdleCallback ou setTimeout
+    const checkStandaloneAsync = () => {
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(() => {
+          checkStandalone();
+        }, { timeout: 1000 });
+      } else {
+        setTimeout(() => {
+          checkStandalone();
+        }, 0);
       }
-    }
+    };
+
+    // Verificar standalone imediatamente de forma não bloqueante
+    checkStandaloneAsync();
+
+    // Verificar se o usuário já dispensou o banner de forma assíncrona
+    const checkDismissedAsync = () => {
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(() => {
+          try {
+            const dismissed = localStorage.getItem(DISMISSED_KEY);
+            if (dismissed) {
+              const dismissedTime = parseInt(dismissed, 10);
+              const daysSinceDismiss = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
+              if (daysSinceDismiss < 7) {
+                console.log('🔵 Banner foi dispensado recentemente');
+                return;
+              }
+            }
+          } catch (error) {
+            console.warn('Erro ao verificar dismissed:', error);
+          }
+        }, { timeout: 500 });
+      } else {
+        setTimeout(() => {
+          try {
+            const dismissed = localStorage.getItem(DISMISSED_KEY);
+            if (dismissed) {
+              const dismissedTime = parseInt(dismissed, 10);
+              const daysSinceDismiss = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
+              if (daysSinceDismiss < 7) {
+                console.log('🔵 Banner foi dispensado recentemente');
+                return;
+              }
+            }
+          } catch (error) {
+            console.warn('Erro ao verificar dismissed:', error);
+          }
+        }, 0);
+      }
+    };
+
+    checkDismissedAsync();
 
     console.log('🔍 Aguardando evento beforeinstallprompt...');
 
@@ -74,25 +117,25 @@ export function InstallPrompt() {
       console.log('✅ Evento beforeinstallprompt recebido!');
       e.preventDefault();
       const promptEvent = e as BeforeInstallPromptEvent;
+      deferredPromptRef.current = promptEvent;
       setDeferredPrompt(promptEvent);
       setShowPrompt(true);
-      setCanInstall(true);
     };
 
+    // Adicionar listener de forma não bloqueante
     window.addEventListener('beforeinstallprompt', handler);
 
-    // Verificar se o evento não foi disparado após alguns segundos
-    // Se não foi disparado, pode significar que o app já está instalado
+    // Verificar se o evento não foi disparado após alguns segundos (não bloqueante)
     const checkEventTimer = setTimeout(() => {
-      if (!deferredPrompt) {
+      if (!deferredPromptRef.current) {
         console.log('Verificando requisitos do PWA:');
         const hasServiceWorker = 'serviceWorker' in navigator;
         const hasManifest = !!document.querySelector('link[rel="manifest"]');
         
-        let hasActiveSW = false;
         if (hasServiceWorker) {
+          // Verificação assíncrona não bloqueante
           navigator.serviceWorker.getRegistrations().then(registrations => {
-            hasActiveSW = registrations.length > 0 && registrations.some(reg => reg.active);
+            const hasActiveSW = registrations.length > 0 && registrations.some(reg => reg.active);
             
             console.log('- Service Worker:', hasServiceWorker ? '✅' : '❌');
             console.log('- Manifest:', hasManifest ? '✅' : '❌');
@@ -100,108 +143,86 @@ export function InstallPrompt() {
             
             // Se todos os requisitos estão atendidos mas o evento não disparou,
             // provavelmente o app já está instalado (Chrome mostra "Abrir no app")
-            if (hasServiceWorker && hasManifest && hasActiveSW && !deferredPrompt) {
+            if (hasServiceWorker && hasManifest && hasActiveSW && !deferredPromptRef.current) {
               console.log('🔵 Evento beforeinstallprompt não disparado - App provavelmente já está instalado');
               console.log('💡 Se o Chrome mostra "Abrir no app", o PWA já está instalado');
             }
+          }).catch(error => {
+            console.warn('Erro ao verificar service worker:', error);
           });
         }
       }
     }, 8000);
 
-    // Verificar periodicamente se está instalado (a cada 2 segundos)
+    // Verificar periodicamente se está instalado (a cada 2 segundos) - não bloqueante
     const checkInstalledInterval = setInterval(() => {
-      if (checkStandalone()) {
-        setShowPrompt(false);
-        setCanInstall(false);
-        setDeferredPrompt(null);
+      try {
+        if (checkStandalone()) {
+          setShowPrompt(false);
+          deferredPromptRef.current = null;
+          setDeferredPrompt(null);
+        }
+      } catch (error) {
+        console.warn('Erro ao verificar instalado periodicamente:', error);
       }
     }, 2000);
-
-    // Verificar novamente se está instalado após um delay inicial
-    const checkInstalled = setTimeout(() => {
-      if (checkStandalone()) {
-        setShowPrompt(false);
-        setCanInstall(false);
-      }
-    }, 1000);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
       clearTimeout(checkEventTimer);
-      clearTimeout(checkInstalled);
       clearInterval(checkInstalledInterval);
     };
-  }, [deferredPrompt]);
+  }, [isClient]); // Removido deferredPrompt das dependências
 
   const handleInstall = async () => {
+    // Usar a ref para garantir que temos o prompt mais recente
+    const prompt = deferredPromptRef.current || deferredPrompt;
+    
     // Se temos o prompt nativo, usar ele
-    if (deferredPrompt) {
+    if (prompt) {
       try {
-        await deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
+        await prompt.prompt();
+        const { outcome } = await prompt.userChoice;
 
         if (outcome === 'accepted') {
           setShowPrompt(false);
           setIsInstalled(true);
         } else {
+          deferredPromptRef.current = null;
           setDeferredPrompt(null);
         }
       } catch (error) {
         console.error('Erro ao instalar PWA:', error);
+        deferredPromptRef.current = null;
         setDeferredPrompt(null);
       }
       return;
-    }
-
-    // Se não temos o prompt nativo mas todos os requisitos estão atendidos,
-    // tentar abrir o diálogo de instalação do Chrome manualmente
-    // Isso funciona em alguns navegadores quando o PWA está pronto
-    if (canInstall) {
-      // Verificar se o Chrome mostra o botão de instalação na barra de endereços
-      // Se sim, instruir o usuário a clicar nele
-      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-      
-      if (isChrome) {
-        // Tentar abrir o menu de instalação do Chrome
-        // Nota: Não há API direta para isso, mas podemos instruir o usuário
-        alert(
-          'Para instalar o app:\n\n' +
-          '1. Procure pelo ícone de instalação (➕) na barra de endereços\n' +
-          '2. Ou clique no menu (⋮) → "Instalar Ranking Investimentos"\n\n' +
-          'Se o ícone não aparecer, aguarde alguns segundos ou recarregue a página.'
-        );
-      } else {
-        alert(
-          'Para instalar o app, procure pela opção de instalação no menu do navegador.'
-        );
-      }
     }
   };
 
   const handleDismiss = () => {
     setShowPrompt(false);
+    deferredPromptRef.current = null;
     setDeferredPrompt(null);
-    // Salvar no localStorage que foi dispensado
-    localStorage.setItem(DISMISSED_KEY, Date.now().toString());
+    // Salvar no localStorage que foi dispensado de forma não bloqueante
+    try {
+      localStorage.setItem(DISMISSED_KEY, Date.now().toString());
+    } catch (error) {
+      console.warn('Erro ao salvar dismissed:', error);
+    }
   };
 
   // Não renderizar nada durante SSR ou se não estiver no cliente
+  // Isso não bloqueia a renderização do resto da aplicação
   if (!isClient) {
     return null;
   }
 
-  // Verificar novamente antes de renderizar (última verificação)
-  // Só verificar se estiver no cliente
-  const isCurrentlyInstalled = 
-    window.matchMedia('(display-mode: standalone)').matches ||
-    (window.navigator as any).standalone === true ||
-    document.referrer.includes('android-app://');
-
   // IMPORTANTE: Só mostrar o banner se o evento beforeinstallprompt foi disparado
   // Se o evento não foi disparado, significa que o app já está instalado
   // (mesmo que o Chrome mostre "Abrir no app" em vez de "Instalar")
-  if (!showPrompt || !deferredPrompt || isInstalled || isCurrentlyInstalled) {
+  // Verificação não bloqueante - não acessa window durante renderização
+  if (!showPrompt || !deferredPrompt || isInstalled) {
     return null;
   }
 

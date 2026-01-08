@@ -5,17 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Check, Trophy, Eye, Star } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
 import { useState } from 'react';
+import { SHOW_MIC_METHOD } from '@/lib/config/features';
+import { redirectToKiwifyCheckout } from '@/lib/utils/checkout';
 
 export function CheckoutSection() {
-  const { updatePremiumStatus } = useUserStore();
+  const { user } = useUserStore();
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = () => {
     setIsProcessing(true);
-    // Simular processamento de pagamento
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    updatePremiumStatus(true);
-    setIsProcessing(false);
+    redirectToKiwifyCheckout(user?.email, 'profile');
   };
 
   return (
@@ -42,17 +41,19 @@ export function CheckoutSection() {
             </div>
           </div>
 
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 mt-0.5">
-              <Star className="h-5 w-5 text-yellow-500" />
+          {SHOW_MIC_METHOD && (
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 mt-0.5">
+                <Star className="h-5 w-5 text-yellow-500" />
+              </div>
+              <div>
+                <p className="font-semibold">Ver carteira oficial do Bruno Chimarelli</p>
+                <p className="text-sm text-muted-foreground">
+                  Acesse a estratégia completa e atualizada do especialista
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold">Ver carteira oficial do Bruno Chimarelli</p>
-              <p className="text-sm text-muted-foreground">
-                Acesse a estratégia completa e atualizada do especialista
-              </p>
-            </div>
-          </div>
+          )}
 
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 mt-0.5">

@@ -1,4 +1,4 @@
-export type AssetType = 'acao' | 'fii' | 'renda-fixa' | 'outros';
+export type AssetType = 'acao' | 'fii' | 'renda-fixa' | 'cripto' | 'outros';
 
 export interface Asset {
   id: string;

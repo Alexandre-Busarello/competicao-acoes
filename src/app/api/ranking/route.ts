@@ -20,14 +20,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Buscar ranking do cache (já calculado)
-    let ranking = rankingService.getRanking(period);
+    // Buscar ranking mais recente do banco de dados
+    let ranking = await rankingService.getRanking(period);
 
     if (!ranking) {
-      // Se não há ranking no cache, calcular pela primeira vez (inicialização)
+      // Se não há ranking no banco, calcular pela primeira vez (inicialização)
       // Isso garante que sempre haverá dados para exibir, mesmo na primeira execução
-      console.log(`Ranking ${period} não encontrado no cache. Calculando pela primeira vez...`);
-      ranking = await rankingService.calculateRanking(period);
+      console.log(`Ranking ${period} não encontrado no banco. Calculando pela primeira vez...`);
+      const calculatedRanking = await rankingService.calculateRanking(period);
+      // Buscar novamente via getRanking para enriquecer com avatares
+      ranking = await rankingService.getRanking(period) || calculatedRanking;
     }
 
     // Garantir que lastUpdate seja serializado corretamente como ISO string

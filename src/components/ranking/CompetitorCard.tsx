@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, Medal, Award, Eye } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
+import { formatUserNameWithId, getNameWithoutId } from '@/lib/utils/format-user-name';
 import Link from 'next/link';
 import type { Competitor } from '@/types';
 
@@ -14,8 +15,11 @@ interface CompetitorCardProps {
 export function CompetitorCard({ competitor }: CompetitorCardProps) {
   const { user } = useUserStore();
   const isPremium = user?.isPremium ?? false;
-  const isPositive = competitor.monthlyReturn >= 0;
-  const initials = competitor.name
+  const monthlyReturn = competitor.monthlyReturn ?? 0;
+  const isPositive = monthlyReturn >= 0;
+  // Remover ID do nome para gerar iniciais corretamente
+  const nameWithoutId = getNameWithoutId(competitor.name);
+  const initials = nameWithoutId
     .split(' ')
     .map((n) => n[0])
     .join('')
@@ -56,7 +60,9 @@ export function CompetitorCard({ competitor }: CompetitorCardProps) {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold truncate">{competitor.name}</p>
+                <p className="font-semibold truncate">
+                  {formatUserNameWithId(competitor.name, competitor.id)}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {competitor.portfolio.length} ativos
                 </p>
@@ -76,7 +82,7 @@ export function CompetitorCard({ competitor }: CompetitorCardProps) {
                   }`}
                 >
                   {isPositive ? '+' : ''}
-                  {competitor.monthlyReturn.toFixed(2)}%
+                  {monthlyReturn.toFixed(2)}%
                 </span>
                 <p className="text-xs text-muted-foreground">{competitor.displayedPeriod}</p>
               </div>

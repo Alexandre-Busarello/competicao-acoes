@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useRankingStore } from '@/lib/store/rankingStore';
 import { useUserStore } from '@/lib/store/userStore';
 import { PortfolioHeader } from '@/components/portfolio/PortfolioHeader';
@@ -8,29 +7,22 @@ import { AssetAllocationChart } from '@/components/portfolio/AssetAllocationChar
 import { AssetList } from '@/components/portfolio/AssetList';
 import { BlurOverlay } from '@/components/portfolio/BlurOverlay';
 import { PageHeader } from '@/components/navigation/PageHeader';
-import { Star, Copy } from 'lucide-react';
+import { Star, Copy, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { generateBrunoPortfolio } from '@/lib/mock-data';
 import { Competitor } from '@/types';
 
 export default function BrunoMethodPage() {
-  const { brunoPortfolio, setBrunoPortfolio } = useRankingStore();
+  const { brunoPortfolio, isLoading } = useRankingStore();
   const { user } = useUserStore();
   const isPremium = user?.isPremium ?? false;
 
-  useEffect(() => {
-    if (!brunoPortfolio) {
-      const portfolio = generateBrunoPortfolio();
-      setBrunoPortfolio(portfolio);
-    }
-  }, [brunoPortfolio, setBrunoPortfolio]);
-
-  if (!brunoPortfolio) {
+  if (isLoading || !brunoPortfolio) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
           <h1 className="text-2xl font-bold mb-2">Carregando...</h1>
         </div>
       </div>

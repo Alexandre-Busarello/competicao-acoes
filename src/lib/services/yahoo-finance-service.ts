@@ -192,6 +192,23 @@ export class YahooFinanceService {
   }
 
   /**
+   * Obtém dados completos do quote (incluindo tipo, nome, etc.)
+   */
+  async getQuoteData(ticker: string): Promise<any | null> {
+    try {
+      const normalizedTicker = normalizeTicker(ticker);
+      const result: any = await retryWithBackoff(async () => {
+        return await yahooFinance.quote(normalizedTicker);
+      });
+      
+      return result || null;
+    } catch (error) {
+      console.error(`Erro ao obter dados do quote de ${ticker}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Obtém preços de múltiplos tickers em batch (otimizado)
    */
   async getBatchPrices(tickers: string[]): Promise<BatchPriceResult> {
