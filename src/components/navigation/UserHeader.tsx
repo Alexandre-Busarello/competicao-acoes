@@ -184,25 +184,25 @@ export function UserHeader() {
           })}
         </nav>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <ThemeToggle />
-          <Link href="/perfil" className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
-            <Avatar className="h-9 w-9 flex-shrink-0">
+          <Link href="/perfil" className="flex items-center gap-1.5 md:gap-2 min-w-0 max-w-[200px] md:max-w-[180px] hover:opacity-80 transition-opacity">
+            <Avatar className="h-8 w-8 md:h-7 md:w-7 flex-shrink-0">
               <AvatarImage src={user.avatarUrl} alt={user.name} />
               <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="hidden sm:block min-w-0">
-              <div className="flex items-center gap-1.5">
-                <p className="font-semibold text-sm truncate">
+            <div className="hidden sm:block min-w-0 flex-1 overflow-hidden">
+              <div className="flex items-center gap-1 min-w-0">
+                <p className="font-semibold text-xs md:text-sm truncate min-w-0">
                   {formatUserNameWithId(user.name || 'Usuário', user.id)}
                 </p>
                 {user.isPremium && (
-                  <Crown className="h-3.5 w-3.5 text-warning flex-shrink-0" />
+                  <Crown className="h-3 w-3 md:h-3.5 md:w-3.5 text-warning flex-shrink-0" />
                 )}
               </div>
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-[10px] md:text-xs text-muted-foreground truncate">
                 {user.email || 'Sem email'}
               </p>
             </div>
