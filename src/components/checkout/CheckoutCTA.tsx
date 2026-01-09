@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { LeadCaptureModal } from './LeadCaptureModal';
 import { Sparkles, Lock } from 'lucide-react';
+import { useAuth } from '@/lib/auth/client';
+import { redirectToKiwifyCheckout } from '@/lib/utils/checkout';
 
 interface CheckoutCTAProps {
   source?: string;
@@ -25,11 +27,48 @@ export function CheckoutCTA({
   className,
 }: CheckoutCTAProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+
+  const handleClick = () => {
+    // Se usuário estiver logado, usar email da conta e pular modal
+    if (isAuthenticated && user?.email) {
+      // Criar lead se necessário e redirecionar direto para checkout
+      fetch('/api/leads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email.trim(),
+          name: user.name || undefined,
+          source,
+        }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          // Se lead já existe e é premium, não fazer nada (ou mostrar mensagem)
+          if (data.action === 'send_magic_link') {
+            // Usuário já é premium, não precisa fazer checkout
+            return;
+          }
+          // Redirecionar para checkout com email do usuário logado
+          redirectToKiwifyCheckout(user.email, source);
+        })
+        .catch((error) => {
+          console.error('Error creating lead:', error);
+          // Mesmo com erro, redirecionar para checkout
+          redirectToKiwifyCheckout(user.email, source);
+        });
+    } else {
+      // Usuário não logado, abrir modal para capturar email
+      setIsModalOpen(true);
+    }
+  };
 
   return (
     <>
       <Button
-        onClick={() => setIsModalOpen(true)}
+        onClick={handleClick}
         variant={variant}
         size={size}
         className={className}

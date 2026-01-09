@@ -19,14 +19,15 @@ export function ConversionBanner() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground">
                 <Sparkles className="h-3.5 w-3.5 inline-block mr-1.5 text-yellow-500" />
-                Comece a pontuar agora e participe da comunidade e prêmios
+                Desbloqueie carteiras de todos os usuários e participe dos prêmios.{' '}
+                <span className="text-muted-foreground">Ou entre agora e teste suas habilidades de investimento na prática com outros competidores, sem premiação</span>
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
             <CheckoutCTA
               source="ranking_banner"
-              buttonText="Participar"
+              buttonText="Desbloquear Premium"
               size="sm"
               variant="default"
               className="flex-1 sm:flex-none"
