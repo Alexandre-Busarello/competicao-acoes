@@ -66,16 +66,16 @@ export function UserHeader() {
             />
           </Link>
           {/* Navegação Desktop - Loading */}
-          <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
+          <nav className="hidden md:flex items-center gap-0.5 flex-1 justify-center">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
                 <div
                   key={item.href}
-                  className="flex items-center gap-2 px-4 py-2 rounded-md text-muted-foreground opacity-50"
+                  className="flex items-center gap-1.5 px-2.5 md:px-3 py-1.5 md:py-1.5 rounded-md text-muted-foreground opacity-50"
                 >
-                  <Icon className="h-4 w-4" />
-                  <span className="text-sm font-medium">{item.label}</span>
+                  <Icon className="h-3.5 w-3.5 md:h-3.5 md:w-3.5" />
+                  <span className="text-xs md:text-sm font-medium">{item.label}</span>
                 </div>
               );
             })}
@@ -102,7 +102,7 @@ export function UserHeader() {
             />
           </Link>
           {/* Navegação Desktop - Não autenticado */}
-          <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
+          <nav className="hidden md:flex items-center gap-0.5 flex-1 justify-center">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
@@ -112,14 +112,14 @@ export function UserHeader() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-2 px-4 py-2 rounded-md transition-colors',
+                    'flex items-center gap-1.5 px-2.5 md:px-3 py-1.5 md:py-1.5 rounded-md transition-colors',
                     isActive
                       ? 'text-primary bg-primary/10'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                   )}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span className="text-sm font-medium">{item.label}</span>
+                  <Icon className="h-3.5 w-3.5 md:h-3.5 md:w-3.5" />
+                  <span className="text-xs md:text-sm font-medium">{item.label}</span>
                 </Link>
               );
             })}
@@ -161,7 +161,7 @@ export function UserHeader() {
           </Link>
         
         {/* Navegação Desktop */}
-        <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
+        <nav className="hidden md:flex items-center gap-0.5 flex-1 justify-center">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
@@ -171,14 +171,14 @@ export function UserHeader() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-md transition-colors',
+                  'flex items-center gap-1.5 px-2.5 md:px-3 py-1.5 md:py-1.5 rounded-md transition-colors',
                   isActive
                     ? 'text-primary bg-primary/10'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 )}
               >
-                <Icon className="h-4 w-4" />
-                <span className="text-sm font-medium">{item.label}</span>
+                <Icon className="h-3.5 w-3.5 md:h-3.5 md:w-3.5" />
+                <span className="text-xs md:text-sm font-medium">{item.label}</span>
               </Link>
             );
           })}
