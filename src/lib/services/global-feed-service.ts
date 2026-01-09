@@ -35,33 +35,107 @@ export class GlobalFeedService extends BaseFeedService {
     const bufferMultiplier = 2;
     const fetchLimit = limit * bufferMultiplier;
 
+    // Sempre buscar posts muito recentes (últimas 24 horas) para garantir que apareçam
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
     const where: any = {
       isPublic: true,
       deletedAt: null,
     };
 
     // Buscar posts do banco
-    const posts = await this.fetchPostsFromPrisma({
-      where,
-      take: fetchLimit + 1, // +1 para verificar se tem mais
-      cursor: cursor ? { id: cursor } : undefined,
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    // Se não há cursor (primeira página), buscar posts recentes primeiro
+    // Se há cursor, buscar normalmente mas também garantir posts muito recentes
+    let posts: any[] = [];
+    
+    if (!cursor) {
+      // Primeira página: buscar posts recentes primeiro
+      posts = await this.fetchPostsFromPrisma({
+        where,
+        take: fetchLimit + 1, // +1 para verificar se tem mais
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    } else {
+      // Páginas seguintes: buscar normalmente com cursor
+      const cursorPosts = await this.fetchPostsFromPrisma({
+        where,
+        take: fetchLimit + 1, // +1 para verificar se tem mais
+        cursor: { id: cursor },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      // Também buscar posts muito recentes que podem ter sido criados após o cursor
+      // Isso garante que posts novos sempre apareçam, mesmo em páginas seguintes
+      const recentPosts = await this.fetchPostsFromPrisma({
+        where: {
+          ...where,
+          createdAt: {
+            gte: twentyFourHoursAgo,
+          },
+        },
+        take: 50, // Buscar até 50 posts recentes
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      // Combinar e remover duplicatas (priorizar posts mais recentes)
+      const postMap = new Map<string, any>();
+      
+      // Adicionar posts recentes primeiro (têm prioridade)
+      recentPosts.forEach(post => {
+        postMap.set(post.id, post);
+      });
+      
+      // Adicionar posts do cursor (não sobrescrever se já existe)
+      cursorPosts.forEach(post => {
+        if (!postMap.has(post.id)) {
+          postMap.set(post.id, post);
+        }
+      });
+
+      posts = Array.from(postMap.values());
+      
+      // Ordenar por data de criação (mais recentes primeiro)
+      posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      
+      // Limitar ao fetchLimit + 1
+      if (posts.length > fetchLimit + 1) {
+        posts = posts.slice(0, fetchLimit + 1);
+      }
+    }
 
     // Se não há usuário logado, ordenar apenas por engajamento e data
     if (!currentUserId) {
+      // Posts muito recentes (últimas 2 horas) têm boost de prioridade
+      const twoHoursAgo = new Date();
+      twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
+      
       // Calcular scores e ordenar
-      const postsWithScores = posts.map(post => ({
-        post,
-        score: this.calculateEngagementScore(post),
-      }));
+      const postsWithScores = posts.map(post => {
+        const baseScore = this.calculateEngagementScore(post);
+        const isVeryRecent = post.createdAt >= twoHoursAgo;
+        // Boost moderado de 20 pontos para posts muito recentes
+        // Isso garante que apareçam antes de posts muito antigos sem engajamento,
+        // mas não sobrepõe posts com engajamento significativo (ex: 30+ likes)
+        const boostedScore = isVeryRecent ? baseScore + 20 : baseScore;
+        
+        return {
+          post,
+          score: baseScore,
+          boostedScore,
+        };
+      });
 
-      // Ordenar: primeiro por score DESC, depois por createdAt DESC
+      // Ordenar: primeiro por boostedScore DESC, depois por createdAt DESC
       postsWithScores.sort((a, b) => {
-        if (b.score !== a.score) {
-          return b.score - a.score;
+        if (b.boostedScore !== a.boostedScore) {
+          return b.boostedScore - a.boostedScore;
         }
         return b.post.createdAt.getTime() - a.post.createdAt.getTime();
       });
@@ -83,8 +157,7 @@ export class GlobalFeedService extends BaseFeedService {
     const followingUserIds = new Set(followingUsers.map(u => u.id));
 
     // Buscar visualizações do usuário nas últimas 24 horas
-    const twentyFourHoursAgo = new Date();
-    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+    // (twentyFourHoursAgo já foi definido acima)
 
     // Buscar posts recentes de pessoas que o usuário segue (últimas 24 horas)
     let followingPosts: any[] = [];
@@ -171,15 +244,29 @@ export class GlobalFeedService extends BaseFeedService {
     });
 
     // Calcular scores para posts não visualizados (geral)
-    const notViewedWithScores = notViewed.map(post => ({
-      post,
-      score: this.calculateEngagementScore(post),
-    }));
+    // Posts muito recentes (últimas 2 horas) têm boost de prioridade
+    const twoHoursAgo = new Date();
+    twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
+    
+    const notViewedWithScores = notViewed.map(post => {
+      const baseScore = this.calculateEngagementScore(post);
+      const isVeryRecent = post.createdAt >= twoHoursAgo;
+      // Boost moderado de 20 pontos para posts muito recentes
+      // Isso garante que apareçam antes de posts muito antigos sem engajamento,
+      // mas não sobrepõe posts com engajamento significativo (ex: 30+ likes)
+      const boostedScore = isVeryRecent ? baseScore + 20 : baseScore;
+      
+      return {
+        post,
+        score: baseScore,
+        boostedScore,
+      };
+    });
 
-    // Ordenar grupo não visualizado (geral): primeiro por score DESC, depois por createdAt DESC
+    // Ordenar grupo não visualizado (geral): primeiro por boostedScore DESC, depois por createdAt DESC
     notViewedWithScores.sort((a, b) => {
-      if (b.score !== a.score) {
-        return b.score - a.score;
+      if (b.boostedScore !== a.boostedScore) {
+        return b.boostedScore - a.boostedScore;
       }
       return b.post.createdAt.getTime() - a.post.createdAt.getTime();
     });
