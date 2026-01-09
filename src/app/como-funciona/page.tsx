@@ -82,9 +82,9 @@ export default function ComoFuncionaPage() {
                       <li><strong>Vendas:</strong> Quando você vende ações, o dinheiro recebido é incluído no valor atual da carteira</li>
                       <li><strong>Encerramento de posições:</strong> Quando você vende todas as ações de um ativo, o dinheiro recebido continua contando para o valor atual</li>
                     </ul>
-                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
-                      <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Exemplo prático:</p>
-                      <p className="text-blue-800 dark:text-blue-200 text-xs">
+                    <div className="mt-3 p-3 bg-primary/10 dark:bg-primary/20 rounded-md border border-primary/20 dark:border-primary/30">
+                      <p className="font-semibold text-primary dark:text-primary mb-1">Exemplo prático:</p>
+                      <p className="text-foreground/80 dark:text-foreground/80 text-xs">
                         Você compra 100 ações de PETR4 a R$ 30,00 (investiu R$ 3.000,00). 
                         Depois vende 50 ações a R$ 35,00 (recebeu R$ 1.750,00). 
                         As 50 ações restantes valem R$ 1.750,00 (a preço atual de mercado). 
@@ -107,16 +107,16 @@ export default function ComoFuncionaPage() {
                     Quanto maior sua rentabilidade percentual, melhor sua posição. A quantidade investida 
                     não importa - apenas a rentabilidade proporcional é considerada.
                   </p>
-                  <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-md border border-purple-200 dark:border-purple-800">
-                    <p className="font-semibold text-purple-900 dark:text-purple-100 mb-2">Critério de Desempate:</p>
-                    <p className="text-sm text-purple-800 dark:text-purple-200 mb-2">
+                  <div className="mt-3 p-3 bg-primary/10 dark:bg-primary/20 rounded-md border border-primary/20 dark:border-primary/30">
+                    <p className="font-semibold text-primary dark:text-primary mb-2">Critério de Desempate:</p>
+                    <p className="text-sm text-foreground/80 dark:text-foreground/80 mb-2">
                       Quando dois ou mais participantes têm a mesma rentabilidade (ou muito próxima), 
                       o sistema usa os seguintes critérios de desempate, nesta ordem:
                     </p>
-                    <ol className="list-decimal list-inside space-y-2 text-sm text-purple-800 dark:text-purple-200 ml-2">
+                    <ol className="list-decimal list-inside space-y-2 text-sm text-foreground/80 dark:text-foreground/80 ml-2">
                       <li>
                         <strong>Número de ativos:</strong> Quem tem mais ativos diferentes na carteira ganha
-                        <p className="text-xs text-purple-700 dark:text-purple-300 mt-1 ml-4">
+                        <p className="text-xs text-foreground/70 dark:text-foreground/70 mt-1 ml-4">
                           <strong>Motivo:</strong> Incentiva a diversificação da carteira, uma prática fundamental de investimento. 
                           Uma carteira diversificada é geralmente mais resiliente e demonstra conhecimento sobre diferentes setores e ativos.
                         </p>
@@ -136,9 +136,9 @@ export default function ComoFuncionaPage() {
                         </p>
                       </li>
                     </ol>
-                    <div className="mt-3 p-2 bg-purple-100 dark:bg-purple-900/30 rounded border border-purple-300 dark:border-purple-700">
-                      <p className="text-xs text-purple-800 dark:text-purple-200 font-semibold mb-1">Exemplo prático:</p>
-                      <p className="text-xs text-purple-700 dark:text-purple-300">
+                    <div className="mt-3 p-2 bg-primary/15 dark:bg-primary/25 rounded border border-primary/30 dark:border-primary/40">
+                      <p className="text-xs text-primary dark:text-primary font-semibold mb-1">Exemplo prático:</p>
+                      <p className="text-xs text-foreground/70 dark:text-foreground/70">
                         Dois participantes têm +10,00% de rentabilidade e ambos têm 3 ativos. 
                         O participante A lançou sua última transação há 2 horas, enquanto o participante B lançou há 1 hora. 
                         O participante B fica à frente porque tem atividade mais recente. 

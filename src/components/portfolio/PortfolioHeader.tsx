@@ -49,13 +49,13 @@ export function PortfolioHeader({ competitor }: PortfolioHeaderProps) {
           </Link>
           <div className="flex items-center gap-2">
             {isPositive ? (
-              <TrendingUp className="h-5 w-5 text-green-500" />
+              <TrendingUp className="h-5 w-5 text-success" />
             ) : (
-              <TrendingDown className="h-5 w-5 text-red-500" />
+              <TrendingDown className="h-5 w-5 text-destructive" />
             )}
             <span
               className={`text-3xl font-bold ${
-                isPositive ? 'text-green-500' : 'text-red-500'
+                isPositive ? 'text-success' : 'text-destructive'
               }`}
             >
               {isPositive ? '+' : ''}

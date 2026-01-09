@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Arena do Investidor',
-    short_name: 'Arena Invest',
+    name: 'Hold Arena',
+    short_name: 'Hold Arena',
     description: 'Competição de investimentos e ranking da comunidade',
     start_url: '/',
     display: 'standalone',

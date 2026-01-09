@@ -160,15 +160,15 @@ export function PublicProfileHeader({ userId }: PublicProfileHeaderProps) {
             {profitabilityData && (
               <div className="flex items-start gap-2 sm:hidden flex-shrink-0">
                 {isPositive ? (
-                  <TrendingUp className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <TrendingUp className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
                 ) : (
-                  <TrendingDown className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <TrendingDown className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
                 )}
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground">Rent. Perpétua</p>
                   <p
                     className={`text-lg font-bold ${
-                      isPositive ? 'text-green-500' : 'text-red-500'
+                      isPositive ? 'text-success' : 'text-destructive'
                     }`}
                   >
                     {isPositive ? '+' : ''}
@@ -180,26 +180,26 @@ export function PublicProfileHeader({ userId }: PublicProfileHeaderProps) {
           </div>
 
           <div className="flex-1 min-w-0 w-full sm:w-auto">
-            {/* Desktop: Nome + Rentabilidade + Botão Compartilhar alinhados */}
-            <div className="flex items-start sm:items-center justify-between gap-3 mb-0.5 sm:mb-1">
+            {/* Desktop: Nome + Rentabilidade + Botões alinhados */}
+            <div className="flex items-start sm:items-end justify-between gap-3 mb-0.5 sm:mb-1">
               <h1 className="text-xl sm:text-2xl font-bold truncate flex-1 min-w-0">
                 {profile.name}
               </h1>
               
-              {/* Desktop: Rentabilidade + Botão Compartilhar alinhados */}
-              <div className="hidden sm:flex items-center gap-5 flex-shrink-0">
+              {/* Desktop: Rentabilidade + Botões em coluna vertical alinhados */}
+              <div className="hidden sm:flex flex-col items-end gap-2 flex-shrink-0">
                 {profitabilityData && (
                   <div className="flex items-center gap-2">
                     {isPositive ? (
-                      <TrendingUp className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <TrendingUp className="h-5 w-5 text-success flex-shrink-0" />
                     ) : (
-                      <TrendingDown className="h-5 w-5 text-red-500 flex-shrink-0" />
+                      <TrendingDown className="h-5 w-5 text-destructive flex-shrink-0" />
                     )}
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Rent. Perpétua</p>
                       <p
                         className={`text-xl font-bold ${
-                          isPositive ? 'text-green-500' : 'text-red-500'
+                          isPositive ? 'text-success' : 'text-destructive'
                         }`}
                       >
                         {isPositive ? '+' : ''}
@@ -208,13 +208,38 @@ export function PublicProfileHeader({ userId }: PublicProfileHeaderProps) {
                     </div>
                   </div>
                 )}
-                <ShareButton
-                  url={shareUrl}
-                  title={`Perfil de ${profile.name}`}
-                  description={`Veja o perfil de ${profile.name} na Competição de Ações`}
-                  variant="button"
-                  size="sm"
-                />
+                <div className="flex items-center gap-2">
+                  <ShareButton
+                    url={shareUrl}
+                    title={`Perfil de ${profile.name}`}
+                    description={`Veja o perfil de ${profile.name} na Competição de Ações`}
+                    variant="button"
+                    size="sm"
+                  />
+                  {!isOwnProfile && currentUser && (
+                    <Button
+                      variant={profile.isFollowing ? 'outline' : 'default'}
+                      onClick={() => followMutation.mutate()}
+                      disabled={followMutation.isPending}
+                      className="text-sm"
+                      size="sm"
+                    >
+                      {followMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : profile.isFollowing ? (
+                        <>
+                          <UserMinus className="h-4 w-4 mr-2" />
+                          Deixar de seguir
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          Seguir
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -230,7 +255,7 @@ export function PublicProfileHeader({ userId }: PublicProfileHeaderProps) {
                     href={`/ranking/mensal/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}`}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 hover:bg-primary/20 rounded-md transition-colors text-sm"
                   >
-                    <Trophy className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                    <Trophy className="h-4 w-4 text-warning flex-shrink-0" />
                     <span className="text-muted-foreground">Mensal:</span>
                     <span className="font-semibold">#{profile.rankings.monthly}</span>
                   </Link>
@@ -240,7 +265,7 @@ export function PublicProfileHeader({ userId }: PublicProfileHeaderProps) {
                     href={`/ranking/anual/${new Date().getFullYear()}`}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 hover:bg-primary/20 rounded-md transition-colors text-sm"
                   >
-                    <Trophy className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                    <Trophy className="h-4 w-4 text-warning flex-shrink-0" />
                     <span className="text-muted-foreground">Anual:</span>
                     <span className="font-semibold">#{profile.rankings.annual}</span>
                   </Link>
@@ -301,33 +326,6 @@ export function PublicProfileHeader({ userId }: PublicProfileHeaderProps) {
               size="sm"
             />
           </div>
-
-          {/* Desktop: Botão de seguir */}
-          {!isOwnProfile && currentUser && (
-            <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-              <Button
-                variant={profile.isFollowing ? 'outline' : 'default'}
-                onClick={() => followMutation.mutate()}
-                disabled={followMutation.isPending}
-                className="text-sm"
-                size="sm"
-              >
-                {followMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : profile.isFollowing ? (
-                  <>
-                    <UserMinus className="h-4 w-4 mr-2" />
-                    Deixar de seguir
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Seguir
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>

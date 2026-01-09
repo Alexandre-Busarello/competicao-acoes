@@ -70,11 +70,11 @@ export function UserRankCard({
             </div>
             <div className="flex items-center gap-2 mt-2">
               <TrendingUp
-                className={`h-4 w-4 ${isPositive ? 'text-green-500' : 'text-red-500'}`}
+                className={`h-4 w-4 ${isPositive ? 'text-success' : 'text-destructive'}`}
               />
               <span
                 className={`text-sm font-semibold ${
-                  isPositive ? 'text-green-500' : 'text-red-500'
+                  isPositive ? 'text-success' : 'text-destructive'
                 }`}
               >
                 {isPositive ? '+' : ''}

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
+import { ThemeProvider } from "@/lib/providers/ThemeProvider";
 import { NavigationWrapper } from "@/components/navigation/NavigationWrapper";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { UpdatePrompt } from "@/components/pwa/UpdatePrompt";
@@ -10,13 +11,13 @@ import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistr
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Arena do Investidor",
+  title: "Hold Arena",
   description: "Competição de investimentos e ranking da comunidade",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Arena do Investidor",
+    title: "Hold Arena",
   },
 };
 
@@ -37,12 +38,26 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const savedTheme = localStorage.getItem('theme');
+                const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                const theme = savedTheme || systemTheme;
+                if (theme === 'dark') {
+                  document.documentElement.classList.add('dark');
+                }
+              })();
+            `,
+          }}
+        />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Arena do Investidor" />
+        <meta name="apple-mobile-web-app-title" content="Hold Arena" />
         <meta name="theme-color" content="#3b82f6" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-        <link rel="icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/favicon-claro.png" />
+        <link rel="icon" href="/favicon-claro.png" />
         {/* Splash screens para iOS */}
         <link rel="apple-touch-startup-image" href="/splash/apple-splash-640-1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" />
         <link rel="apple-touch-startup-image" href="/splash/apple-splash-750-1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
@@ -57,16 +72,18 @@ export default function RootLayout({
         <link rel="apple-touch-startup-image" href="/splash/apple-splash-2048-2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)" />
       </head>
       <body className={inter.className}>
-        <QueryProvider>
-          <div className="min-h-screen bg-background">
-            <ServiceWorkerRegistration />
-            <InstallPrompt />
-            <NavigationWrapper>
-              {children}
-            </NavigationWrapper>
-            <UpdatePrompt />
-          </div>
-        </QueryProvider>
+        <ThemeProvider>
+          <QueryProvider>
+            <div className="min-h-screen bg-background">
+              <ServiceWorkerRegistration />
+              <InstallPrompt />
+              <NavigationWrapper>
+                {children}
+              </NavigationWrapper>
+              <UpdatePrompt />
+            </div>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

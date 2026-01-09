@@ -40,7 +40,7 @@ export async function generateMetadata({
       description,
       url,
       type: 'article',
-      siteName: 'Arena do Investidor',
+      siteName: 'Hold Arena',
       images: post.user.avatarUrl
         ? [
             {

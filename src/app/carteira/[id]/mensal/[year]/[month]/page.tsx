@@ -129,8 +129,8 @@ export default function PortfolioMensalPage() {
       {/* Disclaimer sobre delay de atualização */}
       {canAccess && (
         <div className="container mx-auto px-4 py-2">
-          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
-            <p className="text-xs text-blue-800 dark:text-blue-200 flex items-start gap-2">
+          <div className="bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 rounded-md p-3">
+            <p className="text-xs text-foreground/80 dark:text-foreground/80 flex items-start gap-2">
               <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
               <span>
                 <strong>Atenção:</strong> O cálculo da carteira e rentabilidade no ranking é atualizado automaticamente a cada 15 minutos. 

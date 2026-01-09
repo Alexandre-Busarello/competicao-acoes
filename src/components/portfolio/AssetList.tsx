@@ -56,7 +56,7 @@ export function AssetList({ assets, isPremium, isOwner = false }: AssetListProps
                       </p>
                       <p>
                         <span className="text-muted-foreground">Preço Médio:</span>{' '}
-                        <span className="font-semibold text-blue-600 dark:text-blue-400">
+                        <span className="font-semibold text-primary">
                           {isVisible
                             ? formatPrice(asset.averagePrice, asset.ticker)
                             : '•••'}
@@ -64,7 +64,7 @@ export function AssetList({ assets, isPremium, isOwner = false }: AssetListProps
                       </p>
                       <p>
                         <span className="text-muted-foreground">Preço Atual:</span>{' '}
-                        <span className="font-semibold text-purple-600 dark:text-purple-400">
+                        <span className="font-semibold text-primary/80">
                           {isVisible
                             ? formatPrice(asset.currentPrice, asset.ticker)
                             : '•••'}
@@ -75,13 +75,13 @@ export function AssetList({ assets, isPremium, isOwner = false }: AssetListProps
                   <div className="text-right">
                     <div className="flex items-center gap-1 justify-end mb-1">
                       {isPositive ? (
-                        <TrendingUp className="h-4 w-4 text-green-500" />
+                        <TrendingUp className="h-4 w-4 text-success" />
                       ) : (
-                        <TrendingDown className="h-4 w-4 text-red-500" />
+                        <TrendingDown className="h-4 w-4 text-destructive" />
                       )}
                       <span
                         className={`font-bold ${
-                          isPositive ? 'text-green-500' : 'text-red-500'
+                          isPositive ? 'text-success' : 'text-destructive'
                         }`}
                       >
                         {isVisible

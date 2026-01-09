@@ -8,23 +8,25 @@ interface AssetAllocationChartProps {
   assets: Asset[];
 }
 
+// Paleta de cores baseada no brandbook HOLDARENA (#00c219 verde primário)
+// Usando variações do verde e cores complementares que harmonizam
 const COLORS = {
-  acao: '#3b82f6',
-  fii: '#10b981',
-  // Cores para categorias de ETFs
-  'etf-acoes': '#06b6d4',
-  'etf-crypto': '#f97316',
-  'etf-commodities': '#f59e0b',
-  'etf-dividendos': '#10b981',
-  'etf-internacional': '#3b82f6',
-  'etf-setorial': '#8b5cf6',
-  'etf-sustentabilidade': '#10b981',
-  'etf-renda-fixa': '#f59e0b',
+  acao: '#00c219', // Verde primário do brand
+  fii: '#00a017', // Verde mais escuro
+  // Cores para categorias de ETFs - variações do verde e cores complementares
+  'etf-acoes': '#00c219', // Verde primário
+  'etf-crypto': '#ff6b35', // Laranja vibrante
+  'etf-commodities': '#ffa500', // Laranja/amarelo
+  'etf-dividendos': '#00a017', // Verde escuro
+  'etf-internacional': '#00d624', // Verde mais claro
+  'etf-setorial': '#7c3aed', // Roxo que harmoniza
+  'etf-sustentabilidade': '#00a017', // Verde escuro
+  'etf-renda-fixa': '#ffa500', // Laranja/amarelo
   // Fallback para ETFs sem categoria
-  etf: '#06b6d4',
-  'renda-fixa': '#f59e0b',
-  cripto: '#f97316',
-  outros: '#8b5cf6',
+  etf: '#00c219', // Verde primário
+  'renda-fixa': '#ffa500', // Laranja/amarelo
+  cripto: '#ff6b35', // Laranja vibrante
+  outros: '#7c3aed', // Roxo
 };
 
 export function AssetAllocationChart({ assets }: AssetAllocationChartProps) {

@@ -82,7 +82,7 @@ export function EmptyRankingState() {
         </div>
 
         {/* CTA Section */}
-        <Card className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border-2 border-blue-200 dark:border-blue-800 shadow-lg">
+        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/20 dark:border-primary/30 shadow-lg">
           <CardContent className="p-4 md:p-6 lg:p-8">
             {!isAuthenticated ? (
               <div className="text-center space-y-4 md:space-y-6">

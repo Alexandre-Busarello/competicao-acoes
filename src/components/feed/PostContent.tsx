@@ -282,7 +282,7 @@ export function PostContent({ slug }: PostContentProps) {
                 <Heart
                   className={`h-5 w-5 ${
                     liked
-                      ? 'fill-red-500 text-red-500'
+                      ? 'fill-destructive text-destructive'
                       : 'text-muted-foreground'
                   }`}
                 />

@@ -471,7 +471,7 @@ export function FeedPost({ post, isOwner = false }: FeedPostProps) {
               <Heart
                 className={`h-4 w-4 ${
                   liked
-                    ? 'fill-red-500 text-red-500'
+                    ? 'fill-destructive text-destructive'
                     : 'text-muted-foreground'
                 }`}
               />

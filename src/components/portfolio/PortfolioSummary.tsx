@@ -80,13 +80,13 @@ export function PortfolioSummary() {
               <p className="text-xs text-muted-foreground mb-1">Este Mês</p>
               <div className="flex items-center gap-1">
                 {isMonthlyPositive ? (
-                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  <TrendingUp className="h-4 w-4 text-success" />
                 ) : (
-                  <TrendingDown className="h-4 w-4 text-red-500" />
+                  <TrendingDown className="h-4 w-4 text-destructive" />
                 )}
                 <span
                   className={`font-semibold ${
-                    isMonthlyPositive ? 'text-green-500' : 'text-red-500'
+                    isMonthlyPositive ? 'text-success' : 'text-destructive'
                   }`}
                 >
                   {isMonthlyPositive ? '+' : ''}
@@ -98,13 +98,13 @@ export function PortfolioSummary() {
               <p className="text-xs text-muted-foreground mb-1">Anual</p>
               <div className="flex items-center gap-1">
                 {isAnnualPositive ? (
-                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  <TrendingUp className="h-4 w-4 text-success" />
                 ) : (
-                  <TrendingDown className="h-4 w-4 text-red-500" />
+                  <TrendingDown className="h-4 w-4 text-destructive" />
                 )}
                 <span
                   className={`font-semibold ${
-                    isAnnualPositive ? 'text-green-500' : 'text-red-500'
+                    isAnnualPositive ? 'text-success' : 'text-destructive'
                   }`}
                 >
                   {isAnnualPositive ? '+' : ''}

@@ -31,13 +31,13 @@ export function CompetitorCard({ competitor, period, year, month }: CompetitorCa
 
   const getTrophyIcon = () => {
     if (competitor.rank === 1) {
-      return <Trophy className="h-5 w-5 text-yellow-500" />;
+      return <Trophy className="h-5 w-5 text-warning" />;
     }
     if (competitor.rank === 2) {
-      return <Medal className="h-5 w-5 text-gray-400" />;
+      return <Medal className="h-5 w-5 text-muted-foreground" />;
     }
     if (competitor.rank === 3) {
-      return <Award className="h-5 w-5 text-amber-600" />;
+      return <Award className="h-5 w-5 text-warning/80" />;
     }
     return null;
   };
@@ -97,7 +97,7 @@ export function CompetitorCard({ competitor, period, year, month }: CompetitorCa
               <div className="text-right">
                 <span
                   className={`text-lg font-bold ${
-                    isPositive ? 'text-green-500' : 'text-red-500'
+                    isPositive ? 'text-success' : 'text-destructive'
                   }`}
                 >
                   {isPositive ? '+' : ''}

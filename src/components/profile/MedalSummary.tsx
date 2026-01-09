@@ -51,7 +51,7 @@ export function MedalSummary({ userId }: MedalSummaryProps) {
       <CardContent className="px-4 pb-4">
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <div className="text-center p-3 sm:p-4 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-            <Trophy className="h-6 w-6 sm:h-7 sm:w-7 text-yellow-500 mx-auto mb-1.5 sm:mb-2" />
+            <Trophy className="h-6 w-6 sm:h-7 sm:w-7 text-warning mx-auto mb-1.5 sm:mb-2" />
             <p className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
               {total.gold}
             </p>

@@ -2,7 +2,9 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuth } from '@/lib/auth/client';
+import { useTheme } from '@/lib/providers/ThemeProvider';
 import { formatUserNameWithId, getNameWithoutId } from '@/lib/utils/format-user-name';
 import { LogOut, Crown, Loader2, LogIn, Rss, Trophy, Wallet, User } from 'lucide-react';
 import Link from 'next/link';
@@ -35,8 +37,14 @@ const navItems = [
 
 export function UserHeader() {
   const { user, isLoading, isAuthenticated, signOut } = useAuth();
+  const { theme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
+  
+  // Logo com texto baseado no tema (fallback para tema claro se não houver provider)
+  const logoPath = theme === 'dark' 
+    ? '/holdareana-logo-texto-escuro.png' 
+    : '/holdareana-logo-texto-claro.png';
 
   const handleSignOut = async () => {
     await signOut();
@@ -49,8 +57,8 @@ export function UserHeader() {
         <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-3 max-w-4xl">
           <Link href="/ranking" className="flex items-center hover:opacity-90 transition-opacity">
             <Image 
-              src="/logo-no-bg.png" 
-              alt="Arena do Investidor" 
+              src={logoPath}
+              alt="Hold Arena" 
               width={160} 
               height={53}
               className="h-10 sm:h-12 md:h-14 w-auto object-contain"
@@ -85,8 +93,8 @@ export function UserHeader() {
         <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-3 max-w-4xl">
           <Link href="/ranking" className="flex items-center hover:opacity-90 transition-opacity">
             <Image 
-              src="/logo-no-bg.png" 
-              alt="Arena do Investidor" 
+              src={logoPath}
+              alt="Hold Arena" 
               width={160} 
               height={53}
               className="h-10 sm:h-12 md:h-14 w-auto object-contain"
@@ -116,12 +124,15 @@ export function UserHeader() {
               );
             })}
           </nav>
-          <Link href="/auth/login">
-            <Button variant="outline" size="sm">
-              <LogIn className="h-4 w-4 mr-2" />
-              Entrar
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link href="/auth/login">
+              <Button variant="outline" size="sm">
+                <LogIn className="h-4 w-4 mr-2" />
+                Entrar
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -138,16 +149,16 @@ export function UserHeader() {
   return (
     <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-3 max-w-4xl">
-        <Link href="/ranking" className="flex items-center hover:opacity-90 transition-opacity">
-          <Image 
-            src="/logo-no-bg.png" 
-            alt="Arena do Investidor" 
-            width={200} 
-            height={67}
-            className="h-14 sm:h-16 w-auto object-contain"
-            priority
-          />
-        </Link>
+          <Link href="/ranking" className="flex items-center hover:opacity-90 transition-opacity">
+            <Image 
+              src={logoPath}
+              alt="Hold Arena" 
+              width={200} 
+              height={67}
+              className="h-14 sm:h-16 md:h-16 w-auto object-contain"
+              priority
+            />
+          </Link>
         
         {/* Navegação Desktop */}
         <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
@@ -174,6 +185,7 @@ export function UserHeader() {
         </nav>
         
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <Link href="/perfil" className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
             <Avatar className="h-9 w-9 flex-shrink-0">
               <AvatarImage src={user.avatarUrl} alt={user.name} />
@@ -187,7 +199,7 @@ export function UserHeader() {
                   {formatUserNameWithId(user.name || 'Usuário', user.id)}
                 </p>
                 {user.isPremium && (
-                  <Crown className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
+                  <Crown className="h-3.5 w-3.5 text-warning flex-shrink-0" />
                 )}
               </div>
               <p className="text-xs text-muted-foreground truncate">
