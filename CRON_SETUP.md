@@ -1,8 +1,16 @@
 # Configuração do Cron Job
 
-## Endpoint de Atualização
+## Endpoints Disponíveis
+
+### 1. Endpoint de Atualização de Preços
 
 O endpoint `/api/prices/update` é protegido por token e deve ser chamado periodicamente para atualizar preços e recalcular o ranking.
+
+### 2. Endpoint de Expiração de Assinaturas
+
+O endpoint `/api/subscriptions/expire` é protegido por token e deve ser chamado diariamente para cancelar automaticamente assinaturas premium expiradas (após 12 meses).
+
+**Documentação completa**: Ver `docs/sistema-expiracao-premium-12-meses.md`
 
 ## Configuração
 
@@ -29,9 +37,13 @@ Edite o crontab:
 crontab -e
 ```
 
-Adicione a linha (atualiza a cada 15 minutos):
+Adicione as linhas:
 ```cron
+# Atualização de preços (a cada 15 minutos)
 */15 * * * * curl -X POST https://seu-dominio.com/api/prices/update -H "Authorization: Bearer SEU_TOKEN_AQUI"
+
+# Expiração de assinaturas (diariamente às 00:00 UTC)
+0 0 * * * curl -X POST https://seu-dominio.com/api/subscriptions/expire -H "Authorization: Bearer SEU_TOKEN_AQUI"
 ```
 
 #### Opção 2: Vercel Cron Jobs
@@ -43,6 +55,10 @@ No arquivo `vercel.json`:
     {
       "path": "/api/prices/update",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/subscriptions/expire",
+      "schedule": "0 0 * * *"
     }
   ]
 }

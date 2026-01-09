@@ -249,6 +249,11 @@ export async function POST(request: NextRequest) {
         throw new Error('Failed to get or create user');
       }
 
+      // Calcular data de expiração: 12 meses a partir de agora
+      const now = new Date();
+      const expirationDate = new Date(now);
+      expirationDate.setMonth(expirationDate.getMonth() + 12);
+
       // Criar ou atualizar assinatura
       const subscription = await prisma.subscription.upsert({
         where: { userId: user.id },
@@ -256,9 +261,7 @@ export async function POST(request: NextRequest) {
           kiwifyId: kiwifyId?.toString(),
           kiwifyOrderId: kiwifyOrderId?.toString(),
           status: 'active',
-          currentPeriodEnd: order.current_period_end
-            ? new Date(order.current_period_end * 1000)
-            : null,
+          currentPeriodEnd: expirationDate,
           updatedAt: new Date(),
         },
         create: {
@@ -266,9 +269,7 @@ export async function POST(request: NextRequest) {
           kiwifyId: kiwifyId?.toString(),
           kiwifyOrderId: kiwifyOrderId?.toString(),
           status: 'active',
-          currentPeriodEnd: order.current_period_end
-            ? new Date(order.current_period_end * 1000)
-            : null,
+          currentPeriodEnd: expirationDate,
         },
       });
 

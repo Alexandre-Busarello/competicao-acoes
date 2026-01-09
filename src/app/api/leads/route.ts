@@ -32,12 +32,21 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Verificar se usuário é premium
-      const isPremium =
-        user?.isPremium ||
-        (user?.subscription?.status === 'active' &&
-          (!user.subscription.currentPeriodEnd ||
-            user.subscription.currentPeriodEnd > new Date()));
+      // Verificar se usuário é premium baseado na data de expiração
+      // Se existe subscription, usar apenas a data de expiração (não confiar em isPremium)
+      // Se não existe subscription, usar isPremium como fallback (legado/cache)
+      let isPremium = false;
+      
+      if (user?.subscription) {
+        // Se existe subscription, verificar status e data de expiração
+        isPremium =
+          user.subscription.status === 'active' &&
+          user.subscription.currentPeriodEnd !== null &&
+          user.subscription.currentPeriodEnd > new Date();
+      } else if (user) {
+        // Se não existe subscription, usar isPremium como fallback
+        isPremium = user.isPremium;
+      }
 
       if (isPremium) {
         // Lead já foi convertido e usuário é premium

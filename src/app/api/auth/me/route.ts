@@ -56,11 +56,21 @@ export async function GET(request: NextRequest) {
       console.log('User created in database:', user.email, 'id:', user.id);
     }
 
-    // Verificar se tem assinatura ativa
-    const hasActiveSubscription =
-      user.subscription?.status === 'active' &&
-      (!user.subscription.currentPeriodEnd ||
-        user.subscription.currentPeriodEnd > new Date());
+    // Verificar se tem assinatura ativa baseado na data de expiração
+    // Se existe subscription, usar apenas a data de expiração (não confiar em isPremium)
+    // Se não existe subscription, usar isPremium como fallback (legado/cache)
+    let isPremium = false;
+    
+    if (user.subscription) {
+      // Se existe subscription, verificar status e data de expiração
+      isPremium =
+        user.subscription.status === 'active' &&
+        user.subscription.currentPeriodEnd !== null &&
+        user.subscription.currentPeriodEnd > new Date();
+    } else {
+      // Se não existe subscription, usar isPremium como fallback
+      isPremium = user.isPremium;
+    }
 
     const userData = {
       id: user.id,
@@ -68,7 +78,7 @@ export async function GET(request: NextRequest) {
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl,
-      isPremium: hasActiveSubscription || user.isPremium,
+      isPremium,
     };
     
     console.log('Returning user data:', userData.email, 'isPremium:', userData.isPremium);
