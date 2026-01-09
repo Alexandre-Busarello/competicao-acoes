@@ -91,13 +91,13 @@ export default function BrunoMethodPage() {
                 </p>
               </div>
               <div className="space-y-3">
-                <Link href="/perfil" className="block">
+                <Link href="/perfil?from=cta" className="block">
                   <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-yellow-950" size="lg">
                     <Copy className="h-5 w-5 mr-2" />
                     Desbloquear Estratégia Completa
                   </Button>
                 </Link>
-                <Link href="/perfil">
+                <Link href="/perfil?from=cta">
                   <Button variant="outline" className="w-full" size="sm">
                     Entenda como funciona
                   </Button>
