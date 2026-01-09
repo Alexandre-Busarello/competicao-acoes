@@ -7,6 +7,7 @@ import { allowsFractionalQuantity } from '@/lib/utils/asset-type';
 import { calculatePositions, normalizeTickerForGrouping } from '@/lib/utils/portfolio-calculator';
 import { startOfYear, endOfYear } from 'date-fns';
 import { Prisma } from '@prisma/client';
+import { feedService } from '@/lib/services/feed-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -210,6 +211,22 @@ export async function POST(request: NextRequest) {
       console.log('transaction.quantity is NOT a Decimal, it is:', typeof transaction.quantity);
     }
     console.log('========================');
+
+    // Cria post no feed automaticamente
+    try {
+      await feedService.createPostFromTransaction({
+        id: transaction.id,
+        userId: transaction.userId,
+        ticker: transaction.ticker,
+        type: transaction.type,
+        quantity: toNumber(transaction.quantity),
+        price: toNumber(transaction.price),
+        date: transaction.date,
+      });
+    } catch (feedError) {
+      // Log erro mas não falha a criação da transação
+      console.error('Error creating feed post:', feedError);
+    }
 
     return NextResponse.json({
       success: true,

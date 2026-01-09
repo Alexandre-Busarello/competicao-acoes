@@ -9,6 +9,9 @@ import { PageHeader } from '@/components/navigation/PageHeader';
 import { useUserStore } from '@/lib/store/userStore';
 import { useAuth } from '@/lib/auth/client';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ExternalLink } from 'lucide-react';
 
 function ProfileContent() {
   const { user } = useUserStore();
@@ -38,6 +41,16 @@ function ProfileContent() {
           title="Perfil" 
           backHref="/ranking"
         />
+        {user && (
+          <div className="container mx-auto px-4 py-4">
+            <Link href={`/perfil/${user.id}`}>
+              <Button variant="outline" className="w-full">
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Ver Perfil Público
+              </Button>
+            </Link>
+          </div>
+        )}
         <CheckoutSection />
         <ProfileInfo />
         <PasswordManager />
@@ -51,6 +64,16 @@ function ProfileContent() {
         title="Perfil" 
         backHref="/ranking"
       />
+      {user && (
+        <div className="container mx-auto px-4 py-4">
+          <Link href={`/perfil/${user.id}`}>
+            <Button variant="outline" className="w-full">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Ver Perfil Público
+            </Button>
+          </Link>
+        </div>
+      )}
       <ProfileInfo />
       <PasswordManager />
       {isPremium ? <PremiumCard /> : <CheckoutSection />}

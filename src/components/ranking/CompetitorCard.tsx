@@ -75,9 +75,13 @@ export function CompetitorCard({ competitor, period, year, month }: CompetitorCa
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold truncate">
+                <Link 
+                  href={`/perfil/${competitor.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-semibold truncate hover:underline block"
+                >
                   {formatUserNameWithId(competitor.name, competitor.id)}
-                </p>
+                </Link>
                 <p className="text-xs text-muted-foreground">
                   {competitor.portfolio.length} ativos
                 </p>

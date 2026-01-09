@@ -111,7 +111,7 @@ export default function PortfolioMensalPage() {
   }
 
   return (
-    <div className="min-h-screen pb-32 max-w-4xl mx-auto">
+    <div className="min-h-screen max-w-4xl mx-auto">
       <PageHeader 
         title="Detalhes da Carteira" 
         backHref={`/ranking/mensal/${year}/${month.toString().padStart(2, '0')}`}

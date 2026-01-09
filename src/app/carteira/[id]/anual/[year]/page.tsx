@@ -110,7 +110,7 @@ export default function PortfolioAnualPage() {
   }
 
   return (
-    <div className="min-h-screen pb-32 max-w-4xl mx-auto">
+    <div className="min-h-screen max-w-4xl mx-auto">
       <PageHeader 
         title="Detalhes da Carteira" 
         backHref={`/ranking/anual/${year}`}

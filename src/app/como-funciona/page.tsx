@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 
 export default function ComoFuncionaPage() {
   return (
-    <div className="min-h-screen pb-32">
+    <div className="min-h-screen">
       <PageHeader 
         title="Como Funciona" 
         backHref="/ranking"

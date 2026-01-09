@@ -12,6 +12,25 @@ O endpoint `/api/subscriptions/expire` é protegido por token e deve ser chamado
 
 **Documentação completa**: Ver `docs/sistema-expiracao-premium-12-meses.md`
 
+### 3. Endpoint de Apuração de Medalhas
+
+O endpoint `/api/medals/settle` é protegido por token e deve ser chamado no primeiro dia de cada mês às 00:01 UTC para apurar medalhas do mês anterior.
+
+**Schedule**: `1 0 1 * *` (1º dia do mês às 00:01 UTC)
+
+**Nota sobre UTC**: 
+- Sistema usa UTC para evitar problemas de fuso horário
+- 00:01 UTC = 21:01 do dia anterior no Brasil (UTC-3)
+- Exemplo: CRON executando em 01/02/2026 00:01 UTC apura medalhas de Janeiro/2026
+- Em Janeiro, também apura ranking anual do ano anterior
+
+**O que faz**:
+- Busca o último ranking calculado do mês anterior
+- Cria medalhas (ouro, prata, bronze) para os top 3 do ranking mensal
+- Se for Janeiro, também apura ranking anual do ano anterior
+- Processa períodos anteriores que ainda não foram apurados (catch-up)
+- Garante idempotência: se executar múltiplas vezes, não cria duplicatas
+
 ## Configuração
 
 ### 1. Variáveis de Ambiente
@@ -44,6 +63,9 @@ Adicione as linhas:
 
 # Expiração de assinaturas (diariamente às 00:00 UTC)
 0 0 * * * curl -X POST https://seu-dominio.com/api/subscriptions/expire -H "Authorization: Bearer SEU_TOKEN_AQUI"
+
+# Apuração de medalhas (1º dia do mês às 00:01 UTC)
+1 0 1 * * curl -X POST https://seu-dominio.com/api/medals/settle -H "Authorization: Bearer SEU_TOKEN_AQUI" -H "Content-Type: application/json"
 ```
 
 #### Opção 2: Vercel Cron Jobs
@@ -59,6 +81,10 @@ No arquivo `vercel.json`:
     {
       "path": "/api/subscriptions/expire",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/medals/settle",
+      "schedule": "1 0 1 * *"
     }
   ]
 }
@@ -72,16 +98,33 @@ E configure o header de autenticação nas configurações do Vercel ou use um m
 - **Cron-Job.org**: https://cron-job.org/
 - **GitHub Actions**: Use workflows do GitHub
 
+**Para serviços que usam interface web** (apuração de medalhas):
+- URL: `https://seu-dominio.com/api/medals/settle`
+- Método: POST
+- Headers:
+  - `Authorization: Bearer SEU_TOKEN_AQUI`
+  - `Content-Type: application/json`
+- Schedule: `1 0 1 * *` (ou equivalente: "1st day of month at 00:01 UTC")
+
 ### 3. Exemplo de Requisição
 
+**Atualização de Preços**:
 ```bash
 curl -X POST https://seu-dominio.com/api/prices/update \
   -H "Authorization: Bearer SEU_TOKEN_AQUI" \
   -H "Content-Type: application/json"
 ```
 
+**Apuração de Medalhas**:
+```bash
+curl -X POST https://seu-dominio.com/api/medals/settle \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
+  -H "Content-Type: application/json"
+```
+
 ### 4. Resposta Esperada
 
+**Atualização de Preços**:
 ```json
 {
   "success": true,
@@ -96,10 +139,47 @@ curl -X POST https://seu-dominio.com/api/prices/update \
 }
 ```
 
+**Apuração de Medalhas**:
+```json
+{
+  "success": true,
+  "periodsSettled": 1,
+  "medalsCreated": 3,
+  "monthlySettled": {
+    "year": 2026,
+    "month": 1
+  },
+  "annualSettled": null,
+  "catchUpProcessed": 0,
+  "durationMs": 1234
+}
+```
+
+**Exemplo com apuração anual (Janeiro)**:
+```json
+{
+  "success": true,
+  "periodsSettled": 2,
+  "medalsCreated": 6,
+  "monthlySettled": {
+    "year": 2025,
+    "month": 12
+  },
+  "annualSettled": {
+    "year": 2025
+  },
+  "catchUpProcessed": 0,
+  "durationMs": 2345
+}
+```
+
 ## Segurança
 
-- O endpoint é protegido por token Bearer
-- Rate limiting: máximo 1 request por minuto
+- Todos os endpoints são protegidos por token Bearer
+- Rate limiting:
+  - `/api/prices/update`: máximo 1 request por minuto
+  - `/api/subscriptions/expire`: máximo 1 request por hora
+  - `/api/medals/settle`: máximo 1 execução por hora
 - Token deve ser mantido em segredo
 - Use HTTPS em produção
 

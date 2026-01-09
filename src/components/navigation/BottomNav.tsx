@@ -2,10 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Trophy, Wallet, User } from 'lucide-react';
+import { Rss, Trophy, Wallet, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
+  {
+    href: '/feed',
+    label: 'Feed',
+    icon: Rss,
+  },
   {
     href: '/ranking',
     label: 'Ranking',

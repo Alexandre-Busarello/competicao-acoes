@@ -2,6 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
+import { NavigationWrapper } from "@/components/navigation/NavigationWrapper";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { UpdatePrompt } from "@/components/pwa/UpdatePrompt";
+import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -53,7 +57,16 @@ export default function RootLayout({
         <link rel="apple-touch-startup-image" href="/splash/apple-splash-2048-2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)" />
       </head>
       <body className={inter.className}>
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          <div className="min-h-screen bg-background">
+            <ServiceWorkerRegistration />
+            <InstallPrompt />
+            <NavigationWrapper>
+              {children}
+            </NavigationWrapper>
+            <UpdatePrompt />
+          </div>
+        </QueryProvider>
       </body>
     </html>
   );
