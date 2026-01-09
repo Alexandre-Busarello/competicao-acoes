@@ -7,12 +7,54 @@ import { generateInvestorName } from '@/lib/utils/generate-investor-name';
 export const dynamic = 'force-dynamic';
 
 /**
+ * Função auxiliar para remover premium de um usuário
+ * Remove premium mesmo se não tiver subscription ativa
+ */
+async function removePremiumFromUser(email: string) {
+  const emailLower = email.toLowerCase().trim();
+  
+  const user = await prisma.user.findUnique({
+    where: { email: emailLower },
+    include: { subscription: true },
+  });
+
+  if (user) {
+    // Atualizar subscription se existir
+    if (user.subscription) {
+      await prisma.subscription.update({
+        where: { id: user.subscription.id },
+        data: {
+          status: 'canceled',
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    // Sempre remover premium do usuário
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isPremium: false,
+      },
+    });
+
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Webhook do Kiwify para processar compras confirmadas
  * 
  * Eventos esperados:
- * - order.paid: Compra confirmada
- * - order.refunded: Reembolso
- * - subscription.cancelled: Assinatura cancelada
+ * - order.paid: Compra confirmada (ativa premium)
+ * - order.completed: Compra completada (ativa premium)
+ * - order.refunded: Reembolso (remove premium)
+ * - order.chargeback: Chargeback (remove premium)
+ * - subscription.cancelled: Assinatura cancelada (remove premium)
+ * 
+ * IMPORTANTE: O email é sempre a chave entre Kiwify e a aplicação
  */
 export async function POST(request: NextRequest) {
   try {
@@ -56,13 +98,23 @@ export async function POST(request: NextRequest) {
       const emailLower = email.toLowerCase().trim();
 
       // Verificar se existe lead com esse email
-      const lead = await prisma.lead.findUnique({
+      let lead = await prisma.lead.findUnique({
         where: { email: emailLower },
       });
 
-      // Marcar lead como convertido se existir
-      if (lead && !lead.converted) {
-        await prisma.lead.update({
+      // Criar lead se não existir ou marcar como convertido se existir
+      if (!lead) {
+        // Criar lead e marcar como convertido imediatamente
+        lead = await prisma.lead.create({
+          data: {
+            email: emailLower,
+            converted: true,
+            convertedAt: new Date(),
+          },
+        });
+      } else if (!lead.converted) {
+        // Marcar lead existente como convertido
+        lead = await prisma.lead.update({
           where: { id: lead.id },
           data: {
             converted: true,
@@ -260,38 +312,32 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Processar outros eventos se necessário
-    if (event === 'order.refunded' || event === 'subscription.cancelled') {
+    // Processar eventos que removem premium: reembolso, chargeback e cancelamento
+    if (
+      event === 'order.refunded' ||
+      event === 'order.chargeback' ||
+      event === 'chargeback.created' ||
+      event === 'subscription.cancelled'
+    ) {
       const order = data.order || data;
       const email = order.customer?.email || order.email;
 
-      if (email) {
-        const user = await prisma.user.findUnique({
-          where: { email: email.toLowerCase().trim() },
-          include: { subscription: true },
-        });
-
-        if (user?.subscription) {
-          await prisma.subscription.update({
-            where: { id: user.subscription.id },
-            data: {
-              status: 'canceled',
-              updatedAt: new Date(),
-            },
-          });
-
-          await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              isPremium: false,
-            },
-          });
-        }
+      if (!email) {
+        console.error('No email found in cancellation/refund/chargeback webhook data');
+        return NextResponse.json(
+          { error: 'Email não encontrado nos dados do evento' },
+          { status: 400 }
+        );
       }
+
+      const removed = await removePremiumFromUser(email);
 
       return NextResponse.json({
         success: true,
-        message: 'Assinatura cancelada',
+        message: removed
+          ? 'Premium removido do usuário'
+          : 'Usuário não encontrado',
+        event,
       });
     }
 
