@@ -100,3 +100,5 @@ O loading utiliza o mesmo padrão visual da página de ranking para manter consi
 - O mesmo padrão pode ser aplicado em outras páginas que dependem de dados do ranking
 
 
+
+

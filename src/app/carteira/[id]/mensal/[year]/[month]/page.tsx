@@ -78,6 +78,7 @@ export default function PortfolioMensalPage() {
   const { user } = useUserStore();
   const isPremium = user?.isPremium ?? false;
   const isOwner = user?.id === id;
+  const canAccess = isOwner || isPremium;
 
   if (!isValidPeriod(year, month)) {
     return null;
@@ -117,7 +118,7 @@ export default function PortfolioMensalPage() {
       />
       
       {/* Seletor de Período e Indicador */}
-      {isPremium && (
+      {canAccess && (
         <div className="container mx-auto px-4 py-4">
           <PeriodFilters period="mensal" year={year} month={month} basePath={`/carteira/${id}`} />
         </div>
@@ -126,22 +127,34 @@ export default function PortfolioMensalPage() {
       <PortfolioHeader competitor={competitor} />
       
       {/* Disclaimer sobre delay de atualização */}
-      <div className="container mx-auto px-4 py-2">
-        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
-          <p className="text-xs text-blue-800 dark:text-blue-200 flex items-start gap-2">
-            <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
-            <span>
-              <strong>Atenção:</strong> O cálculo da carteira e rentabilidade no ranking é atualizado automaticamente a cada 15 minutos. 
-              Transações recém-cadastradas podem levar até 15 minutos para serem contabilizadas nas posições e rentabilidade exibidas.
-            </span>
-          </p>
+      {canAccess && (
+        <div className="container mx-auto px-4 py-2">
+          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+            <p className="text-xs text-blue-800 dark:text-blue-200 flex items-start gap-2">
+              <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+              <span>
+                <strong>Atenção:</strong> O cálculo da carteira e rentabilidade no ranking é atualizado automaticamente a cada 15 minutos. 
+                Transações recém-cadastradas podem levar até 15 minutos para serem contabilizadas nas posições e rentabilidade exibidas.
+              </span>
+            </p>
+          </div>
         </div>
-      </div>
+      )}
       
-      <AssetAllocationChart assets={competitor.portfolio} />
-      <AssetList assets={competitor.portfolio} isPremium={isPremium} />
-      <UserTransactionList userId={competitor.id} isPremium={isPremium} period="mensal" year={year} month={month} />
-      {!isPremium && <BlurOverlay competitorName={competitor.name} />}
+      {canAccess ? (
+        <>
+          <AssetAllocationChart assets={competitor.portfolio} />
+          <AssetList assets={competitor.portfolio} isPremium={canAccess} isOwner={isOwner} />
+          <UserTransactionList userId={competitor.id} isPremium={canAccess} isOwner={isOwner} period="mensal" year={year} month={month} />
+        </>
+      ) : (
+        <>
+          <AssetAllocationChart assets={competitor.portfolio} />
+          <AssetList assets={competitor.portfolio} isPremium={false} isOwner={false} />
+          <UserTransactionList userId={competitor.id} isPremium={false} isOwner={false} period="mensal" year={year} month={month} />
+          <BlurOverlay competitorName={competitor.name} />
+        </>
+      )}
       
       {/* Botão de edição para o dono da carteira */}
       {isOwner && (

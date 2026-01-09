@@ -20,6 +20,7 @@ const monthNames = [
 interface UserTransactionListProps {
   userId: string;
   isPremium?: boolean;
+  isOwner?: boolean;
   period?: 'mensal' | 'anual';
   year?: number;
   month?: number;
@@ -34,10 +35,12 @@ interface GroupedTransactions {
 export function UserTransactionList({ 
   userId, 
   isPremium = false,
+  isOwner = false,
   period,
   year,
   month
 }: UserTransactionListProps) {
+  const canView = isPremium || isOwner;
   const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
     queryKey: ['transactions', userId],
     queryFn: async () => {
@@ -213,7 +216,7 @@ export function UserTransactionList({
                             <Card 
                               key={transaction.id}
                               className={`relative overflow-hidden ${
-                                !isPremium ? 'blur-sm' : ''
+                                !canView ? 'blur-sm' : ''
                               }`}
                             >
                               <CardContent className="p-4">

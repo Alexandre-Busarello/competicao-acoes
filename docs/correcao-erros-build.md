@@ -160,3 +160,5 @@ Após todas as correções, o build foi concluído com sucesso:
 4. Adicionar tratamento de erro mais robusto para casos onde o ranking não está disponível
 
 
+
+

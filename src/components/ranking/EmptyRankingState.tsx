@@ -92,16 +92,16 @@ export function EmptyRankingState() {
                   <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-yellow-500" />
                 </div>
                 <p className="text-sm md:text-base text-muted-foreground max-w-xl mx-auto px-2">
-                  Faça checkout para criar sua conta e começar a competir. 
+                  Crie sua conta gratuita e comece a competir. 
                   Você poderá cadastrar transações, ver seu ranking e competir com outros investidores.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-stretch sm:items-center px-2">
-                  <CheckoutCTA
-                    source="empty_ranking_state"
-                    buttonText="Criar Conta e Começar"
-                    size="lg"
-                    className="w-full sm:w-auto sm:min-w-[200px]"
-                  />
+                  <Link href="/auth/login" className="w-full sm:w-auto">
+                    <Button size="lg" className="w-full sm:w-auto sm:min-w-[200px]">
+                      Criar Conta Grátis
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
                   <div className="flex flex-col gap-3 w-full sm:w-auto">
                     <Link href="/auth/login" className="w-full sm:w-auto">
                       <Button variant="outline" size="lg" className="w-full sm:w-auto sm:min-w-[200px]">
@@ -125,22 +125,23 @@ export function EmptyRankingState() {
                   <h3 className="text-xl md:text-2xl font-bold">Você está quase lá!</h3>
                 </div>
                 <p className="text-sm md:text-base text-muted-foreground max-w-xl mx-auto px-2">
-                  Faça checkout para desbloquear todas as funcionalidades. 
-                  Cadastre transações, veja seu ranking e competa com outros investidores.
+                  Cadastre transações para aparecer no ranking. 
+                  Faça upgrade para premium e desbloqueie acesso completo às carteiras de outros competidores.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-stretch sm:items-center px-2">
-                  <CheckoutCTA
-                    source="empty_ranking_state_premium"
-                    buttonText="Fazer Checkout"
-                    size="lg"
-                    className="w-full sm:w-auto sm:min-w-[200px]"
-                  />
                   <Link href="/minha-carteira" className="w-full sm:w-auto">
-                    <Button variant="outline" size="lg" className="w-full sm:w-auto sm:min-w-[200px]">
-                      Ver Minha Carteira
+                    <Button size="lg" className="w-full sm:w-auto sm:min-w-[200px]">
+                      Cadastrar Transação
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </Link>
+                  <CheckoutCTA
+                    source="empty_ranking_state_premium"
+                    buttonText="Fazer Upgrade"
+                    size="lg"
+                    variant="outline"
+                    className="w-full sm:w-auto sm:min-w-[200px]"
+                  />
                 </div>
               </div>
             ) : (

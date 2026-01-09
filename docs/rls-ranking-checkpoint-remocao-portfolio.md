@@ -121,3 +121,5 @@ const { error } = await supabase
 3. ✅ Verificar que RLS está ativo nas tabelas
 4. ✅ Testar políticas de acesso
 
+
+

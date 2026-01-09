@@ -17,9 +17,9 @@ interface CheckoutCTAProps {
 
 export function CheckoutCTA({
   source = 'checkout_cta',
-  title = 'Acesso Premium',
-  description = 'Para acessar esta funcionalidade, você precisa fazer checkout.',
-  buttonText = 'Fazer Checkout',
+  title = 'Upgrade para Premium',
+  description = 'Desbloqueie funcionalidades exclusivas com assinatura premium',
+  buttonText = 'Fazer Upgrade',
   variant = 'default',
   size = 'default',
   className,

@@ -53,9 +53,11 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      const emailLower = email.toLowerCase().trim();
+
       // Verificar se existe lead com esse email
       const lead = await prisma.lead.findUnique({
-        where: { email: email.toLowerCase().trim() },
+        where: { email: emailLower },
       });
 
       // Marcar lead como convertido se existir
@@ -69,67 +71,131 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Criar ou atualizar usuário no Supabase Auth
-      const supabase = createServerClient(true); // Usar service role para criar usuário
-
-      // Gerar nome criativo se não fornecido (antes de criar/atualizar usuário)
-      const userName = name?.trim() || generateInvestorName(email);
-
-      // Verificar se usuário já existe no Supabase Auth
-      let authUser;
-      const { data: existingUsers } = await supabase.auth.admin.listUsers();
-      const existingUser = existingUsers?.users?.find(
-        (u) => u.email === email.toLowerCase().trim()
-      );
-
-      if (existingUser) {
-        authUser = existingUser;
-      } else {
-        // Criar novo usuário no Supabase Auth
-        // Gerar senha aleatória (usuário usará magic link)
-        const randomPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12) + 'A1!';
-        
-        const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-          email: email.toLowerCase().trim(),
-          email_confirm: true,
-          password: randomPassword,
-          user_metadata: {
-            name: userName,
-          },
-        });
-
-        if (createError) {
-          console.error('Error creating user in Supabase:', createError);
-          throw createError;
-        }
-
-        authUser = newUser.user;
-      }
-
-      if (!authUser) {
-        throw new Error('Failed to get or create auth user');
-      }
-      
-      // Gerar avatar
-      const avatarUrl = await generateAvatarUrlWithFallback(email, userName);
-
-      // Criar ou atualizar usuário no banco
-      const user = await prisma.user.upsert({
-        where: { authUserId: authUser.id },
-        update: {
-          email: email.toLowerCase().trim(),
-          name: userName,
-          avatarUrl,
-          updatedAt: new Date(),
-        },
-        create: {
-          authUserId: authUser.id,
-          email: email.toLowerCase().trim(),
-          name: userName,
-          avatarUrl,
-          isPremium: true, // Será atualizado pela subscription
+      // Verificar se usuário já existe no banco por EMAIL (chave principal)
+      let user = await prisma.user.findUnique({
+        where: { email: emailLower },
+        include: {
+          subscription: true,
         },
       });
+
+      const supabase = createServerClient(true);
+      const userName = name?.trim() || generateInvestorName(emailLower);
+
+      // Verificar se existe no Supabase Auth por email
+      const { data: existingUsers } = await supabase.auth.admin.listUsers();
+      let authUser = existingUsers?.users?.find(
+        (u) => u.email === emailLower
+      );
+
+      if (user) {
+        // Usuário já existe no banco por email
+        if (authUser) {
+          // Se authUserId é diferente, pode ser que o usuário tenha múltiplos métodos de login
+          // Verificar se o authUserId antigo ainda existe
+          if (user.authUserId !== authUser.id) {
+            const { data: oldAuthUser } = await supabase.auth.admin.getUserById(user.authUserId);
+            
+            if (!oldAuthUser?.user) {
+              // AuthUserId antigo não existe mais, atualizar para o novo método
+              await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                  authUserId: authUser.id,
+                },
+              });
+              // Buscar novamente com subscription
+              const updatedUser = await prisma.user.findUnique({
+                where: { id: user.id },
+                include: { subscription: true },
+              });
+              if (updatedUser) user = updatedUser;
+            }
+            // Se o authUserId antigo ainda existe, mantemos (Supabase Auth gerencia múltiplas identidades)
+          }
+        } else {
+          // Usuário existe no banco mas não encontrado no Supabase Auth por email
+          // Tentar buscar pelo authUserId do banco
+          const { data: authUserById } = await supabase.auth.admin.getUserById(user.authUserId);
+          
+          if (authUserById?.user) {
+            authUser = authUserById.user;
+          } else {
+            // Criar no Supabase Auth (caso raro - usuário foi criado manualmente)
+            const randomPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12) + 'A1!';
+            
+            const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+              email: emailLower,
+              email_confirm: true,
+              password: randomPassword,
+              user_metadata: {
+                name: userName,
+              },
+            });
+
+            if (!createError && newUser.user) {
+              // Atualizar authUserId no banco
+              await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                  authUserId: newUser.user.id,
+                },
+              });
+              // Buscar novamente com subscription
+              user = await prisma.user.findUnique({
+                where: { id: user.id },
+                include: { subscription: true },
+              });
+              if (!user) throw new Error('Failed to update user');
+              authUser = newUser.user;
+            }
+          }
+        }
+      } else {
+        // Usuário não existe no banco
+        if (!authUser) {
+          // Criar novo usuário no Supabase Auth
+          const randomPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12) + 'A1!';
+          
+          const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+            email: emailLower,
+            email_confirm: true,
+            password: randomPassword,
+            user_metadata: {
+              name: userName,
+            },
+          });
+
+          if (createError) {
+            console.error('Error creating user in Supabase:', createError);
+            throw createError;
+          }
+
+          authUser = newUser.user;
+        }
+
+        // Criar usuário no banco
+        const avatarUrl = await generateAvatarUrlWithFallback(emailLower, userName);
+        const newUser = await prisma.user.create({
+          data: {
+            authUserId: authUser.id,
+            email: emailLower,
+            name: userName,
+            avatarUrl,
+            isPremium: false,
+          },
+        });
+        // Buscar com subscription
+        user = await prisma.user.findUnique({
+          where: { id: newUser.id },
+          include: { subscription: true },
+        });
+        if (!user) throw new Error('Failed to create user');
+      }
+
+      if (!user || !authUser) {
+        throw new Error('Failed to get or create user');
+      }
 
       // Criar ou atualizar assinatura
       const subscription = await prisma.subscription.upsert({

@@ -85,3 +85,5 @@ USING (false); -- Bloqueado via API pública, apenas service role pode deletar
 -- O backend (Prisma com service role) bypassa RLS automaticamente e pode
 -- acessar/modificar todas as tabelas conforme necessário.
 
+
+

@@ -14,7 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTransactionStore } from '@/lib/store/transactionStore';
 import { useUserStore } from '@/lib/store/userStore';
-import { CheckoutCTA } from '@/components/checkout/CheckoutCTA';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Loader2, CheckCircle2, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
@@ -258,21 +257,6 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
             Registre uma nova transação para atualizar sua carteira.
           </DialogDescription>
         </DialogHeader>
-        {user && !user.isPremium && (
-          <div className="px-4 sm:px-6 pb-4">
-            <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-4">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-3">
-                Você precisa de uma assinatura premium para cadastrar transações.
-              </p>
-              <CheckoutCTA
-                source="transaction_modal"
-                buttonText="Fazer Checkout"
-                size="sm"
-                className="w-full"
-              />
-            </div>
-          </div>
-        )}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="grid gap-4 px-4 sm:px-6 pb-4 overflow-y-auto flex-1">
             <div className="grid gap-2">

@@ -219,3 +219,5 @@ if (item.name.startsWith('etf-')) {
 4. ✅ Verificar que nomes corretos são exibidos
 5. ✅ Verificar que cores diferentes são usadas para cada categoria
 
+
+

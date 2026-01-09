@@ -9,15 +9,17 @@ import { getCategoryDisplayName } from '@/lib/data/etfs';
 interface AssetListProps {
   assets: Asset[];
   isPremium: boolean;
+  isOwner?: boolean;
 }
 
-export function AssetList({ assets, isPremium }: AssetListProps) {
+export function AssetList({ assets, isPremium, isOwner = false }: AssetListProps) {
+  const canView = isPremium || isOwner;
   return (
     <div className="container mx-auto px-4 py-4">
       <h2 className="text-lg font-semibold mb-4">Carteira</h2>
       <div className="space-y-3">
         {assets.map((asset, index) => {
-          const isVisible = isPremium || asset.visible || index === 0;
+          const isVisible = canView || asset.visible || index === 0;
           const isPositive = asset.return >= 0;
 
           return (

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { yahooFinanceService } from '@/lib/services/yahoo-finance-service';
-import { requirePremium } from '@/lib/auth/server';
+import { requireAuth } from '@/lib/auth/server';
 import { prisma } from '@/lib/prisma/client';
 import { priceService } from '@/lib/services/price-service';
 import { allowsFractionalQuantity } from '@/lib/utils/asset-type';
@@ -45,8 +45,8 @@ function numberToString(num: number): string {
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar autenticação e assinatura premium
-    const session = await requirePremium();
+    // Verificar autenticação (usuários gratuitos podem cadastrar transações)
+    const session = await requireAuth();
     const userId = session.user.id;
 
     const body = await request.json();
@@ -235,10 +235,10 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    if (error instanceof Error && error.message === 'Premium subscription required') {
+    if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json(
-        { error: 'Assinatura premium necessária para criar transações' },
-        { status: 403 }
+        { error: 'Você precisa estar autenticado para criar transações' },
+        { status: 401 }
       );
     }
     
@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requirePremium();
+    const session = await requireAuth();
     const userId = session.user.id;
 
     const transactions = await prisma.transaction.findMany({

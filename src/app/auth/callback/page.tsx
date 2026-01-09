@@ -73,29 +73,26 @@ function AuthCallbackContent() {
 
           console.log('Session set successfully:', sessionData.session.user.email);
 
-          // Sincronizar sessão com cookies do servidor
+          // Criar usuário no banco se não existir
           try {
-            const syncResponse = await fetch('/api/auth/sync-session', {
+            await fetch('/api/auth/create-user-if-needed', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                access_token: sessionData.session.access_token,
-                refresh_token: sessionData.session.refresh_token,
-                expires_at: sessionData.session.expires_at,
+                authUserId: sessionData.session.user.id,
+                email: sessionData.session.user.email,
+                name: sessionData.session.user.user_metadata?.name,
               }),
             });
-
-            if (!syncResponse.ok) {
-              console.warn('Failed to sync session to server, but continuing...');
-            } else {
-              console.log('Session synced to server successfully');
-            }
-          } catch (syncError) {
-            console.warn('Error syncing session to server:', syncError);
-            // Continuar mesmo se a sincronização falhar
+          } catch (createUserError) {
+            console.warn('Error creating user if needed:', createUserError);
+            // Continuar mesmo se falhar
           }
+
+          // Sincronização será feita pelo hook useAuth via onAuthStateChange
+          // Não precisamos sincronizar manualmente aqui para evitar duplicação
 
           // Limpar hash da URL
           window.history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -152,20 +149,25 @@ function AuthCallbackContent() {
                 return;
               }
 
-              // Sincronizar com servidor
+              // Criar usuário no banco se não existir
               try {
-                await fetch('/api/auth/sync-session', {
+                await fetch('/api/auth/create-user-if-needed', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
                   body: JSON.stringify({
-                    access_token: sessionData.session.access_token,
-                    refresh_token: sessionData.session.refresh_token,
-                    expires_at: sessionData.session.expires_at,
+                    authUserId: sessionData.session.user.id,
+                    email: sessionData.session.user.email,
+                    name: sessionData.session.user.user_metadata?.name,
                   }),
                 });
-              } catch (e) {
-                console.warn('Failed to sync session:', e);
+              } catch (createUserError) {
+                console.warn('Error creating user if needed:', createUserError);
               }
+
+              // Sincronização será feita automaticamente pelo hook useAuth via onAuthStateChange
+              // Não precisamos sincronizar manualmente aqui para evitar duplicação
 
               // Limpar query string e redirecionar
               window.history.replaceState(null, '', window.location.pathname);
@@ -183,20 +185,25 @@ function AuthCallbackContent() {
 
           console.log('Session found:', session.user.email);
 
-          // Sincronizar sessão com servidor se ainda não foi sincronizada
+          // Criar usuário no banco se não existir
           try {
-            await fetch('/api/auth/sync-session', {
+            await fetch('/api/auth/create-user-if-needed', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+              },
               body: JSON.stringify({
-                access_token: session.access_token,
-                refresh_token: session.refresh_token,
-                expires_at: session.expires_at,
+                authUserId: session.user.id,
+                email: session.user.email,
+                name: session.user.user_metadata?.name,
               }),
             });
-          } catch (e) {
-            console.warn('Failed to sync session:', e);
+          } catch (createUserError) {
+            console.warn('Error creating user if needed:', createUserError);
           }
+
+          // Sincronização será feita pelo hook useAuth via onAuthStateChange
+          // Não precisamos sincronizar manualmente aqui para evitar duplicação
 
           // Limpar hash da URL
           window.history.replaceState(null, '', window.location.pathname + window.location.search);

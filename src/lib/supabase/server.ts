@@ -96,8 +96,13 @@ export async function getServerUser() {
     const authCookieName = `sb-${supabaseProjectRef}-auth-token`;
     const authCookie = cookieStore.get(authCookieName);
     
-    console.log('Checking for auth cookie:', authCookieName);
+    console.log('=== getServerUser ===');
+    console.log('Cookie name:', authCookieName);
     console.log('Cookie found:', !!authCookie);
+    
+    // Listar todos os cookies para debug
+    const allCookies = cookieStore.getAll();
+    console.log('All cookies:', allCookies.map(c => c.name).join(', '));
     
     // Extrair token do cookie se disponível
     let accessToken: string | undefined;
@@ -105,9 +110,9 @@ export async function getServerUser() {
       try {
         const authData = JSON.parse(authCookie.value);
         accessToken = authData.access_token;
-        console.log('Token extracted from cookie');
+        console.log('Token extracted from formatted cookie, length:', accessToken?.length);
       } catch (e) {
-        console.warn('Failed to parse auth cookie');
+        console.warn('Failed to parse auth cookie:', e);
       }
     }
     
@@ -115,7 +120,7 @@ export async function getServerUser() {
     if (!accessToken) {
       const directToken = cookieStore.get('sb-access-token');
       accessToken = directToken?.value;
-      console.log('Using direct token cookie:', !!accessToken);
+      console.log('Using direct token cookie:', !!accessToken, 'length:', accessToken?.length);
     }
     
     if (!accessToken) {

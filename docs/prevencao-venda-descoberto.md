@@ -227,3 +227,5 @@ Você NÃO deve:
 - `@/lib/utils/portfolio-calculator` - Para `calculatePositions` e `normalizeTickerForGrouping`
 
 
+
+

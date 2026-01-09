@@ -12,8 +12,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Mail } from 'lucide-react';
+import { Loader2, Mail, AlertTriangle } from 'lucide-react';
 import { redirectToKiwifyCheckout } from '@/lib/utils/checkout';
+import { useAuth } from '@/lib/auth/client';
 
 interface LeadCaptureModalProps {
   open: boolean;
@@ -27,10 +28,11 @@ export function LeadCaptureModal({
   open,
   onOpenChange,
   source = 'checkout_cta',
-  title = 'Acesso Premium',
-  description = 'Para acessar esta funcionalidade, você precisa fazer checkout. Informe seu email para continuar.',
+  title = 'Upgrade para Premium',
+  description = 'Upgrade para Premium e desbloqueie funcionalidades exclusivas',
 }: LeadCaptureModalProps) {
-  const [email, setEmail] = useState('');
+  const { user } = useAuth();
+  const [email, setEmail] = useState(user?.email || '');
   const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +179,21 @@ export function LeadCaptureModal({
                   <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
                 </div>
               )}
+
+              {/* Aviso sobre email do Kiwify */}
+              <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-1">
+                      ⚠️ IMPORTANTE
+                    </p>
+                    <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                      Use o mesmo email informado aqui (<strong>{email || 'seu email'}</strong>) no checkout do Kiwify para garantir que sua assinatura seja vinculada corretamente à sua conta.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
             <DialogFooter>
               <Button
@@ -194,7 +211,7 @@ export function LeadCaptureModal({
                     Processando...
                   </>
                 ) : (
-                  'Continuar para Checkout'
+                  'Continuar para Upgrade'
                 )}
               </Button>
             </DialogFooter>

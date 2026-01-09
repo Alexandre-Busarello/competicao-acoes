@@ -19,11 +19,11 @@ export async function getServerSession() {
     // Usar getUser() que valida o token diretamente (mais confiável)
     const supabaseUser = await getServerUser();
     if (!supabaseUser) {
-      console.log('No Supabase user found');
+      console.log('No Supabase user found in getServerSession');
       return null;
     }
     
-    console.log('Supabase user found:', supabaseUser.email);
+    console.log('Supabase user found:', supabaseUser.email, 'authUserId:', supabaseUser.id);
 
     // Buscar dados do usuário no banco
     const user = await prisma.user.findUnique({
@@ -33,7 +33,12 @@ export async function getServerSession() {
       },
     });
 
-    if (!user) return null;
+    if (!user) {
+      console.log('User not found in database for authUserId:', supabaseUser.id);
+      return null;
+    }
+    
+    console.log('User found in database:', user.email, 'id:', user.id);
 
     // Verificar se tem assinatura ativa
     const hasActiveSubscription =

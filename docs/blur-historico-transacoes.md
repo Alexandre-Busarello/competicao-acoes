@@ -91,3 +91,5 @@ O blur aplicado utiliza a classe Tailwind `blur-sm`, que:
 - O componente `BlurOverlay` continua sendo exibido na parte inferior da página para usuários não premium
 
 
+
+

@@ -3,6 +3,7 @@
 import { ProfileInfo } from '@/components/profile/ProfileInfo';
 import { PremiumCard } from '@/components/profile/PremiumCard';
 import { CheckoutSection } from '@/components/profile/CheckoutSection';
+import { PasswordManager } from '@/components/profile/PasswordManager';
 import { PageHeader } from '@/components/navigation/PageHeader';
 import { useUserStore } from '@/lib/store/userStore';
 import { useAuth } from '@/lib/auth/client';
@@ -32,6 +33,7 @@ export default function ProfilePage() {
         backHref="/ranking"
       />
       <ProfileInfo />
+      <PasswordManager />
       {isPremium ? <PremiumCard /> : <CheckoutSection />}
     </div>
   );

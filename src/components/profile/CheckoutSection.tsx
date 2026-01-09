@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, Trophy, Eye, Star } from 'lucide-react';
+import { Check, Trophy, Eye, Star, AlertTriangle } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
 import { useAuth } from '@/lib/auth/client';
 import { useState } from 'react';
@@ -25,9 +25,9 @@ export function CheckoutSection() {
       <CardContent className="p-6">
         <div className="text-center mb-6">
           <Trophy className="h-12 w-12 text-primary mx-auto mb-3" />
-          <h2 className="text-2xl font-bold mb-2">Entre para a Elite dos Investidores</h2>
+          <h2 className="text-2xl font-bold mb-2">Upgrade para Premium</h2>
           <p className="text-muted-foreground">
-            Desbloqueie acesso completo e participe dos prêmios mensais
+            Desbloqueie funcionalidades exclusivas e acesse carteiras completas
           </p>
         </div>
 
@@ -58,17 +58,6 @@ export function CheckoutSection() {
             </div>
           )}
 
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 mt-0.5">
-              <Trophy className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="font-semibold">Participar do Ranking valendo Prêmios</p>
-              <p className="text-sm text-muted-foreground">
-                Compita por prêmios mensais e mostre suas habilidades
-              </p>
-            </div>
-          </div>
         </div>
 
         <div className="border-t border-border pt-6">
@@ -76,11 +65,29 @@ export function CheckoutSection() {
             <p className="text-3xl font-bold">R$ 29,90</p>
             <p className="text-sm text-muted-foreground">por mês</p>
           </div>
+
+          {/* Aviso sobre email do Kiwify quando autenticado */}
+          {isAuthenticated && user?.email && (
+            <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3 mb-4">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-1">
+                    ⚠️ IMPORTANTE
+                  </p>
+                  <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                    No checkout do Kiwify, use o mesmo email da sua conta (<strong>{user.email}</strong>) para garantir que sua assinatura seja vinculada corretamente.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {!isAuthenticated ? (
             // Se não estiver autenticado, usar CheckoutCTA que abre modal
             <CheckoutCTA
               source="profile_page"
-              buttonText="Assinar Agora"
+              buttonText="Fazer Upgrade para Premium"
               size="lg"
               variant="default"
               className="w-full"
@@ -93,7 +100,7 @@ export function CheckoutSection() {
               onClick={handleSubscribe}
               disabled={isProcessing}
             >
-              {isProcessing ? 'Processando...' : 'Assinar Agora'}
+              {isProcessing ? 'Processando...' : 'Fazer Upgrade para Premium'}
             </Button>
           )}
           <p className="text-xs text-center text-muted-foreground mt-3">

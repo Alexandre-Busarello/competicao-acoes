@@ -165,3 +165,5 @@ Isso permite identificar a origem das conversões e otimizar campanhas.
 - O source tracking permite identificar origem das conversões para análise posterior
 
 
+
+
