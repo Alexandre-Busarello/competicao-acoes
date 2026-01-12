@@ -13,20 +13,34 @@ export interface GlobalFeedQueryParams extends FeedQueryParams {
 
 /**
  * Serviço para gerenciar feed global de posts
- * Posts muito recentes (últimas 2 horas) sempre aparecem primeiro, ordenados por data
- * Posts mais antigos são ordenados por engajamento (likes + comentários) e depois por data
+ * Posts com menos de 1 hora recebem boost temporário de +50 pontos no score de engajamento
+ * Posts são organizados em camadas temporais (DIA → SEMANA → ANTIGOS) e ordenados por engajamento
  * Posts visualizados recentemente vão para o final
  */
 export class GlobalFeedService extends BaseFeedService {
   /**
    * Calcula score de engajamento: likeCount * 2 + commentCount * 3 + pollVotes * 1.5
    * Votos em enquetes contam como engajamento (peso 1.5)
+   * Posts com menos de 1 hora recebem boost temporário de +50 pontos
    */
-  private calculateEngagementScore(post: any): number {
+  private calculateEngagementScore(post: any, now: Date = new Date()): number {
     const likes = (post.likeCount || 0) * 2;
     const comments = (post.commentCount || 0) * 3;
     const pollVotes = (post.poll?.totalVotes || 0) * 1.5;
-    return likes + comments + pollVotes;
+    const baseScore = likes + comments + pollVotes;
+
+    // Boost temporário para posts com menos de 1 hora
+    const postDate = new Date(post.createdAt);
+    const ageInMs = now.getTime() - postDate.getTime();
+    const oneHourInMs = 60 * 60 * 1000; // 1 hora em milissegundos
+    
+    if (ageInMs < oneHourInMs) {
+      // Boost de +50 pontos para posts com menos de 1 hora
+      // Isso garante que posts novos apareçam no topo mesmo sem engajamento
+      return baseScore + 50;
+    }
+
+    return baseScore;
   }
 
   /**
@@ -341,7 +355,8 @@ export class GlobalFeedService extends BaseFeedService {
     // Aplicar engajamento e aleatoriedade em cada camada
     const processLayer = (layer: any[], layerName: string, isDayLayer: boolean = false) => {
       return layer.map((post, index) => {
-        const baseScore = this.calculateEngagementScore(post);
+        // Passa 'now' para calcular boost temporal corretamente
+        const baseScore = this.calculateEngagementScore(post, now);
         const finalScore = this.applyRandomness(baseScore, effectiveSeed, index, 0.3);
         return {
           post,
