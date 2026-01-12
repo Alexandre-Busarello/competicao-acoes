@@ -87,7 +87,7 @@ function validateKiwifySignature(bodyText: string, signature: string | null, sec
  * 
  * IMPORTANTE: 
  * - O email é sempre a chave entre Kiwify e a aplicação
- * - Configure KIWIFY_WEBHOOK_TOKEN nas variáveis de ambiente com o token do painel
+ * - Configure KIWIFY_WEBHOOK_SECRET nas variáveis de ambiente com o token do painel
  */
 export async function POST(request: NextRequest) {
   try {
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     // O signature vem na querystring: ?signature=xxx
     // A fórmula é: signature = hmac_sha1(JSON.stringify(request.body), secretKey)
     if (!isTestMode) {
-      const webhookToken = process.env.KIWIFY_WEBHOOK_TOKEN;
+      const webhookToken = process.env.KIWIFY_WEBHOOK_SECRET;
       const { searchParams } = new URL(request.url);
       const signature = searchParams.get('signature');
 
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
 
         console.log('Webhook signature validated successfully');
       } else {
-        console.warn('KIWIFY_WEBHOOK_TOKEN not configured. Skipping signature validation.');
+        console.warn('KIWIFY_WEBHOOK_SECRET not configured. Skipping signature validation.');
       }
     }
 
