@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
 
     const normalizedTicker = validationResult.ticker;
     const priceResult = validationResult.price;
+    const currency = validationResult.currency || null; // Moeda obtida do Yahoo Finance
     
     // Verificar se o ativo permite frações
     const allowsFractions = allowsFractionalQuantity(normalizedTicker);
@@ -137,6 +138,7 @@ export async function POST(request: NextRequest) {
         type: tx.type as 'compra' | 'venda',
         quantity: toNumber(tx.quantity),
         price: toNumber(tx.price),
+        currency: tx.currency,
         date: tx.date,
         createdAt: tx.createdAt,
       }));
@@ -192,6 +194,7 @@ export async function POST(request: NextRequest) {
         type,
         quantity: quantityStr, // Passar string diretamente - Prisma converte para Decimal
         price: String(priceResult), // Passar string diretamente também
+        currency: currency, // Moeda obtida do Yahoo Finance
         date: new Date(date),
       },
     });
@@ -221,6 +224,7 @@ export async function POST(request: NextRequest) {
         type: transaction.type,
         quantity: toNumber(transaction.quantity),
         price: toNumber(transaction.price),
+        currency: transaction.currency,
         date: transaction.date,
       });
     } catch (feedError) {
@@ -237,6 +241,7 @@ export async function POST(request: NextRequest) {
         type: transaction.type,
         quantity: toNumber(transaction.quantity),
         price: toNumber(transaction.price),
+        currency: transaction.currency,
         date: transaction.date.toISOString(),
         createdAt: transaction.createdAt.toISOString(),
       },
@@ -284,6 +289,7 @@ export async function GET(request: NextRequest) {
         type: t.type,
         quantity: toNumber(t.quantity),
         price: toNumber(t.price),
+        currency: t.currency,
         date: t.date.toISOString(),
         createdAt: t.createdAt.toISOString(),
       })),

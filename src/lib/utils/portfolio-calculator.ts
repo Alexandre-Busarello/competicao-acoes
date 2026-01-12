@@ -184,6 +184,17 @@ export function calculateCurrentValue(
       position.ticker.toLowerCase(), // Lowercase do original
     ];
     
+    // Para tickers brasileiros, também tentar sem .SA
+    if (normalizedTicker.endsWith('.SA')) {
+      const withoutSA = normalizedTicker.slice(0, -3);
+      tickerVariations.push(withoutSA, withoutSA.toUpperCase(), withoutSA.toLowerCase());
+    }
+    
+    // Para tickers que parecem brasileiros mas não têm .SA, tentar adicionar
+    if (!normalizedTicker.includes('.') && /^[A-Z]{4,5}\d{1,2}$/i.test(normalizedTicker)) {
+      tickerVariations.push(`${normalizedTicker}.SA`, `${normalizedTicker}.SA`.toUpperCase());
+    }
+    
     let currentPrice = 0;
     for (const variation of tickerVariations) {
       if (prices[variation] && prices[variation] > 0) {
@@ -376,5 +387,81 @@ export function calculatePortfolio(
     return: returnValue,
     returnPercentage,
   };
+}
+
+/**
+ * Interface para totais agrupados por moeda
+ */
+export interface CurrencyTotals {
+  currency: string;
+  totalInvested: number;
+  currentValue: number;
+  cashFromSales: number;
+  positionsValue?: number; // Valor atual das posições (sem incluir vendas)
+  return: number;
+  returnPercentage: number;
+}
+
+/**
+ * Calcula totais da carteira agrupados por moeda
+ * 
+ * IMPORTANTE: A moeda não impacta o ranking - todas as moedas têm equivalência 1:1
+ * para cálculo de rentabilidade. Esta função apenas agrupa os valores por moeda
+ * para exibição, mas o ranking considera todas as moedas igualmente.
+ */
+export function calculatePortfolioByCurrency(
+  transactions: Transaction[],
+  prices: PriceMap
+): CurrencyTotals[] {
+  // Agrupar transações por moeda
+  const transactionsByCurrency = new Map<string, Transaction[]>();
+  
+  for (const tx of transactions) {
+    // Usar 'BRL' como padrão se currency não estiver definida (transações antigas)
+    const currency = tx.currency || 'BRL';
+    
+    if (!transactionsByCurrency.has(currency)) {
+      transactionsByCurrency.set(currency, []);
+    }
+    transactionsByCurrency.get(currency)!.push(tx);
+  }
+  
+  const currencyTotals: CurrencyTotals[] = [];
+  
+  // Calcular totais para cada moeda
+  for (const [currency, currencyTransactions] of transactionsByCurrency.entries()) {
+    const positions = calculatePositions(currencyTransactions);
+    const totalInvested = calculateTotalInvested(currencyTransactions);
+    const cashFromSales = calculateTotalFromSales(currencyTransactions);
+    
+    // Usar calculateCurrentValue diretamente para calcular valor das posições
+    // Ela já tem toda a lógica de busca de preços com todas as variações
+    // Passar cashFromSales=0 para obter apenas o valor das posições
+    const positionsValue = calculateCurrentValue(positions, prices, 0);
+    
+    // Valor atual = posições + dinheiro de vendas
+    const currentValue = positionsValue + cashFromSales;
+    const returnValue = currentValue - totalInvested;
+    const returnPercentage = calculateReturn(currentValue, totalInvested);
+    
+    currencyTotals.push({
+      currency,
+      totalInvested,
+      currentValue,
+      cashFromSales,
+      positionsValue, // Valor atual das posições (sem incluir vendas)
+      return: returnValue,
+      returnPercentage,
+    });
+  }
+  
+  // Ordenar por moeda (BRL primeiro, depois alfabeticamente)
+  currencyTotals.sort((a, b) => {
+    if (a.currency === 'BRL') return -1;
+    if (b.currency === 'BRL') return 1;
+    return a.currency.localeCompare(b.currency);
+  });
+  
+  return currencyTotals;
 }
 

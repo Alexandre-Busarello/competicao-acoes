@@ -132,11 +132,15 @@ export class YahooFinanceService {
         };
       }
       
+      // Extrair currency do resultado (pode estar em currency ou financialCurrency)
+      const currency = result.currency || result.financialCurrency || null;
+      
       return {
         valid: true,
         ticker: normalizedTicker,
         name: result.longName || result.shortName || result.displayName || result.symbol || normalizedTicker,
         price: typeof price === 'number' ? price : parseFloat(price),
+        currency: currency || undefined,
       };
     } catch (error) {
       let errorMessage = 'Erro ao validar ticker';

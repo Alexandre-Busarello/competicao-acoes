@@ -21,6 +21,7 @@ export interface TickerValidationResult {
   ticker: string;
   name?: string;
   price?: number;
+  currency?: string; // Moeda do ativo (BRL, USD, EUR, etc.)
   error?: string;
 }
 

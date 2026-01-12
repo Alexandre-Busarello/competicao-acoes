@@ -47,6 +47,7 @@ model Transaction {
   type      String
   quantity  Decimal   @db.Decimal(18, 8)
   price     Decimal   @db.Decimal(10, 2)
+  currency  String?   // Moeda do ativo (BRL, USD, EUR, etc.) obtida do Yahoo Finance
   date      DateTime
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -55,6 +56,7 @@ model Transaction {
   @@index([userId])
   @@index([ticker])
   @@index([date])
+  @@index([currency])
 }
 
 model Subscription {

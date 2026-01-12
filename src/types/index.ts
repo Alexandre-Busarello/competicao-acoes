@@ -54,6 +54,7 @@ export interface Transaction {
   type: 'compra' | 'venda';
   quantity: number;
   price: number;
+  currency?: string | null; // Moeda do ativo (BRL, USD, EUR, etc.)
   date: Date;
   createdAt: Date;
 }

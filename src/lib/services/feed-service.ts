@@ -52,6 +52,7 @@ export class FeedService {
     type: string;
     quantity: number;
     price: number;
+    currency?: string | null;
     date: Date;
   }): Promise<void> {
     // Gera slug único
@@ -82,6 +83,7 @@ export class FeedService {
           ticker: transaction.ticker,
           quantity: transaction.quantity,
           price: transaction.price,
+          currency: transaction.currency,
           date: transaction.date.toISOString(),
         },
         isPublic: true, // Padrão: público

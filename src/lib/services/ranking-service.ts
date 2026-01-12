@@ -1303,6 +1303,7 @@ export class RankingService {
       type: tx.type as 'compra' | 'venda',
       quantity: tx.quantity.toNumber(),
       price: tx.price.toNumber(),
+      currency: tx.currency,
       date: tx.date,
       createdAt: tx.createdAt,
     }));

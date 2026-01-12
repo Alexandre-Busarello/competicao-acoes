@@ -321,6 +321,88 @@ export default function ComoFuncionaPage() {
           </CardContent>
         </Card>
 
+        {/* Moeda e Câmbio */}
+        <Card className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/10">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-900 dark:text-green-100">
+              <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+              Moeda e Câmbio no Ranking
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-md border border-green-200 dark:border-green-800">
+              <p className="font-semibold text-green-900 dark:text-green-100 mb-2">
+                💡 Como funciona a moeda no ranking
+              </p>
+              <p className="text-sm text-green-800 dark:text-green-200 mb-3">
+                A moeda do ativo (BRL, USD, EUR, etc.) <strong>NÃO impacta</strong> o cálculo da rentabilidade no ranking. 
+                Todas as moedas têm equivalência 1:1 para fins de cálculo de rentabilidade.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                  <Info className="h-4 w-4" />
+                  Equivalência 1:1 entre Moedas
+                </h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  No ranking, todas as moedas são tratadas como equivalentes. Isso significa que:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-2">
+                  <li><strong className="text-foreground">1 BRL = 1 USD = 1 EUR</strong> para cálculo de rentabilidade</li>
+                  <li>A variação cambial <strong className="text-foreground">não é contabilizada</strong> na rentabilidade</li>
+                  <li>Se você comprar um ativo em dólar e ele se valorizar frente ao real, essa variação cambial não impacta sua rentabilidade</li>
+                  <li>A rentabilidade é calculada apenas pela variação do preço do ativo na sua moeda original</li>
+                </ul>
+              </div>
+
+              <div className="mt-4 p-4 bg-background rounded-md border border-border">
+                <h4 className="font-semibold mb-2">Exemplo prático:</h4>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    Você compra 10 ações de AAPL (Apple) a <strong className="text-foreground">$150 USD</strong> cada 
+                    (total investido: <strong className="text-foreground">$1.500 USD</strong>).
+                  </p>
+                  <p>
+                    Após alguns dias, as ações estão valendo <strong className="text-foreground">$165 USD</strong> cada 
+                    (valor atual: <strong className="text-foreground">$1.650 USD</strong>).
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Rentabilidade:</strong> ((1.650 - 1.500) / 1.500) × 100% = <strong className="text-success">+10%</strong>
+                  </p>
+                  <p className="mt-2 text-xs italic">
+                    ⚠️ <strong>Importante:</strong> Mesmo que o dólar tenha se valorizado frente ao real durante esse período, 
+                    essa variação cambial <strong>não é considerada</strong> no cálculo da rentabilidade. Apenas a variação do preço 
+                    do ativo em dólar é contabilizada.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <h4 className="font-semibold mb-2">Diversificação da Carteira</h4>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Na hora de calcular as proporções de diversificação da sua carteira, você deve considerar que:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-2">
+                  <li>Toda moeda tem a mesma equivalência (1:1)</li>
+                  <li>Um ativo de R$ 1.000 em BRL tem o mesmo peso que um ativo de $ 1.000 em USD</li>
+                  <li>Para diversificação, considere apenas o valor investido, não a moeda</li>
+                </ul>
+              </div>
+
+              <div className="mt-4 p-4 bg-primary/10 dark:bg-primary/20 rounded-md border border-primary/20 dark:border-primary/30">
+                <h4 className="font-semibold text-primary dark:text-primary mb-2">Por que essa regra existe?</h4>
+                <p className="text-sm text-foreground/80 dark:text-foreground/80">
+                  O objetivo do ranking é avaliar a capacidade de escolher ativos que se valorizam, não a capacidade de 
+                  prever movimentos cambiais. Dessa forma, todos os participantes competem em condições iguais, independentemente 
+                  de investirem em ativos brasileiros ou internacionais.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Outras Regras */}
         <Card>
           <CardHeader>
