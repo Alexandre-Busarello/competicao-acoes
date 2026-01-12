@@ -47,14 +47,21 @@ async function removePremiumFromUser(email: string) {
 /**
  * Webhook do Kiwify para processar compras confirmadas
  * 
- * Eventos esperados:
- * - order.paid: Compra confirmada (ativa premium)
- * - order.completed: Compra completada (ativa premium)
- * - order.refunded: Reembolso (remove premium)
- * - order.chargeback: Chargeback (remove premium)
- * - subscription.cancelled: Assinatura cancelada (remove premium)
+ * Formato do webhook do Kiwify:
+ * - O evento vem em webhook_event_type (ex: "order_approved", "order_refunded", "subscription_cancelled")
+ * - Os dados do cliente estão em Customer (Customer.email, Customer.full_name)
+ * - Os dados da subscription estão em Subscription (Subscription.id, Subscription.next_payment)
+ * - O order_id está em order_id
+ * - O token de validação vem em body.token (se configurado)
  * 
- * IMPORTANTE: O email é sempre a chave entre Kiwify e a aplicação
+ * Eventos mapeados:
+ * - order_approved → order.paid (ativa premium)
+ * - order_refunded → order.refunded (remove premium)
+ * - subscription_cancelled → subscription.cancelled (remove premium)
+ * 
+ * IMPORTANTE: 
+ * - O email é sempre a chave entre Kiwify e a aplicação
+ * - Configure KIWIFY_WEBHOOK_TOKEN nas variáveis de ambiente para validar webhooks
  */
 export async function POST(request: NextRequest) {
   try {
@@ -100,19 +107,47 @@ export async function POST(request: NextRequest) {
 
     console.log('Kiwify webhook parsed body:', JSON.stringify(body, null, 2));
 
-    // O Kiwify pode enviar o webhook em diferentes formatos
-    // Formato 1: { event: 'order.paid', data: { order: {...} } }
-    // Formato 2: { event: 'order.paid', order: {...} }
-    // Formato 3: { type: 'order.paid', order: {...} }
-    let event = body.event || body.type || body.event_type;
-    let data = body.data || body;
-
-    // Se não encontrou event no nível superior, pode estar dentro de data
-    if (!event && data && typeof data === 'object') {
-      event = data.event || data.type || data.event_type;
+    // Validar token do webhook (se configurado)
+    // O token do webhook do Kiwify vem no campo "token" do body
+    // Configure KIWIFY_WEBHOOK_TOKEN nas variáveis de ambiente com o token fornecido no painel
+    // Exemplo: KIWIFY_WEBHOOK_TOKEN=h0c8vrgzo71
+    const webhookToken = process.env.KIWIFY_WEBHOOK_TOKEN;
+    if (webhookToken && body.token !== webhookToken) {
+      console.error('Invalid webhook token. Expected:', webhookToken, 'Received:', body.token);
+      return NextResponse.json(
+        { error: 'Token inválido' },
+        { status: 401 }
+      );
     }
 
-    console.log('Kiwify webhook extracted:', { event, dataKeys: data ? Object.keys(data) : null });
+    // O Kiwify envia o evento em webhook_event_type
+    // Formatos possíveis: "order_approved", "order_refunded", "subscription_cancelled", etc.
+    const webhookEventType = body.webhook_event_type;
+    
+    // Mapear eventos do Kiwify para eventos internos
+    // order_approved = pedido aprovado/pago
+    // order_refunded = pedido reembolsado
+    // subscription_cancelled = assinatura cancelada
+    let event: string | null = null;
+    
+    if (webhookEventType === 'order_approved') {
+      event = 'order.paid';
+    } else if (webhookEventType === 'order_refunded') {
+      event = 'order.refunded';
+    } else if (webhookEventType === 'subscription_cancelled') {
+      event = 'subscription.cancelled';
+    } else if (webhookEventType) {
+      // Manter o evento original se não houver mapeamento específico
+      event = webhookEventType;
+    }
+
+    console.log('Kiwify webhook extracted:', { 
+      webhookEventType, 
+      mappedEvent: event,
+      orderStatus: body.order_status,
+      hasCustomer: !!body.Customer,
+      hasSubscription: !!body.Subscription
+    });
 
     // Validar que temos um evento
     if (!event) {
@@ -125,24 +160,27 @@ export async function POST(request: NextRequest) {
 
     // Processar apenas eventos de compra confirmada
     if (event === 'order.paid' || event === 'order.completed') {
-      // O Kiwify pode enviar order em diferentes lugares:
-      // - data.order
-      // - data (quando data já é o order)
-      // - body.order (quando não há data)
-      const order = data?.order || data || body.order || body;
+      // Formato do Kiwify: dados estão diretamente no body
+      // Customer está em body.Customer
+      // Subscription está em body.Subscription
+      // Order ID está em body.order_id
       
-      if (!order || typeof order !== 'object') {
-        console.error('No order found in webhook data. Data structure:', JSON.stringify(data, null, 2));
+      const customer = body.Customer;
+      const kiwifySubscription = body.Subscription;
+      
+      if (!customer) {
+        console.error('No Customer found in webhook data. Body structure:', JSON.stringify(body, null, 2));
         return NextResponse.json(
-          { error: 'Dados do pedido não encontrados no webhook' },
+          { error: 'Dados do cliente não encontrados no webhook' },
           { status: 400 }
         );
       }
 
-      const email = order.customer?.email || order.email || order.customer_email;
-      const name = order.customer?.name || order.name || order.customer_name;
-      const kiwifyOrderId = order.id || order.order_id || order.orderId;
-      const kiwifyId = order.subscription_id || order.product_id || order.subscriptionId || order.productId;
+      const email = customer.email;
+      const name = customer.full_name || customer.first_name;
+      const kiwifyOrderId = body.order_id;
+      // Subscription ID pode estar em body.subscription_id ou body.Subscription.id
+      const kiwifyId = body.subscription_id || kiwifySubscription?.id;
 
       if (!email) {
         console.error('No email found in webhook data');
@@ -306,10 +344,17 @@ export async function POST(request: NextRequest) {
         throw new Error('Failed to get or create user');
       }
 
-      // Calcular data de expiração: 12 meses a partir de agora
-      const now = new Date();
-      const expirationDate = new Date(now);
-      expirationDate.setMonth(expirationDate.getMonth() + 12);
+      // Calcular data de expiração
+      // Prioridade: usar next_payment da subscription do Kiwify, senão 12 meses
+      let expirationDate: Date;
+      if (kiwifySubscription?.next_payment) {
+        expirationDate = new Date(kiwifySubscription.next_payment);
+      } else {
+        // Fallback: 12 meses a partir de agora
+        const now = new Date();
+        expirationDate = new Date(now);
+        expirationDate.setMonth(expirationDate.getMonth() + 12);
+      }
 
       // Criar ou atualizar assinatura
       const subscription = await prisma.subscription.upsert({
@@ -377,9 +422,9 @@ export async function POST(request: NextRequest) {
       event === 'chargeback.created' ||
       event === 'subscription.cancelled'
     ) {
-      // O Kiwify pode enviar order em diferentes lugares
-      const order = data?.order || data || body.order || body;
-      const email = order?.customer?.email || order?.email || order?.customer_email || data?.email || body?.email;
+      // Formato do Kiwify: Customer está em body.Customer
+      const customer = body.Customer;
+      const email = customer?.email || body.email;
 
       if (!email) {
         console.error('No email found in cancellation/refund/chargeback webhook data');
