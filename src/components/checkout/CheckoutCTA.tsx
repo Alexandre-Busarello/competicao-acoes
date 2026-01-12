@@ -1,9 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { LeadCaptureModal } from './LeadCaptureModal';
-import { Sparkles, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth/client';
 import { redirectToKiwifyCheckout } from '@/lib/utils/checkout';
 
@@ -26,7 +24,6 @@ export function CheckoutCTA({
   size = 'default',
   className,
 }: CheckoutCTAProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const { user, isAuthenticated } = useAuth();
 
   const handleClick = () => {
@@ -60,30 +57,21 @@ export function CheckoutCTA({
           redirectToKiwifyCheckout(user.email, source);
         });
     } else {
-      // Usuário não logado, abrir modal para capturar email
-      setIsModalOpen(true);
+      // Usuário não logado, redirecionar para página de criação de conta
+      window.location.href = '/auth/login?signup=true';
     }
   };
 
   return (
-    <>
-      <Button
-        onClick={handleClick}
-        variant={variant}
-        size={size}
-        className={className}
-      >
-        <Lock className="h-4 w-4 mr-2" />
-        {buttonText}
-      </Button>
-      <LeadCaptureModal
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        source={source}
-        title={title}
-        description={description}
-      />
-    </>
+    <Button
+      onClick={handleClick}
+      variant={variant}
+      size={size}
+      className={className}
+    >
+      <Lock className="h-4 w-4 mr-2" />
+      {buttonText}
+    </Button>
   );
 }
 

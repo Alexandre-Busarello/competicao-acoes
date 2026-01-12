@@ -41,6 +41,7 @@ function LoginForm() {
   useEffect(() => {
     const urlError = searchParams.get('error');
     const urlEmail = searchParams.get('email');
+    const urlSignup = searchParams.get('signup');
     
     if (urlError === 'expired') {
       setError('O link de acesso expirou. Solicite um novo link abaixo.');
@@ -50,6 +51,12 @@ function LoginForm() {
     
     if (urlEmail) {
       setEmail(urlEmail);
+    }
+    
+    // Se houver parâmetro signup na URL, abrir em modo criação de conta
+    if (urlSignup === 'true') {
+      setIsSignup(true);
+      setLoginMethod('password'); // Criar conta requer senha
     }
   }, [searchParams]);
 

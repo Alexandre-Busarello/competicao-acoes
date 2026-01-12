@@ -96,7 +96,7 @@ export function EmptyRankingState() {
                   Você poderá cadastrar transações, ver seu ranking e competir com outros investidores.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-stretch sm:items-center px-2">
-                  <Link href="/auth/login" className="w-full sm:w-auto">
+                  <Link href="/auth/login?signup=true" className="w-full sm:w-auto">
                     <Button size="lg" className="w-full sm:w-auto sm:min-w-[200px]">
                       Criar Conta Grátis
                       <ArrowRight className="h-4 w-4 ml-2" />

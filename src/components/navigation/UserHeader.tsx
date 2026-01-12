@@ -6,7 +6,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuth } from '@/lib/auth/client';
 import { useTheme } from '@/lib/providers/ThemeProvider';
 import { formatUserNameWithId, getNameWithoutId } from '@/lib/utils/format-user-name';
-import { LogOut, Crown, Loader2, LogIn, Rss, Trophy, Wallet, User } from 'lucide-react';
+import { LogOut, Crown, Loader2, LogIn, Rss, Trophy, Wallet, User, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
@@ -130,6 +130,12 @@ export function UserHeader() {
               <Button variant="outline" size="sm">
                 <LogIn className="h-4 w-4 mr-2" />
                 Entrar
+              </Button>
+            </Link>
+            <Link href="/auth/login?signup=true">
+              <Button size="sm">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Criar Conta
               </Button>
             </Link>
           </div>
