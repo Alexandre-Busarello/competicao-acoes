@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rankingService } from '@/lib/services/ranking-service';
+import { getServerSession } from '@/lib/auth/server';
+import { obfuscatePortfolioAssets } from '@/lib/utils/portfolio-obfuscation';
 
 /**
  * GET /api/ranking
  * Retorna o ranking já calculado (sem recalcular)
  * O cálculo deve ser feito apenas pelo cron em /api/prices/update
+ * Aplica ofuscação de ativos para usuários não premium
  */
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +44,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Buscar sessão do usuário (pode ser null se não autenticado)
+    const session = await getServerSession();
+    const viewerUserId = session?.user.id;
+    const isPremium = session?.user.isPremium ?? false;
+
     // Buscar ranking do período específico do banco de dados
     let ranking = await rankingService.getRanking(period, year, month);
 
@@ -53,13 +61,40 @@ export async function GET(request: NextRequest) {
       ranking = await rankingService.getRanking(period, year, month) || calculatedRanking;
     }
 
+    // Aplicar ofuscação de ativos para cada entrada do ranking
+    const rankingWithObfuscation = {
+      ...ranking,
+      ranking: ranking.ranking.map(entry => {
+        // Verificar se o usuário visualizador é o dono do portfólio
+        const isOwner = viewerUserId === entry.userId;
+        
+        // Aplicar ofuscação se houver portfólio
+        if (entry.portfolio && entry.portfolio.length > 0) {
+          const obfuscatedPortfolio = obfuscatePortfolioAssets(
+            entry.portfolio,
+            isPremium,
+            isOwner,
+            viewerUserId,
+            entry.userId
+          );
+          
+          return {
+            ...entry,
+            portfolio: obfuscatedPortfolio,
+          };
+        }
+        
+        return entry;
+      }),
+    };
+
     // Garantir que lastUpdate seja serializado corretamente como ISO string
     // Isso preserva a data real do cálculo, não a data atual
     return NextResponse.json({
-      ...ranking,
-      lastUpdate: ranking.lastUpdate instanceof Date 
-        ? ranking.lastUpdate.toISOString() 
-        : ranking.lastUpdate,
+      ...rankingWithObfuscation,
+      lastUpdate: rankingWithObfuscation.lastUpdate instanceof Date 
+        ? rankingWithObfuscation.lastUpdate.toISOString() 
+        : rankingWithObfuscation.lastUpdate,
     });
   } catch (error) {
     console.error('Erro ao obter ranking:', error);

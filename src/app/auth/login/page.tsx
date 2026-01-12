@@ -8,10 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Mail, Loader2, CheckCircle2, AlertCircle, Trophy, Sparkles, Lock, LogIn } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth, syncSessionManager } from '@/lib/auth/client';
 import { CheckoutCTA } from '@/components/checkout/CheckoutCTA';
 import { supabase } from '@/lib/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTheme } from '@/lib/providers/ThemeProvider';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -25,6 +27,12 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
+  const { theme } = useTheme();
+  
+  // Logo combinada baseada no tema
+  const logoPath = theme === 'dark' 
+    ? '/logo-combinada-escuro.svg' 
+    : '/logo-combinada-claro.svg';
 
   // Usar o singleton global de sincronização ao invés de refs locais
   // Isso garante que apenas uma sincronização ocorra por vez em toda a aplicação
@@ -268,9 +276,14 @@ function LoginForm() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Mail className="h-8 w-8 text-primary" />
-            </div>
+            <Image 
+              src={logoPath}
+              alt="Hold Arena" 
+              width={200} 
+              height={67}
+              className="h-16 w-auto object-contain"
+              priority
+            />
           </div>
           <CardTitle className="text-2xl">Acessar Plataforma</CardTitle>
           <CardDescription className="text-base mt-2">

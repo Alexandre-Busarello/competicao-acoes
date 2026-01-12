@@ -14,6 +14,10 @@ interface AssetListProps {
 
 export function AssetList({ assets, isPremium, isOwner = false }: AssetListProps) {
   const canView = isPremium || isOwner;
+  
+  // Verificar se um ativo é mockado (começa com MOCK)
+  const isMockedAsset = (ticker: string) => ticker.startsWith('MOCK');
+  
   return (
     <div className="container mx-auto px-4 py-4">
       <h2 className="text-lg font-semibold mb-4">Carteira</h2>
@@ -21,6 +25,7 @@ export function AssetList({ assets, isPremium, isOwner = false }: AssetListProps
         {assets.map((asset, index) => {
           const isVisible = canView || asset.visible || index === 0;
           const isPositive = asset.return >= 0;
+          const isMocked = isMockedAsset(asset.ticker);
 
           return (
             <Card
@@ -30,6 +35,14 @@ export function AssetList({ assets, isPremium, isOwner = false }: AssetListProps
               }`}
             >
               <CardContent className="p-4">
+                {isMocked && !canView && (
+                  <div className="mb-2 p-2 bg-muted/50 rounded-md border border-dashed border-muted-foreground/30">
+                    <p className="text-xs text-muted-foreground text-center">
+                      <strong>Ativo ofuscado:</strong> Este dado foi mockado para proteger a privacidade. 
+                      Assine o plano premium para visualizar todos os ativos do portfólio.
+                    </p>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">

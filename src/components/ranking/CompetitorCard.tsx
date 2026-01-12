@@ -75,15 +75,13 @@ export function CompetitorCard({ competitor, period, year, month }: CompetitorCa
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <Link 
-                  href={`/perfil/${competitor.id}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="font-semibold truncate hover:underline block"
-                >
+                <p className="font-semibold truncate">
                   {formatUserNameWithId(competitor.name, competitor.id)}
-                </Link>
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  {competitor.portfolio.length} ativos
+                  {isPremium || user?.id === competitor.id
+                    ? `${competitor.portfolio.length} ativos`
+                    : `${competitor.portfolio.length > 0 ? '1+' : '0'} ativos`}
                 </p>
               </div>
             </div>
