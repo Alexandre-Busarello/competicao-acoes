@@ -3,6 +3,7 @@ import { createServerClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma/client';
 import { generateInvestorName } from '@/lib/utils/generate-investor-name';
 import { generateAvatarUrlWithFallback } from '@/lib/utils/avatar';
+import { generateSlugAfterUserCreation } from '@/lib/utils/user-slug-helper';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,6 +93,9 @@ export async function POST(request: NextRequest) {
           isPremium: false,
         },
       });
+      
+      // Gerar slug inicial para o novo usuário
+      await generateSlugAfterUserCreation(user.id);
     } else if (authUser && user.authUserId !== authUser.id) {
       // Usuário existe no banco mas authUserId é diferente
       // Isso significa que o usuário está usando outro método de login (ex: tinha Google, agora usando magic link)
@@ -113,7 +117,10 @@ export async function POST(request: NextRequest) {
     // Obter URL de redirecionamento
     // Prioridade: APP_URL (server-side) > NEXT_PUBLIC_APP_URL (client-side) > localhost
     const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const redirectUrl = `${appUrl}/auth/callback`;
+    
+    // Obter returnUrl do body se fornecido
+    const returnUrl = body.returnUrl || body.redirect || '/ranking';
+    const redirectUrl = `${appUrl}/auth/callback?returnUrl=${encodeURIComponent(returnUrl)}`;
     
     console.log('=== Magic Link Configuration ===');
     console.log('Redirect URL (emailRedirectTo):', redirectUrl);

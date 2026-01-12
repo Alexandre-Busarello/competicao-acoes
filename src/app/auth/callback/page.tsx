@@ -110,9 +110,9 @@ function AuthCallbackContent() {
 
           console.log('Session verified, redirecting...');
           
-          // Redirecionar para ranking
-          const next = searchParams.get('next') || '/ranking';
-          router.push(next);
+          // Redirecionar para returnUrl, redirect ou next (prioridade nesta ordem)
+          const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect') || searchParams.get('next') || '/ranking';
+          router.push(returnUrl);
         } else {
           // Tentar obter sessão atual (pode ter sido processada automaticamente pelo Supabase)
           // Isso pode acontecer se o Supabase detectou automaticamente a sessão na URL
@@ -173,8 +173,9 @@ function AuthCallbackContent() {
               window.history.replaceState(null, '', window.location.pathname);
               await new Promise(resolve => setTimeout(resolve, 1000));
               
-              const next = searchParams.get('next') || '/ranking';
-              router.push(next);
+              // Redirecionar para returnUrl, redirect ou next (prioridade nesta ordem)
+              const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect') || searchParams.get('next') || '/ranking';
+              router.push(returnUrl);
               return;
             }
 
@@ -211,9 +212,9 @@ function AuthCallbackContent() {
           // Aguardar sincronização
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // Redirecionar para ranking
-          const next = searchParams.get('next') || '/ranking';
-          router.push(next);
+          // Redirecionar para returnUrl, redirect ou next (prioridade nesta ordem)
+          const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect') || searchParams.get('next') || '/ranking';
+          router.push(returnUrl);
         }
       } catch (err) {
         console.error('Error in callback:', err);

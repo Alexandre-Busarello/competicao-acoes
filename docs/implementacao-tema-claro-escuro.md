@@ -118,7 +118,7 @@ const logoPath = theme === 'dark'
 
 ### Favicons
 - `/favicon-claro.png` - Favicon para tema claro
-- `/favicon-escuro.png` - Favicon para tema escuro
+- `/favicon-escuro.svg` - Favicon para tema escuro
 
 ### Logos
 - `/holdareana-logo-texto-claro.png` - Logo com texto para tema claro

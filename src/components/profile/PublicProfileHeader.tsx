@@ -132,7 +132,9 @@ export function PublicProfileHeader({ userId }: PublicProfileHeaderProps) {
     .toUpperCase()
     .slice(0, 2);
 
-  const shareUrl = getShareUrl('profile', userId);
+  // Obter slug do perfil para compartilhamento
+  const profileSlug = profile?.slug || null;
+  const shareUrl = getShareUrl('profile', userId, undefined, profileSlug);
   const memberSince = formatDistanceToNow(new Date(profile.createdAt), {
     addSuffix: true,
     locale: ptBR,

@@ -63,11 +63,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const appleTouchIcon = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement;
     
     if (favicon) {
-      favicon.href = newTheme === 'dark' ? '/favicon-escuro.png' : '/favicon-claro.png';
+      favicon.href = newTheme === 'dark' ? '/favicon-escuro.svg' : '/favicon-claro.svg';
     }
     
     if (appleTouchIcon) {
-      appleTouchIcon.href = newTheme === 'dark' ? '/favicon-escuro.png' : '/favicon-claro.png';
+      appleTouchIcon.href = newTheme === 'dark' ? '/favicon-escuro.svg' : '/favicon-claro.svg';
     }
   };
 

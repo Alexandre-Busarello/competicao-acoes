@@ -3,7 +3,7 @@
 ## Objetivo
 Remover os fundos dos favicons deixando-os com transparência:
 - **favicon-claro.png**: Remover fundo escuro (borda escura), mantendo o fundo branco
-- **favicon-escuro.png**: Remover apenas o fundo branco fora do quadrado escuro, mantendo o fundo escuro e o logo
+- **favicon-escuro.svg**: Remover apenas o fundo branco fora do quadrado escuro, mantendo o fundo escuro e o logo
 
 ## Implementação
 
@@ -39,7 +39,7 @@ python3 scripts/process-favicons.py
 
 O script processa automaticamente:
 - `public/favicon-claro.png` - Remove fundo escuro (borda escura)
-- `public/favicon-escuro.png` - Remove apenas fundo branco (mantém fundo escuro do quadrado)
+- `public/favicon-escuro.svg` - Remove apenas fundo branco (mantém fundo escuro do quadrado)
 
 Os arquivos são salvos no mesmo local, substituindo os originais.
 

@@ -81,7 +81,7 @@ export default function EditPostPage() {
     onSuccess: () => {
       // Redirecionar para o post
       if (post?.slug) {
-        router.push(`/post/${post.slug}`);
+        router.push(`/posts/${post.slug}`);
       } else {
         router.push('/feed');
       }
@@ -141,7 +141,7 @@ export default function EditPostPage() {
 
   return (
     <div className="flex flex-col overflow-hidden">
-      <PageHeader title="Editar Post" backHref={post.slug ? `/post/${post.slug}` : '/feed'} className="flex-shrink-0" />
+      <PageHeader title="Editar Post" backHref={post.slug ? `/posts/${post.slug}` : '/feed'} className="flex-shrink-0" />
       
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Editor - altura calculada descontando header e footer (valores diferentes para mobile/desktop) */}

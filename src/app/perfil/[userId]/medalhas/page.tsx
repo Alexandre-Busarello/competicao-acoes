@@ -8,13 +8,26 @@ import { PublicProfileHeader } from '@/components/profile/PublicProfileHeader';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
+import { useProfileUrl } from '@/lib/hooks/use-profile-url';
 
 export default function MedalTimelinePage({
   params,
 }: {
   params: { userId: string };
 }) {
-  const userId = params.userId;
+  // params.userId pode ser slug ou ID - buscar perfil para obter ID real
+  const { data: profile } = useQuery({
+    queryKey: ['public-profile-by-slug-or-id', params.userId],
+    queryFn: async () => {
+      // Tentar buscar por slug primeiro, depois por ID
+      const response = await fetch(`/api/users/${params.userId}/public`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+  });
+  
+  const userId = profile?.id || params.userId;
+  const profileUrl = useProfileUrl(userId);
 
   const { data: timeline, isLoading } = useQuery({
     queryKey: ['medal-timeline', userId],
@@ -54,7 +67,7 @@ export default function MedalTimelinePage({
 
   return (
     <div className="min-h-screen">
-      <PageHeader title="Medalhas" backHref={`/perfil/${userId}`} />
+      <PageHeader title="Medalhas" backHref={profileUrl} />
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         <PublicProfileHeader userId={userId} />
 

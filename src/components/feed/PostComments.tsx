@@ -28,6 +28,7 @@ import { ptBR } from 'date-fns/locale';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
+import { useRouter } from 'next/navigation';
 
 interface Comment {
   id: string;
@@ -44,11 +45,13 @@ interface Comment {
 
 interface PostCommentsProps {
   postId: string;
+  postSlug?: string;
   onCommentAdded?: () => void;
 }
 
-export function PostComments({ postId, onCommentAdded }: PostCommentsProps) {
-  const { user } = useUserStore();
+export function PostComments({ postId, postSlug, onCommentAdded }: PostCommentsProps) {
+  const { user, isAuthenticated } = useUserStore();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [commentContent, setCommentContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -202,11 +205,23 @@ export function PostComments({ postId, onCommentAdded }: PostCommentsProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentContent.trim() || !user) return;
+    
+    // Verificar autenticação antes de permitir comentar
+    if (!isAuthenticated || !user) {
+      // Construir URL de retorno baseada no slug do post ou URL atual
+      const returnUrl = postSlug 
+        ? `/posts/${postSlug}` 
+        : (typeof window !== 'undefined' ? window.location.pathname : '/feed');
+      router.push(`/auth/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+      return;
+    }
+    
+    if (!commentContent.trim()) return;
 
     setIsSubmitting(true);
     try {
       await addCommentMutation.mutateAsync(commentContent.trim());
+      setCommentContent(''); // Limpar campo após sucesso
     } finally {
       setIsSubmitting(false);
     }

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma/client';
 import { generateInvestorName } from '@/lib/utils/generate-investor-name';
 import { generateAvatarUrlWithFallback } from '@/lib/utils/avatar';
 import { createServerClient } from '@/lib/supabase/server';
+import { generateSlugAfterUserCreation } from '@/lib/utils/user-slug-helper';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +53,9 @@ export async function GET(request: NextRequest) {
           subscription: true,
         },
       });
+      
+      // Gerar slug inicial para o novo usuário
+      await generateSlugAfterUserCreation(user.id);
       
       console.log('User created in database:', user.email, 'id:', user.id);
     }

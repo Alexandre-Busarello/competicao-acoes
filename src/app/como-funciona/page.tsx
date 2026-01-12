@@ -234,10 +234,20 @@ export default function ComoFuncionaPage() {
                     apenas as transações realizadas dentro do mês específico. Transações de meses anteriores não são consideradas 
                     no cálculo da rentabilidade mensal.
                   </p>
-                  <p>
-                    <strong className="text-foreground">Premiação:</strong> A premiação não acontece exatamente no reset do mês. 
-                    Nossa equipe analisa os resultados e entra em contato com os vencedores após análise completa dos dados.
-                  </p>
+                  <div className="mt-3 p-3 bg-primary/10 dark:bg-primary/20 rounded-md border border-primary/20 dark:border-primary/30">
+                    <p className="font-semibold text-primary dark:text-primary mb-2">🏆 Premiação Mensal:</p>
+                    <p className="mb-2">
+                      Os <strong className="text-foreground">Top 3</strong> do ranking mensal recebem <strong className="text-foreground">medalhas</strong> como reconhecimento:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 ml-2 mb-2">
+                      <li><strong className="text-foreground">🥇 1º lugar:</strong> Medalha de Ouro</li>
+                      <li><strong className="text-foreground">🥈 2º lugar:</strong> Medalha de Prata</li>
+                      <li><strong className="text-foreground">🥉 3º lugar:</strong> Medalha de Bronze</li>
+                    </ul>
+                    <p className="text-xs text-foreground/80 dark:text-foreground/80">
+                      As medalhas são visíveis no perfil público do usuário. <strong>Não há prêmio em dinheiro no ranking mensal</strong> - apenas reconhecimento através de medalhas.
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -257,6 +267,33 @@ export default function ComoFuncionaPage() {
                     apenas no fim do ano. Nossa equipe pode decidir encerrar antes e criar uma data de corte específica. Os participantes 
                     serão informados sobre qualquer mudança na data de encerramento.
                   </p>
+                  <div className="mt-3 p-3 bg-warning/10 dark:bg-warning/20 rounded-md border border-warning/20 dark:border-warning/30">
+                    <p className="font-semibold text-warning dark:text-warning mb-2">💰 Premiação Anual:</p>
+                    <p className="mb-2">
+                      Os <strong className="text-foreground">Top 3</strong> do ranking anual recebem <strong className="text-foreground">prêmios em dinheiro + medalhas</strong>:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 ml-2 mb-2">
+                      <li><strong className="text-foreground">🥇 1º lugar:</strong> R$ 300,00 + Medalha de Ouro</li>
+                      <li><strong className="text-foreground">🥈 2º lugar:</strong> R$ 200,00 + Medalha de Prata</li>
+                      <li><strong className="text-foreground">🥉 3º lugar:</strong> R$ 100,00 + Medalha de Bronze</li>
+                    </ul>
+                    <div className="mt-2 p-2 bg-warning/20 dark:bg-warning/30 rounded border border-warning/30 dark:border-warning/40">
+                      <p className="text-xs text-foreground/90 dark:text-foreground/90 mb-2">
+                        <strong className="text-warning dark:text-warning">Membros PRO recebem o prêmio em dobro:</strong>
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 ml-2 text-xs mb-2">
+                        <li>1º lugar PRO: R$ 600,00 + Medalha de Ouro</li>
+                        <li>2º lugar PRO: R$ 400,00 + Medalha de Prata</li>
+                        <li>3º lugar PRO: R$ 200,00 + Medalha de Bronze</li>
+                      </ul>
+                      <p className="text-xs text-foreground/80 dark:text-foreground/80 italic">
+                        ⚠️ <strong>Importante:</strong> Para receber o prêmio em dobro, é necessário ter assinatura premium ativa há pelo menos 3 meses antes da data de encerramento do ranking anual. Isso evita que usuários assinem premium apenas no último mês para ganhar o prêmio dobrado.
+                      </p>
+                    </div>
+                    <p className="text-xs text-foreground/80 dark:text-foreground/80 mt-2">
+                      As medalhas são visíveis no perfil público do usuário. Nossa equipe analisa os resultados e entra em contato com os vencedores após análise completa dos dados.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

@@ -28,7 +28,7 @@ export function PremiumCard() {
           )}
           <div className="flex items-center gap-2 text-sm">
             <Check className="h-4 w-4 text-success" />
-            <span>Participação nos prêmios</span>
+            <span>Elegível para prêmios anuais em dinheiro</span>
           </div>
         </div>
       </CardContent>

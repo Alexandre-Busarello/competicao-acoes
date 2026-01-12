@@ -24,6 +24,7 @@ export interface FeedPost {
     id: string;
     name: string;
     avatarUrl: string | null;
+    slug?: string | null;
   };
   transaction?: {
     ticker: string;
@@ -226,6 +227,7 @@ export class FeedService {
             id: true,
             name: true,
             avatarUrl: true,
+            slug: true,
           },
         },
         transaction: {
@@ -465,6 +467,7 @@ export class FeedService {
         id: post.user.id,
         name: post.user.name,
         avatarUrl: post.user.avatarUrl,
+        slug: post.user.slug || null,
       },
       transaction: post.transaction ? {
         ticker: post.transaction.ticker,

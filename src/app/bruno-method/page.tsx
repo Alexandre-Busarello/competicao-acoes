@@ -87,7 +87,7 @@ export default function BrunoMethodPage() {
                   Copie a estratégia do Bruno Chimarelli
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Desbloqueie acesso completo à carteira oficial e participe dos prêmios
+                  Desbloqueie acesso completo à carteira oficial e participe dos prêmios anuais
                 </p>
               </div>
               <div className="space-y-3">

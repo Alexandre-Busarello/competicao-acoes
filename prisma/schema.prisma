@@ -13,6 +13,7 @@ model User {
   name                  String
   email                 String?                    @unique
   avatarUrl             String?
+  slug                  String?                    @unique
   isPremium             Boolean                   @default(false)
   createdAt             DateTime                  @default(now())
   updatedAt             DateTime                  @updatedAt
@@ -35,6 +36,7 @@ model User {
 
   @@index([authUserId])
   @@index([email])
+  @@index([slug])
 }
 
 model Transaction {

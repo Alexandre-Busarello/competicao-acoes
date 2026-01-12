@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Script para gerar splash screens do iOS a partir do logo.
+Script para gerar splash screens do iOS a partir dos SVGs de logo.
 """
 
 from PIL import Image, ImageDraw, ImageFont
+import cairosvg
 import os
 import sys
 
@@ -27,18 +28,41 @@ SPLASH_SIZES = [
     (2048, 2732),  # iPad Pro 12.9" - 2x
 ]
 
-def create_splash_screen(logo_path, width, height, output_path):
+def svg_to_pil_image(svg_path, width, height):
     """
-    Cria uma splash screen com o logo centralizado.
+    Converte SVG para PIL Image.
     """
-    # Criar imagem com fundo branco
-    splash = Image.new("RGB", (width, height), (255, 255, 255))
-    
-    # Carregar logo
     try:
-        logo = Image.open(logo_path).convert("RGBA")
+        with open(svg_path, 'rb') as f:
+            svg_data = f.read()
+        
+        # Converter SVG para PNG em memória
+        png_data = cairosvg.svg2png(
+            bytestring=svg_data,
+            output_width=width,
+            output_height=height
+        )
+        
+        # Converter bytes para PIL Image
+        from io import BytesIO
+        return Image.open(BytesIO(png_data)).convert("RGBA")
     except Exception as e:
-        print(f"❌ Erro ao carregar logo: {e}")
+        print(f"❌ Erro ao converter SVG: {e}")
+        return None
+
+def create_splash_screen(logo_svg_path, width, height, output_path, bg_color=(255, 255, 255)):
+    """
+    Cria uma splash screen com o logo centralizado a partir de SVG.
+    """
+    # Criar imagem com fundo
+    splash = Image.new("RGB", (width, height), bg_color)
+    
+    # Converter SVG para imagem PIL
+    # Primeiro converter em tamanho maior para melhor qualidade
+    temp_size = max(width, height) * 2
+    logo = svg_to_pil_image(logo_svg_path, temp_size, temp_size)
+    
+    if logo is None:
         return False
     
     # Calcular tamanho do logo (máximo 40% da menor dimensão)
@@ -75,12 +99,13 @@ def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(script_dir)
     
-    logo_path = os.path.join(project_root, "public", "logo.png")
+    # Usar logo combinada claro para splash screens (fundo branco)
+    logo_svg_path = os.path.join(project_root, "public", "logo-combinada-claro.svg")
     splash_dir = os.path.join(project_root, "public", "splash")
     
-    # Verificar se o logo existe
-    if not os.path.exists(logo_path):
-        print(f"❌ Erro: Logo não encontrado em {logo_path}")
+    # Verificar se o logo SVG existe
+    if not os.path.exists(logo_svg_path):
+        print(f"❌ Erro: Logo SVG não encontrado em {logo_svg_path}")
         sys.exit(1)
     
     # Criar diretório de splash screens se não existir
@@ -93,7 +118,7 @@ def main():
         filename = f"apple-splash-{width}-{height}.png"
         output_path = os.path.join(splash_dir, filename)
         
-        if create_splash_screen(logo_path, width, height, output_path):
+        if create_splash_screen(logo_svg_path, width, height, output_path):
             print(f"✓ Criado: {filename} ({width}x{height})")
             created_count += 1
     

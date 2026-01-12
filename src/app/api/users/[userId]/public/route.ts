@@ -27,6 +27,7 @@ export async function GET(
         id: true,
         name: true,
         avatarUrl: true,
+        slug: true,
         createdAt: true,
         stats: {
           select: {
@@ -84,6 +85,7 @@ export async function GET(
       id: user.id,
       name: user.name,
       avatarUrl: user.avatarUrl,
+      slug: user.slug,
       createdAt: user.createdAt.toISOString(),
       stats: user.stats ? {
         followerCount: user.stats.followerCount,

@@ -12,6 +12,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ExternalLink } from 'lucide-react';
+import { useProfileUrl } from '@/lib/hooks/use-profile-url';
 
 function ProfileContent() {
   const { user } = useUserStore();
@@ -19,6 +20,7 @@ function ProfileContent() {
   const searchParams = useSearchParams();
   const isPremium = user?.isPremium ?? false;
   const fromCTA = searchParams.get('from') === 'cta';
+  const profileUrl = user ? useProfileUrl(user.id) : '/perfil';
 
   // Se não estiver autenticado, mostrar CheckoutSection que usa modal
   if (!isAuthenticated) {
@@ -43,7 +45,7 @@ function ProfileContent() {
         />
         {user && (
           <div className="container mx-auto px-4 py-4">
-            <Link href={`/perfil/${user.id}`}>
+            <Link href={profileUrl}>
               <Button variant="outline" className="w-full">
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Ver Perfil Público

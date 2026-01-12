@@ -3,6 +3,7 @@ import { createServerClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma/client';
 import { generateInvestorName } from '@/lib/utils/generate-investor-name';
 import { generateAvatarUrlWithFallback } from '@/lib/utils/avatar';
+import { generateSlugAfterUserCreation } from '@/lib/utils/user-slug-helper';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,6 +82,9 @@ export async function POST(request: NextRequest) {
             isPremium: false,
           },
         });
+        
+        // Gerar slug inicial para o novo usuário (sem medalhas ainda)
+        await generateSlugAfterUserCreation(user.id);
       }
     }
 

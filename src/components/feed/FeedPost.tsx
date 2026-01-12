@@ -13,6 +13,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
 import { getShareUrl } from '@/lib/utils/share';
+import { getProfileUrlSync } from '@/lib/utils/profile-url';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -47,6 +48,7 @@ interface FeedPostProps {
       id: string;
       name: string;
       avatarUrl: string | null;
+      slug?: string | null;
     };
     transaction?: {
       ticker: string;
@@ -62,7 +64,7 @@ interface FeedPostProps {
 }
 
 export function FeedPost({ post, isOwner = false, truncateContent = false }: FeedPostProps) {
-  const { user } = useUserStore();
+  const { user, isAuthenticated } = useUserStore();
   const queryClient = useQueryClient();
   const router = useRouter();
   const [isTogglingVisibility, setIsTogglingVisibility] = useState(false);
@@ -316,8 +318,26 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
   });
 
   const shareUrl = getShareUrl('post', post.id, post.slug);
-  const profileUrl = `/perfil/${post.user.id}`;
-  const postUrl = `/post/${post.slug}`;
+  const profileUrl = getProfileUrlSync(post.user.id, post.user.slug);
+  const postUrl = `/posts/${post.slug}`;
+
+  const handleLikeClick = () => {
+    if (!isAuthenticated || !user) {
+      // Redirecionar para login com returnUrl apontando para o post
+      router.push(`/auth/login?returnUrl=${encodeURIComponent(postUrl)}`);
+      return;
+    }
+    toggleLikeMutation.mutate();
+  };
+
+  const handleCommentClick = () => {
+    if (!isAuthenticated || !user) {
+      // Redirecionar para login com returnUrl apontando para o post
+      router.push(`/auth/login?returnUrl=${encodeURIComponent(postUrl)}`);
+      return;
+    }
+    setShowComments(!showComments);
+  };
 
   // Truncar conteúdo para 255 caracteres no feed global
   const MAX_CONTENT_LENGTH = 255;
@@ -525,7 +545,7 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => toggleLikeMutation.mutate()}
+              onClick={handleLikeClick}
               disabled={toggleLikeMutation.isPending}
               className="flex items-center gap-2"
             >
@@ -541,7 +561,7 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowComments(!showComments)}
+              onClick={handleCommentClick}
               className="flex items-center gap-2"
             >
               <MessageCircle className={`h-4 w-4 ${showComments ? 'text-primary' : 'text-muted-foreground'}`} />
@@ -558,7 +578,8 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
         </div>
         {showComments && (
           <PostComments 
-            postId={post.id} 
+            postId={post.id}
+            postSlug={post.slug}
             onCommentAdded={() => {
               // Atualizar contador de comentários otimisticamente
               const newCount = commentCount + 1;

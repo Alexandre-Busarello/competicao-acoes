@@ -56,8 +56,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Hold Arena" />
         <meta name="theme-color" content="#3b82f6" />
-        <link rel="apple-touch-icon" href="/favicon-claro.png" />
-        <link rel="icon" href="/favicon-claro.png" />
+        <link rel="apple-touch-icon" href="/favicon-claro.svg" />
+        <link rel="icon" href="/favicon-claro.svg" type="image/svg+xml" />
         {/* Splash screens para iOS */}
         <link rel="apple-touch-startup-image" href="/splash/apple-splash-640-1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" />
         <link rel="apple-touch-startup-image" href="/splash/apple-splash-750-1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />

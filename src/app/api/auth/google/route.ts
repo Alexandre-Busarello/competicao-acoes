@@ -13,7 +13,13 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServerClient();
     const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const redirectUrl = `${appUrl}/auth/callback`;
+    
+    // Obter returnUrl da query string
+    const { searchParams } = new URL(request.url);
+    const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect') || '/ranking';
+    
+    // Passar returnUrl como query param no callback
+    const redirectUrl = `${appUrl}/auth/callback?returnUrl=${encodeURIComponent(returnUrl)}`;
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',

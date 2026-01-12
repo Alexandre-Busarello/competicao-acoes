@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma/client';
 import { createServerClient } from '@/lib/supabase/server';
 import { generateAvatarUrlWithFallback } from '@/lib/utils/avatar';
 import { generateInvestorName } from '@/lib/utils/generate-investor-name';
+import { generateSlugAfterUserCreation } from '@/lib/utils/user-slug-helper';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -415,6 +416,10 @@ export async function POST(request: NextRequest) {
             isPremium: false,
           },
         });
+        
+        // Gerar slug inicial para o novo usuário
+        await generateSlugAfterUserCreation(newUser.id);
+        
         // Buscar com subscription
         user = await prisma.user.findUnique({
           where: { id: newUser.id },

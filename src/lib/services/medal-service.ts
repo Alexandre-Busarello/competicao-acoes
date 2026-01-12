@@ -100,6 +100,14 @@ export class MedalService {
             calculatedAt: ranking.calculatedAt,
           },
         });
+        
+        // Atualizar slug do usuário após criar medalha
+        try {
+          const { updateUserSlug } = await import('@/lib/utils/user-slug-generator');
+          await updateUserSlug(userId);
+        } catch (error) {
+          console.error('Error updating user slug after medal creation:', error);
+        }
       }
     }
   }
@@ -302,6 +310,14 @@ export class MedalService {
           },
         });
         medalsCreated++;
+        
+        // Atualizar slug do usuário após criar medalha
+        try {
+          const { updateUserSlug } = await import('@/lib/utils/user-slug-generator');
+          await updateUserSlug(userEntry.userId);
+        } catch (error) {
+          console.error('Error updating user slug after medal settlement:', error);
+        }
       }
     }
 

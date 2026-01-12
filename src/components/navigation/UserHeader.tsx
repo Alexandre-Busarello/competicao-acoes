@@ -41,10 +41,10 @@ export function UserHeader() {
   const router = useRouter();
   const pathname = usePathname();
   
-  // Logo com texto baseado no tema (fallback para tema claro se não houver provider)
+  // Logo combinada (favicon + texto) baseado no tema
   const logoPath = theme === 'dark' 
-    ? '/holdareana-logo-texto-escuro.png' 
-    : '/holdareana-logo-texto-claro.png';
+    ? '/logo-combinada-escuro.svg' 
+    : '/logo-combinada-claro.svg';
 
   const handleSignOut = async () => {
     await signOut();

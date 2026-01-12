@@ -2,7 +2,7 @@
 """
 Script para processar os favicons removendo fundos.
 - favicon-claro.png: remove fundo escuro (mantém branco)
-- favicon-escuro.png: remove apenas fundo branco (mantém fundo escuro e logo)
+- favicon-escuro.svg: remove apenas fundo branco (mantém fundo escuro e logo)
 """
 
 from PIL import Image
@@ -77,7 +77,7 @@ def main():
     public_dir = os.path.join(project_root, "public")
     
     favicon_claro_path = os.path.join(public_dir, "favicon-claro.png")
-    favicon_escuro_path = os.path.join(public_dir, "favicon-escuro.png")
+    favicon_escuro_path = os.path.join(public_dir, "favicon-escuro.svg")
     
     print("🖼️  Processando favicons...\n")
     
@@ -93,14 +93,14 @@ def main():
     
     # Processar favicon-escuro: remover apenas fundo branco (mantém fundo escuro e logo)
     if os.path.exists(favicon_escuro_path):
-        print("📝 Processando favicon-escuro.png...")
+        print("📝 Processando favicon-escuro.svg...")
         print("  Removendo apenas fundo branco (mantendo fundo escuro e logo)...")
         # Remove apenas fundo branco, mantendo o fundo escuro do quadrado
         favicon_escuro_processed = remove_white_background(favicon_escuro_path, threshold=240)
         favicon_escuro_processed.save(favicon_escuro_path, "PNG", optimize=True)
-        print(f"✓ favicon-escuro.png processado e salvo\n")
+        print(f"✓ favicon-escuro.svg processado e salvo\n")
     else:
-        print(f"⚠️  Aviso: favicon-escuro.png não encontrado em {favicon_escuro_path}\n")
+        print(f"⚠️  Aviso: favicon-escuro.svg não encontrado em {favicon_escuro_path}\n")
     
     print("✅ Processamento concluído!")
 

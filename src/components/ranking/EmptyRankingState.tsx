@@ -37,8 +37,8 @@ export function EmptyRankingState() {
             Seja o Primeiro no Ranking!
           </h2>
           <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-4 md:mb-6 px-4">
-            Compita com outros investidores e mostre suas habilidades. 
-            Cadastre suas transações e comece a pontuar agora mesmo.
+            Teste sua estratégia em público e mostre sua carteira. 
+            Cadastre suas transações e comece a competir agora mesmo.
           </p>
         </div>
 
@@ -73,9 +73,9 @@ export function EmptyRankingState() {
               <div className="inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-yellow-100 dark:bg-yellow-900 mb-3 md:mb-4">
                 <Award className="h-5 w-5 md:h-6 md:w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
-              <h3 className="font-semibold mb-2 text-sm md:text-base">Prêmios e Reconhecimento</h3>
+              <h3 className="font-semibold mb-2 text-sm md:text-base">Medalhas e Prêmios</h3>
               <p className="text-xs md:text-sm text-muted-foreground">
-                Destaque-se e ganhe prêmios mensais
+                Destaque-se e conquiste medalhas mensais
               </p>
             </CardContent>
           </Card>

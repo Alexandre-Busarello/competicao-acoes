@@ -46,8 +46,14 @@ function LoginForm() {
   }, [searchParams]);
 
   // Se já estiver autenticado, redirecionar
+  useEffect(() => {
+    if (isAuthenticated) {
+      const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect') || '/ranking';
+      router.push(returnUrl);
+    }
+  }, [isAuthenticated, searchParams, router]);
+
   if (isAuthenticated) {
-    router.push('/ranking');
     return null;
   }
 
@@ -55,7 +61,8 @@ function LoginForm() {
     setIsSubmitting(true);
     setError(null);
     try {
-      window.location.href = '/api/auth/google';
+      const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect') || '/ranking';
+      window.location.href = `/api/auth/google?returnUrl=${encodeURIComponent(returnUrl)}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao iniciar login com Google');
       setIsSubmitting(false);
@@ -112,7 +119,8 @@ function LoginForm() {
               queryClient.invalidateQueries({ queryKey: ['auth', 'user'] });
               
               console.log('Login complete, redirecting...');
-              router.push('/ranking');
+              const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect') || '/ranking';
+              router.push(returnUrl);
               return;
             }
             
@@ -148,7 +156,8 @@ function LoginForm() {
           queryClient.invalidateQueries({ queryKey: ['auth', 'user'] });
           
           console.log('Signup complete, redirecting...');
-          router.push('/ranking');
+          const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect') || '/ranking';
+          router.push(returnUrl);
           return;
         }
 
@@ -206,7 +215,8 @@ function LoginForm() {
               queryClient.invalidateQueries({ queryKey: ['auth', 'user'] });
               
               console.log('Retry login complete, redirecting...');
-              router.push('/ranking');
+              const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect') || '/ranking';
+              router.push(returnUrl);
               return;
             }
           } else {
@@ -222,15 +232,20 @@ function LoginForm() {
         await syncSessionManager.sync(signInData.session, 'login-password');
 
         // Redirecionar após login bem-sucedido
-        router.push('/ranking');
+        const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect') || '/ranking';
+        router.push(returnUrl);
       } else {
         // Magic link
+        const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect') || '/ranking';
         const response = await fetch('/api/auth/magic-link', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ email: email.trim() }),
+          body: JSON.stringify({ 
+            email: email.trim(),
+            returnUrl: returnUrl,
+          }),
         });
 
         const data = await response.json();

@@ -13,6 +13,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
 import { getShareUrl } from '@/lib/utils/share';
+import { getProfileUrlSync } from '@/lib/utils/profile-url';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { PostComments } from './PostComments';
 import ReactMarkdown from 'react-markdown';
@@ -41,7 +42,7 @@ interface PostContentProps {
 }
 
 export function PostContent({ slug }: PostContentProps) {
-  const { user } = useUserStore();
+  const { user, isAuthenticated } = useUserStore();
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -183,6 +184,16 @@ export function PostContent({ slug }: PostContentProps) {
     },
   });
 
+  const handleLikeClick = () => {
+    if (!isAuthenticated || !user) {
+      // Redirecionar para login com returnUrl apontando para o post
+      const postUrl = `/posts/${slug}`;
+      router.push(`/auth/login?returnUrl=${encodeURIComponent(postUrl)}`);
+      return;
+    }
+    toggleLikeMutation.mutate();
+  };
+
   // Atualiza estado quando post carrega
   useEffect(() => {
     if (post) {
@@ -293,7 +304,7 @@ export function PostContent({ slug }: PostContentProps) {
   }
 
   const shareUrl = getShareUrl('post', post.id, post.slug);
-  const profileUrl = `/perfil/${post.user.id}`;
+  const profileUrl = getProfileUrlSync(post.user.id, post.user.slug);
   const isOwner = user?.id === post.userId;
 
   const initials = post.user.name
@@ -429,7 +440,7 @@ export function PostContent({ slug }: PostContentProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => toggleLikeMutation.mutate()}
+                onClick={handleLikeClick}
                 disabled={toggleLikeMutation.isPending || !post}
                 className="flex items-center gap-2"
               >
@@ -451,6 +462,7 @@ export function PostContent({ slug }: PostContentProps) {
             {/* Seção de comentários */}
             <PostComments 
               postId={post.id}
+              postSlug={post.slug}
               onCommentAdded={() => {
                 // Atualizar contador de comentários otimisticamente
                 const newCount = commentCount + 1;

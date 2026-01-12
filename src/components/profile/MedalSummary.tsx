@@ -4,12 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Medal, Award, Loader2, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { useProfileUrl } from '@/lib/hooks/use-profile-url';
 
 interface MedalSummaryProps {
   userId: string;
 }
 
 export function MedalSummary({ userId }: MedalSummaryProps) {
+  const profileUrl = useProfileUrl(userId);
   const { data, isLoading } = useQuery({
     queryKey: ['user-medals', userId],
     queryFn: async () => {
@@ -41,7 +43,7 @@ export function MedalSummary({ userId }: MedalSummaryProps) {
     <Card className="mb-4">
       <CardHeader className="flex flex-row items-center justify-between px-4 pt-4 pb-3">
         <CardTitle className="text-lg">Medalhas</CardTitle>
-        <Link href={`/perfil/${userId}/medalhas`}>
+        <Link href={`${profileUrl}/medalhas`}>
           <button className="text-xs sm:text-sm text-primary hover:underline flex items-center gap-1">
             Ver todas
             <ExternalLink className="h-3 w-3" />

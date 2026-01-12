@@ -88,6 +88,7 @@ export abstract class BaseFeedService {
         id: post.user.id,
         name: post.user.name,
         avatarUrl: post.user.avatarUrl,
+        slug: post.user.slug || null,
       },
       transaction: post.transaction ? {
         ticker: post.transaction.ticker,
@@ -120,6 +121,7 @@ export abstract class BaseFeedService {
             id: true,
             name: true,
             avatarUrl: true,
+            slug: true,
           },
         },
         transaction: {

@@ -98,14 +98,15 @@ export async function copyToClipboard(text: string): Promise<void> {
 /**
  * Gera URL completa para compartilhamento
  */
-export function getShareUrl(type: 'post' | 'profile' | 'ranking', id: string, slug?: string): string {
+export function getShareUrl(type: 'post' | 'profile' | 'ranking', id: string, slug?: string, profileSlug?: string | null): string {
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   
   switch (type) {
     case 'post':
-      return `${baseUrl}/post/${slug || id}`;
+      return `${baseUrl}/posts/${slug || id}`;
     case 'profile':
-      return `${baseUrl}/perfil/${id}`;
+      // Usar slug do perfil se disponível, senão usar ID
+      return `${baseUrl}/perfil/${profileSlug || id}`;
     case 'ranking':
       return `${baseUrl}/ranking`;
     default:
