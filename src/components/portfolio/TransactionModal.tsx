@@ -202,12 +202,6 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
     
     if (!ticker || !quantity) return;
     
-    // Verificar se tem assinatura Pro
-    if (!user.isPremium) {
-      setSubmitError('Assinatura Pro necessária para cadastrar transações');
-      return;
-    }
-    
     // Bloquear submit se ticker não for válido
     if (!validation.valid) {
       setSubmitError('Valide o ticker antes de continuar');
@@ -265,13 +259,17 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
     }
   };
 
-  const canSubmit = validation.valid && ticker && quantity && user && user.isPremium && !isSubmitting;
-
   // Detectar moeda baseada no ticker validado
   const detectedTicker = validation.ticker || ticker.toUpperCase();
   const isUSD = isUSDCurrency(detectedTicker);
   const currencySymbol = getCurrencySymbol(detectedTicker);
   const allowsFractions = allowsFractionalQuantity(detectedTicker);
+
+  // Validar quantidade
+  const numQuantity = quantity ? Number(quantity) : 0;
+  const isValidQuantity = !isNaN(numQuantity) && numQuantity > 0 && (allowsFractions || numQuantity >= 1);
+
+  const canSubmit = validation.valid && ticker && isValidQuantity && user && !isSubmitting;
 
   // Não renderizar o modal se não estiver autenticado (evita flickering)
   // O useEffect já cuida do redirecionamento
