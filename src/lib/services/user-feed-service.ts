@@ -60,7 +60,8 @@ export class UserFeedService extends BaseFeedService {
     const mappedPosts = resultPosts.map(post => this.mapToFeedPost(post));
 
     // Enriquece com likes do usuário atual
-    const enrichedPosts = await this.enrichWithLikes(mappedPosts, currentUserId);
+    const enrichedWithLikes = await this.enrichWithLikes(mappedPosts, currentUserId);
+    const enrichedPosts = await this.enrichWithRankingsAndProfitability(enrichedWithLikes);
 
     const result: FeedResult = {
       posts: enrichedPosts,

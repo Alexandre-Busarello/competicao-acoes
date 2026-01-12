@@ -19,6 +19,8 @@ import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import { PostComments } from './PostComments';
 import { renderMarkdownWithPolls } from '@/lib/utils/markdown-with-polls';
+import { UserStatsBadge } from './UserStatsBadge';
+import { UserMedalsBadge } from './UserMedalsBadge';
 import {
   Dialog,
   DialogContent,
@@ -60,6 +62,19 @@ interface FeedPostProps {
     };
     likedByCurrentUser?: boolean;
     pollId?: string | null;
+    rankings?: {
+      monthly: number | null;
+      annual: number | null;
+      monthlyReturn?: number | null;
+      annualReturn?: number | null;
+    };
+    profitability?: number;
+    medals?: {
+      gold: number;
+      silver: number;
+      bronze: number;
+      total: number;
+    };
   };
   isOwner?: boolean;
   truncateContent?: boolean; // Se true, trunca conteúdo para 255 caracteres no feed global
@@ -384,17 +399,27 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
               </Avatar>
             </Link>
             <div className="flex-1 min-w-0">
-              <Link href={profileUrl}>
-                <p className="font-semibold hover:underline truncate">
-                  {post.user.name}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link href={profileUrl}>
+                  <p className="font-semibold hover:underline truncate">
+                    {post.user.name}
+                  </p>
+                </Link>
+                <UserMedalsBadge medals={post.medals} />
+              </div>
+              <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                <p className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(new Date(post.createdAt), {
+                    addSuffix: true,
+                    locale: ptBR,
+                  })}
                 </p>
-              </Link>
-              <p className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(post.createdAt), {
-                  addSuffix: true,
-                  locale: ptBR,
-                })}
-              </p>
+                <UserStatsBadge
+                  userId={post.userId}
+                  rankings={post.rankings}
+                  profitability={post.profitability}
+                />
+              </div>
             </div>
           </div>
           {isOwner && (

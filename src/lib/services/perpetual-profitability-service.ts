@@ -7,7 +7,7 @@ import { cacheConfig } from '@/lib/config/cache';
 /**
  * Serviço para calcular e cachear rentabilidade perpétua do usuário
  * Rentabilidade perpétua considera TODO o histórico de transações do usuário
- * Cache de 1 dia - recalcula apenas se passou mais de 1 dia desde última atualização
+ * Cache de 15 minutos - recalcula sob demanda se passou mais de 15 minutos desde última atualização
  */
 export class PerpetualProfitabilityService {
   /**
@@ -130,7 +130,7 @@ export class PerpetualProfitabilityService {
   /**
    * Obtém ou calcula rentabilidade perpétua com cache
    * Verifica cache no banco (UserPerpetualProfitability)
-   * Se não existe ou passou 1 dia, recalcula e atualiza cache
+   * Se não existe ou passou 15 minutos, recalcula sob demanda e atualiza cache
    */
   async getOrCalculateProfitability(userId: string): Promise<{
     profitability: number;
@@ -148,10 +148,18 @@ export class PerpetualProfitabilityService {
     }>(cacheKey);
 
     if (cached) {
-      return {
-        ...cached,
-        lastUpdated: new Date(cached.lastUpdated),
-      };
+      const cachedDate = new Date(cached.lastUpdated);
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+      
+      // Se cache em memória ainda é válido (menos de 15 minutos), retorna
+      if (cachedDate > fifteenMinutesAgo) {
+        return {
+          ...cached,
+          lastUpdated: cachedDate,
+        };
+      }
+      // Se expirou, remove do cache em memória para recalcular
+      await cacheService.delete(cacheKey);
     }
 
     // Busca no banco
@@ -159,10 +167,10 @@ export class PerpetualProfitabilityService {
       where: { userId },
     });
 
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
 
-    // Se existe cache válido (menos de 1 dia), retorna
-    if (dbCache && dbCache.lastUpdated > oneDayAgo) {
+    // Se existe cache válido (menos de 15 minutos), retorna
+    if (dbCache && dbCache.lastUpdated > fifteenMinutesAgo) {
       const result = {
         profitability: Number(dbCache.profitability),
         totalInvested: Number(dbCache.totalInvested),

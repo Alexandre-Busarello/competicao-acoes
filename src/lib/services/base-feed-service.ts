@@ -2,6 +2,10 @@ import { prisma } from '@/lib/prisma/client';
 import { cacheService } from '@/lib/cache/cache-service';
 import { cacheConfig } from '@/lib/config/cache';
 import type { FeedPost } from './feed-service';
+import { rankingService } from './ranking-service';
+import { perpetualProfitabilityService } from './perpetual-profitability-service';
+import { medalService } from './medal-service';
+import { getCurrentPeriod } from '@/lib/utils/period-utils';
 
 /**
  * Resultado de uma busca de feed com paginação cursor-based
@@ -63,6 +67,97 @@ export abstract class BaseFeedService {
     return posts.map(post => ({
       ...post,
       likedByCurrentUser: userLikes.has(post.id),
+    }));
+  }
+
+  /**
+   * Enriquece posts com informações de ranking e rentabilidade perpétua
+   * Busca em batch para otimizar performance
+   */
+  protected async enrichWithRankingsAndProfitability(
+    posts: FeedPost[]
+  ): Promise<FeedPost[]> {
+    if (posts.length === 0) {
+      return posts;
+    }
+
+    // Coletar IDs únicos de usuários
+    const userIds = [...new Set(posts.map(p => p.userId))];
+
+    // Buscar rankings e rentabilidade em paralelo
+    const currentPeriod = getCurrentPeriod();
+    
+    // Buscar rankings mensal e anual vigentes
+    const [monthlyRanking, annualRanking] = await Promise.all([
+      rankingService.getRanking('mensal', currentPeriod.year, currentPeriod.month).catch(() => null),
+      rankingService.getRanking('anual', currentPeriod.year).catch(() => null),
+    ]);
+
+    // Criar mapas de ranking e rentabilidade por userId
+    const monthlyRankMap = new Map<string, number>();
+    const annualRankMap = new Map<string, number>();
+    const monthlyReturnMap = new Map<string, number>();
+    const annualReturnMap = new Map<string, number>();
+
+    if (monthlyRanking) {
+      monthlyRanking.ranking.forEach((entry: any) => {
+        monthlyRankMap.set(entry.userId, entry.rank);
+        monthlyReturnMap.set(entry.userId, entry.monthlyReturn);
+      });
+    }
+
+    if (annualRanking) {
+      annualRanking.ranking.forEach((entry: any) => {
+        annualRankMap.set(entry.userId, entry.rank);
+        annualReturnMap.set(entry.userId, entry.annualReturn || entry.monthlyReturn);
+      });
+    }
+
+    // Buscar rentabilidades perpétuas em batch (com cache)
+    const profitabilityPromises = userIds.map(async (userId) => {
+      try {
+        const profitability = await perpetualProfitabilityService.getOrCalculateProfitability(userId);
+        return { userId, profitability: profitability.profitability };
+      } catch (error) {
+        console.error(`Error fetching profitability for user ${userId}:`, error);
+        return { userId, profitability: 0 };
+      }
+    });
+
+    const profitabilityResults = await Promise.all(profitabilityPromises);
+    const profitabilityMap = new Map<string, number>();
+    profitabilityResults.forEach(({ userId, profitability }) => {
+      profitabilityMap.set(userId, profitability);
+    });
+
+    // Buscar medalhas em batch
+    const medalPromises = userIds.map(async (userId) => {
+      try {
+        const medals = await medalService.getUserMedals(userId);
+        return { userId, medals: medals.total };
+      } catch (error) {
+        console.error(`Error fetching medals for user ${userId}:`, error);
+        return { userId, medals: { gold: 0, silver: 0, bronze: 0, total: 0 } };
+      }
+    });
+
+    const medalResults = await Promise.all(medalPromises);
+    const medalMap = new Map<string, { gold: number; silver: number; bronze: number; total: number }>();
+    medalResults.forEach(({ userId, medals }) => {
+      medalMap.set(userId, medals);
+    });
+
+    // Enriquecer posts com rankings, rentabilidades e medalhas
+    return posts.map(post => ({
+      ...post,
+      rankings: {
+        monthly: monthlyRankMap.get(post.userId) || null,
+        annual: annualRankMap.get(post.userId) || null,
+        monthlyReturn: monthlyReturnMap.get(post.userId) || null,
+        annualReturn: annualReturnMap.get(post.userId) || null,
+      },
+      profitability: profitabilityMap.get(post.userId),
+      medals: medalMap.get(post.userId),
     }));
   }
 

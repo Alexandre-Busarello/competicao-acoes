@@ -35,6 +35,19 @@ export interface FeedPost {
   };
   likedByCurrentUser?: boolean;
   pollId?: string | null;
+  rankings?: {
+    monthly: number | null;
+    annual: number | null;
+    monthlyReturn?: number | null;
+    annualReturn?: number | null;
+  };
+  profitability?: number;
+  medals?: {
+    gold: number;
+    silver: number;
+    bronze: number;
+    total: number;
+  };
 }
 
 /**

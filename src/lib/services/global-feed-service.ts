@@ -199,7 +199,8 @@ export class GlobalFeedService extends BaseFeedService {
     const mappedPosts = resultPosts.map(post => this.mapToFeedPost(post));
 
     // Enriquece com likes do usuário atual
-    const enrichedPosts = await this.enrichWithLikes(mappedPosts, currentUserId);
+    const enrichedWithLikes = await this.enrichWithLikes(mappedPosts, currentUserId);
+    const enrichedPosts = await this.enrichWithRankingsAndProfitability(enrichedWithLikes);
 
     return {
       posts: enrichedPosts,
@@ -382,7 +383,8 @@ export class GlobalFeedService extends BaseFeedService {
       const { resultPosts, nextCursor } = this.processCursorPagination(sortedPosts, limit);
 
       const mappedPosts = resultPosts.map(post => this.mapToFeedPost(post));
-      const enrichedPosts = await this.enrichWithLikes(mappedPosts, currentUserId);
+      const enrichedWithLikes = await this.enrichWithLikes(mappedPosts, currentUserId);
+      const enrichedPosts = await this.enrichWithRankingsAndProfitability(enrichedWithLikes);
 
       const result: FeedResult = {
         posts: enrichedPosts,
@@ -428,7 +430,8 @@ export class GlobalFeedService extends BaseFeedService {
     const mappedPosts = resultPosts.map(post => this.mapToFeedPost(post));
 
     // Enriquece com likes do usuário atual
-    const enrichedPosts = await this.enrichWithLikes(mappedPosts, currentUserId);
+    const enrichedWithLikes = await this.enrichWithLikes(mappedPosts, currentUserId);
+    const enrichedPosts = await this.enrichWithRankingsAndProfitability(enrichedWithLikes);
 
     const result: FeedResult = {
       posts: enrichedPosts,
