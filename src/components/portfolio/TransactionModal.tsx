@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTransactionStore } from '@/lib/store/transactionStore';
 import { useUserStore } from '@/lib/store/userStore';
+import { useAuth } from '@/lib/auth/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Loader2, CheckCircle2, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
@@ -35,7 +37,9 @@ interface TickerValidation {
 }
 
 export function TransactionModal({ open, onOpenChange }: TransactionModalProps) {
+  const router = useRouter();
   const { user } = useUserStore();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { addTransaction } = useTransactionStore();
   const [ticker, setTicker] = useState('');
   const [type, setType] = useState<'compra' | 'venda'>('compra');
@@ -51,6 +55,18 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // Verificar autenticação quando o modal é aberto
+  useEffect(() => {
+    if (open && !authLoading) {
+      if (!isAuthenticated) {
+        // Fechar o modal e redirecionar para login
+        onOpenChange(false);
+        const returnUrl = encodeURIComponent('/minha-carteira');
+        router.push(`/auth/login?returnUrl=${returnUrl}`);
+      }
+    }
+  }, [open, isAuthenticated, authLoading, router, onOpenChange]);
 
   // Validação de ticker apenas no blur (quando sair do campo)
   const validateTicker = useCallback(async (tickerValue: string) => {
@@ -175,7 +191,16 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !ticker || !quantity) return;
+    
+    // Verificar autenticação antes de continuar
+    if (!isAuthenticated || !user) {
+      onOpenChange(false);
+      const returnUrl = encodeURIComponent('/minha-carteira');
+      router.push(`/auth/login?returnUrl=${returnUrl}`);
+      return;
+    }
+    
+    if (!ticker || !quantity) return;
     
     // Verificar se tem assinatura premium
     if (!user.isPremium) {
@@ -248,8 +273,17 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
   const currencySymbol = getCurrencySymbol(detectedTicker);
   const allowsFractions = allowsFractionalQuantity(detectedTicker);
 
+  // Não renderizar o modal se não estiver autenticado (evita flickering)
+  // O useEffect já cuida do redirecionamento
+  if (!authLoading && !isAuthenticated) {
+    return null;
+  }
+
+  // Não abrir o modal se não estiver autenticado ou ainda estiver carregando
+  const shouldOpen = open && isAuthenticated && !authLoading;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={shouldOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col p-0 sm:p-6">
         <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 flex-shrink-0">
           <DialogTitle>Nova Transação</DialogTitle>
