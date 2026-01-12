@@ -62,7 +62,7 @@ export function CheckoutSection() {
 
         <div className="border-t border-border pt-6">
           <div className="text-center mb-4">
-            <p className="text-3xl font-bold">R$ 29,90</p>
+            <p className="text-3xl font-bold">R$ 9,99</p>
             <p className="text-sm text-muted-foreground">por mês</p>
           </div>
 

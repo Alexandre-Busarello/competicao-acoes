@@ -212,14 +212,25 @@ export function UserTransactionList({
                       <div className="space-y-2">
                         {dayTransactions.map((transaction) => {
                           const isCompra = transaction.type === 'compra';
+                          const isMocked = transaction.ticker.startsWith('MOCK');
+                          const isVisible = canView || !isMocked;
+                          
                           return (
                             <Card 
                               key={transaction.id}
                               className={`relative overflow-hidden ${
-                                !canView ? 'blur-sm' : ''
+                                !isVisible ? 'blur-sm' : ''
                               }`}
                             >
                               <CardContent className="p-4">
+                                {isMocked && !canView && (
+                                  <div className="mb-2 p-2 bg-muted/50 rounded-md border border-dashed border-muted-foreground/30">
+                                    <p className="text-xs text-muted-foreground text-center">
+                                      <strong>Transação ofuscada:</strong> Este dado foi mockado para proteger a privacidade. 
+                                      Assine o plano premium para visualizar todas as transações do portfólio.
+                                    </p>
+                                  </div>
+                                )}
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3 flex-1">
                                     {isCompra ? (
@@ -241,15 +252,21 @@ export function UserTransactionList({
                                         </span>
                                       </div>
                                       <p className="text-sm text-muted-foreground">
-                                        {transaction.quantity} unidades × {formatPrice(transaction.price, transaction.ticker)}
+                                        {isVisible 
+                                          ? `${transaction.quantity} unidades × ${formatPrice(transaction.price, transaction.ticker)}`
+                                          : '••• unidades × •••'}
                                       </p>
                                       <p className="text-xs text-muted-foreground mt-1">
-                                        {format(transaction.createdAt, "HH:mm", { locale: ptBR })}h
+                                        {isVisible 
+                                          ? `${format(transaction.createdAt, "HH:mm", { locale: ptBR })}h`
+                                          : '•••h'}
                                       </p>
                                     </div>
                                     <div className="text-right">
                                       <p className="font-semibold">
-                                        {formatPrice(transaction.quantity * transaction.price, transaction.ticker)}
+                                        {isVisible
+                                          ? formatPrice(transaction.quantity * transaction.price, transaction.ticker)
+                                          : '•••'}
                                       </p>
                                     </div>
                                   </div>
