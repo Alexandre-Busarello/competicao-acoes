@@ -5,7 +5,6 @@ import { ProfileInfo } from '@/components/profile/ProfileInfo';
 import { PremiumCard } from '@/components/profile/PremiumCard';
 import { CheckoutSection } from '@/components/profile/CheckoutSection';
 import { PasswordManager } from '@/components/profile/PasswordManager';
-import { PageHeader } from '@/components/navigation/PageHeader';
 import { useUserStore } from '@/lib/store/userStore';
 import { useAuth } from '@/lib/auth/client';
 import { useSearchParams } from 'next/navigation';
@@ -27,10 +26,6 @@ function ProfileContent() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen pb-4">
-        <PageHeader 
-          title="Perfil" 
-          backHref="/ranking"
-        />
         <CheckoutSection />
       </div>
     );
@@ -40,10 +35,6 @@ function ProfileContent() {
   if (fromCTA && !isPremium) {
     return (
       <div className="min-h-screen pb-4">
-        <PageHeader 
-          title="Perfil" 
-          backHref="/ranking"
-        />
         {user && profileUrl && (
           <div className="container mx-auto px-4 py-4">
             <Link href={profileUrl}>
@@ -63,10 +54,6 @@ function ProfileContent() {
 
   return (
     <div className="min-h-screen pb-4">
-      <PageHeader 
-        title="Perfil" 
-        backHref="/ranking"
-      />
       {user && (
         <div className="container mx-auto px-4 py-4">
           <Link href={`/perfil/${user.id}`}>
@@ -88,10 +75,6 @@ export default function ProfilePage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen pb-4">
-        <PageHeader 
-          title="Perfil" 
-          backHref="/ranking"
-        />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <p className="text-muted-foreground">Carregando...</p>

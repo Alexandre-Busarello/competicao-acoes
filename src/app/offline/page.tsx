@@ -2,7 +2,6 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/navigation/PageHeader';
 import { WifiOff, RefreshCw, Home } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -35,11 +34,7 @@ export default function OfflinePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PageHeader 
-        title="Offline" 
-        backHref="/ranking"
-      />
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] p-4">
+      <div className="flex items-center justify-center min-h-screen p-4">
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center">
             <WifiOff className="h-16 w-16 text-muted-foreground mx-auto mb-4" />

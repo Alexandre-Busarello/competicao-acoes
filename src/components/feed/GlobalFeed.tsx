@@ -9,9 +9,10 @@ import { Button } from '@/components/ui/button';
 
 interface GlobalFeedProps {
   filterInteractions?: boolean;
+  filterComponent?: React.ReactNode;
 }
 
-export function GlobalFeed({ filterInteractions = false }: GlobalFeedProps) {
+export function GlobalFeed({ filterInteractions = false, filterComponent }: GlobalFeedProps) {
   const { user } = useUserStore();
   const queryClient = useQueryClient();
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -387,6 +388,13 @@ export function GlobalFeed({ filterInteractions = false }: GlobalFeedProps) {
                 }}
               />
             )}
+          </div>
+        )}
+
+        {/* Filtro integrado ao conteúdo */}
+        {filterComponent && (
+          <div className="mb-4">
+            {filterComponent}
           </div>
         )}
 

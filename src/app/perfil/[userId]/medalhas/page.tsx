@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Medal, Award, Loader2, ArrowLeft } from 'lucide-react';
-import { PageHeader } from '@/components/navigation/PageHeader';
 import { PublicProfileHeader } from '@/components/profile/PublicProfileHeader';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -67,7 +66,6 @@ export default function MedalTimelinePage({
 
   return (
     <div className="min-h-screen">
-      <PageHeader title="Medalhas" backHref={profileUrl} />
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         <PublicProfileHeader userId={userId} />
 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/server';
 import { feedService } from '@/lib/services/feed-service';
+import { parsePollFromMarkdown } from '@/lib/utils/poll-parser';
+import { prisma } from '@/lib/prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,8 +33,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verificar se há múltiplas enquetes no conteúdo
+    const pollComments = content.match(/<!--\s*poll:[^>]+-->/g);
+    if (pollComments && pollComments.length > 1) {
+      return NextResponse.json(
+        { error: 'Only one poll per post is allowed' },
+        { status: 400 }
+      );
+    }
+
     // Criar post customizado
     const post = await feedService.createCustomPost(userId, content.trim());
+
+    // Verificar se há enquete no conteúdo
+    const pollConfig = parsePollFromMarkdown(content.trim());
+    if (pollConfig && pollConfig.options.length >= 2 && pollConfig.options.length <= 6) {
+      // Verificar se já existe enquete para este post (proteção adicional)
+      const existingPoll = await prisma.feedPoll.findUnique({
+        where: { postId: post.id },
+      });
+
+      if (existingPoll) {
+        return NextResponse.json(
+          { error: 'Post already has a poll' },
+          { status: 400 }
+        );
+      }
+
+      // Criar enquete para o post
+      try {
+        await prisma.feedPoll.create({
+          data: {
+            postId: post.id,
+            question: pollConfig.question,
+            options: pollConfig.options,
+            totalVotes: 0,
+          },
+        });
+      } catch (error: any) {
+        // Se erro for de constraint única, já existe enquete
+        if (error?.code === 'P2002') {
+          return NextResponse.json(
+            { error: 'Post already has a poll' },
+            { status: 400 }
+          );
+        }
+        console.error('Error creating poll:', error);
+        // Não falhar a criação do post se a enquete falhar por outros motivos
+      }
+    }
 
     return NextResponse.json(post, { status: 201 });
   } catch (error) {

@@ -97,6 +97,7 @@ export abstract class BaseFeedService {
         price: Number(post.transaction.price),
         date: post.transaction.date,
       } : undefined,
+      pollId: post.poll?.id || null,
     };
   }
 
@@ -121,6 +122,7 @@ export abstract class BaseFeedService {
             id: true,
             name: true,
             avatarUrl: true,
+            // @ts-ignore - slug exists in schema but TypeScript may not recognize it immediately
             slug: true,
           },
         },
@@ -131,6 +133,12 @@ export abstract class BaseFeedService {
             quantity: true,
             price: true,
             date: true,
+          },
+        },
+        poll: {
+          select: {
+            id: true,
+            totalVotes: true,
           },
         },
       },

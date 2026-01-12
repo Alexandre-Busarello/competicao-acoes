@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { PortfolioSummary } from '@/components/portfolio/PortfolioSummary';
 import { TransactionList } from '@/components/portfolio/TransactionList';
 import { TransactionModal } from '@/components/portfolio/TransactionModal';
-import { PageHeader } from '@/components/navigation/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Plus, Info } from 'lucide-react';
 
@@ -13,10 +12,6 @@ export default function MyPortfolioPage() {
 
   return (
     <div className="min-h-screen">
-      <PageHeader 
-        title="Minha Carteira" 
-        backHref="/ranking"
-      />
       <PortfolioSummary />
       
       {/* Disclaimer sobre delay de atualização */}

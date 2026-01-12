@@ -18,6 +18,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import { PostComments } from './PostComments';
+import { renderMarkdownWithPolls } from '@/lib/utils/markdown-with-polls';
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,7 @@ interface FeedPostProps {
       date: string;
     };
     likedByCurrentUser?: boolean;
+    pollId?: string | null;
   };
   isOwner?: boolean;
   truncateContent?: boolean; // Se true, trunca conteúdo para 255 caracteres no feed global
@@ -488,43 +490,7 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
           </Link>
         ) : (
           <div className="mb-4 break-words">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm, remarkBreaks]}
-              components={{
-                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                em: ({ children }) => <em className="italic">{children}</em>,
-                code: ({ children }) => (
-                  <code className="px-1.5 py-0.5 bg-muted rounded text-sm font-mono">
-                    {children}
-                  </code>
-                ),
-                a: ({ href, children }) => (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {children}
-                  </a>
-                ),
-                ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
-                li: ({ children }) => <li className="ml-2">{children}</li>,
-                h1: ({ children }) => <h1 className="text-xl font-bold mb-2 mt-4 first:mt-0">{children}</h1>,
-                h2: ({ children }) => <h2 className="text-lg font-bold mb-2 mt-4 first:mt-0">{children}</h2>,
-                h3: ({ children }) => <h3 className="text-base font-bold mb-2 mt-4 first:mt-0">{children}</h3>,
-                blockquote: ({ children }) => (
-                  <blockquote className="border-l-4 border-muted-foreground/30 pl-4 italic my-2">
-                    {children}
-                  </blockquote>
-                ),
-              }}
-            >
-              {displayContent}
-            </ReactMarkdown>
+            {renderMarkdownWithPolls(displayContent, post.id, post.pollId || undefined)}
           </div>
         )}
 

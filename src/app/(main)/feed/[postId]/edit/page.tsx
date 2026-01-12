@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { MarkdownEditor } from '@/components/feed/MarkdownEditor';
-import { PageHeader } from '@/components/navigation/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/client';
@@ -15,17 +14,17 @@ export default function EditPostPage() {
   const postId = params.postId as string;
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [content, setContent] = useState('');
-  const [editorHeight, setEditorHeight] = useState('calc(100vh - 300px)'); // Mobile por padrão
+  const [editorHeight, setEditorHeight] = useState('calc(100vh - 237px)'); // Mobile por padrão (sem header)
 
   // Ajustar altura baseado no tamanho da tela
   useEffect(() => {
     const updateHeight = () => {
       if (window.innerWidth >= 768) {
         // Desktop
-        setEditorHeight('calc(100vh - 327px)');
+        setEditorHeight('calc(100vh - 289px)');
       } else {
         // Mobile
-        setEditorHeight('calc(100vh - 300px)');
+        setEditorHeight('calc(100vh - 237px)');
       }
     };
 
@@ -98,7 +97,6 @@ export default function EditPostPage() {
   if (authLoading || postLoading) {
     return (
       <div className="min-h-screen">
-        <PageHeader title="Editar Post" backHref="/feed" />
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -114,7 +112,6 @@ export default function EditPostPage() {
   if (postError) {
     return (
       <div className="min-h-screen">
-        <PageHeader title="Editar Post" backHref="/feed" />
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <div className="bg-destructive/10 text-destructive p-4 rounded-md">
             <p>
@@ -141,8 +138,6 @@ export default function EditPostPage() {
 
   return (
     <div className="flex flex-col overflow-hidden">
-      <PageHeader title="Editar Post" backHref={post.slug ? `/posts/${post.slug}` : '/feed'} className="flex-shrink-0" />
-      
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Editor - altura calculada descontando header e footer (valores diferentes para mobile/desktop) */}
         <div 

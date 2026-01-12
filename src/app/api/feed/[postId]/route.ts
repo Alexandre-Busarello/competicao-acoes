@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/server';
 import { feedService } from '@/lib/services/feed-service';
+import { parsePollFromMarkdown } from '@/lib/utils/poll-parser';
+import { prisma } from '@/lib/prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,7 +68,51 @@ export async function PUT(
       );
     }
 
+    // Verificar se há múltiplas enquetes no conteúdo
+    const pollComments = content.match(/<!--\s*poll:[^>]+-->/g);
+    if (pollComments && pollComments.length > 1) {
+      return NextResponse.json(
+        { error: 'Only one poll per post is allowed' },
+        { status: 400 }
+      );
+    }
+
     await feedService.updatePost(postId, userId, content.trim());
+
+    // Verificar se há enquete no conteúdo e se não existe enquete ainda
+    const existingPoll = await prisma.feedPoll.findUnique({
+      where: { postId },
+    });
+
+    if (!existingPoll) {
+      // Não existe enquete, verificar se há comentário poll no conteúdo
+      const pollConfig = parsePollFromMarkdown(content.trim());
+      if (pollConfig && pollConfig.options.length >= 2 && pollConfig.options.length <= 6) {
+        // Criar enquete para o post
+        try {
+          await prisma.feedPoll.create({
+            data: {
+              postId,
+              question: pollConfig.question,
+              options: pollConfig.options,
+              totalVotes: 0,
+            },
+          });
+        } catch (error: any) {
+          // Se erro for de constraint única, já existe enquete (race condition)
+          if (error?.code === 'P2002') {
+            return NextResponse.json(
+              { error: 'Post already has a poll' },
+              { status: 400 }
+            );
+          }
+          console.error('Error creating poll:', error);
+          // Não falhar a edição do post se a enquete falhar por outros motivos
+        }
+      }
+    }
+    // Se já existe enquete, ignorar comentários poll no conteúdo
+    // (a enquete já está criada e não pode ser modificada via edição de post)
 
     return NextResponse.json({ success: true });
   } catch (error) {

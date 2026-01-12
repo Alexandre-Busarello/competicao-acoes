@@ -33,6 +33,7 @@ model User {
   stats                 UserStats?
   timeline              FeedTimeline[]
   feedViews             FeedView[]
+  pollVotes             FeedPollVote[]
 
   @@index([authUserId])
   @@index([email])
@@ -181,6 +182,7 @@ model FeedPost {
   notifications Notification[]
   timeline     FeedTimeline[]
   views        FeedView[]
+  poll         FeedPoll?
 
   @@index([userId])
   @@index([slug])
@@ -388,4 +390,32 @@ model KiwifyWebhookQueue {
   @@index([orderId])
   @@index([customerEmail])
   @@index([createdAt])
+}
+
+model FeedPoll {
+  id         String        @id @default(uuid())
+  postId     String        @unique
+  question   String
+  options    Json          // Array de strings: ["opção1", "opção2", ...]
+  totalVotes Int           @default(0)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  post       FeedPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  votes      FeedPollVote[]
+
+  @@index([postId])
+}
+
+model FeedPollVote {
+  id          String   @id @default(uuid())
+  pollId      String
+  userId      String
+  optionIndex Int      // Índice da opção votada (0-5)
+  createdAt   DateTime @default(now())
+  poll        FeedPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, userId])
+  @@index([pollId])
+  @@index([userId])
 }

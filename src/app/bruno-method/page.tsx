@@ -6,7 +6,6 @@ import { PortfolioHeader } from '@/components/portfolio/PortfolioHeader';
 import { AssetAllocationChart } from '@/components/portfolio/AssetAllocationChart';
 import { AssetList } from '@/components/portfolio/AssetList';
 import { BlurOverlay } from '@/components/portfolio/BlurOverlay';
-import { PageHeader } from '@/components/navigation/PageHeader';
 import { Star, Copy, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -43,17 +42,6 @@ export default function BrunoMethodPage() {
 
   return (
     <div className="min-h-screen pb-32 bg-gradient-to-br from-yellow-50/50 dark:from-yellow-950/10 to-background">
-      <PageHeader 
-        title={
-          <div className="flex items-center gap-2">
-            <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-            <span>MIC Method</span>
-          </div>
-        }
-        backHref="/ranking"
-        className="border-yellow-200 dark:border-yellow-900"
-      />
-
       <div className="bg-gradient-to-br from-yellow-100/50 dark:from-yellow-900/20 to-background border-b-2 border-yellow-300 dark:border-yellow-700">
         <div className="container mx-auto px-4 py-6 max-w-4xl">
           <div className="text-center mb-4">

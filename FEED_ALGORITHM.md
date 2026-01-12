@@ -47,12 +47,18 @@ O feed é organizado em três camadas principais, na seguinte ordem de **priorid
 Cada post recebe um **score de engajamento** calculado pela fórmula:
 
 ```
-Score = (likes × 2) + (comentários × 3)
+Score = (likes × 2) + (comentários × 3) + (votos em enquete × 1.5)
 ```
 
 ### Exemplo:
-- Post com 5 likes e 2 comentários: `(5 × 2) + (2 × 3) = 16 pontos`
+- Post com 5 likes, 2 comentários e 10 votos em enquete: `(5 × 2) + (2 × 3) + (10 × 1.5) = 31 pontos`
 - Post com 10 likes e 0 comentários: `(10 × 2) + (0 × 3) = 20 pontos`
+- Post com enquete e 20 votos: `(0 × 2) + (0 × 3) + (20 × 1.5) = 30 pontos`
+
+### Pesos de Engajamento:
+- **Like**: 2 pontos
+- **Comentário**: 3 pontos
+- **Voto em Enquete**: 1.5 pontos
 
 ## Aleatoriedade (Q = 30%)
 

@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, CreditCard, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
-import { PageHeader } from '@/components/navigation/PageHeader';
 
 function FakeKiwifyCheckoutContent() {
   const router = useRouter();
@@ -51,8 +50,6 @@ function FakeKiwifyCheckoutContent() {
 
   return (
     <div className="min-h-screen pb-4">
-      <PageHeader title="Checkout" backHref="/ranking" />
-      
       <div className="max-w-2xl mx-auto px-4 mt-4">
         <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
           <div className="flex items-start gap-3">
@@ -178,7 +175,6 @@ export default function FakeKiwifyCheckoutPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen pb-4">
-        <PageHeader title="Checkout" backHref="/ranking" />
         <div className="max-w-2xl mx-auto px-4 mt-4">
           <Card>
             <CardContent className="p-6">

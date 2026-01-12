@@ -19,10 +19,14 @@ export interface GlobalFeedQueryParams extends FeedQueryParams {
  */
 export class GlobalFeedService extends BaseFeedService {
   /**
-   * Calcula score de engajamento: likeCount * 2 + commentCount * 3
+   * Calcula score de engajamento: likeCount * 2 + commentCount * 3 + pollVotes * 1.5
+   * Votos em enquetes contam como engajamento (peso 1.5)
    */
   private calculateEngagementScore(post: any): number {
-    return (post.likeCount || 0) * 2 + (post.commentCount || 0) * 3;
+    const likes = (post.likeCount || 0) * 2;
+    const comments = (post.commentCount || 0) * 3;
+    const pollVotes = (post.poll?.totalVotes || 0) * 1.5;
+    return likes + comments + pollVotes;
   }
 
   /**
@@ -61,7 +65,7 @@ export class GlobalFeedService extends BaseFeedService {
   }
 
   /**
-   * Obtém posts com interações recentes do usuário (likes ou comentários)
+   * Obtém posts com interações recentes do usuário (likes, comentários ou votos em enquetes)
    * Ordenados pela data da interação mais recente
    */
   async getInteractionsFeed(params: GlobalFeedQueryParams): Promise<FeedResult> {
@@ -78,9 +82,9 @@ export class GlobalFeedService extends BaseFeedService {
       };
     }
 
-    // Buscar posts onde o usuário interagiu (like ou comentário)
+    // Buscar posts onde o usuário interagiu (like, comentário ou voto em enquete)
     // Ordenar pela data da interação mais recente
-    const [likedPosts, commentedPosts] = await Promise.all([
+    const [likedPosts, commentedPosts, votedPolls] = await Promise.all([
       // Posts com likes do usuário
       prisma.feedLike.findMany({
         where: {
@@ -108,6 +112,23 @@ export class GlobalFeedService extends BaseFeedService {
           createdAt: 'desc',
         },
       }),
+      // Posts com votos em enquetes do usuário
+      prisma.feedPollVote.findMany({
+        where: {
+          userId: currentUserId,
+        },
+        select: {
+          poll: {
+            select: {
+              postId: true,
+            },
+          },
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
     ]);
 
     // Combinar e deduplicar posts, mantendo a data da interação mais recente
@@ -124,6 +145,16 @@ export class GlobalFeedService extends BaseFeedService {
       const existing = postInteractions.get(comment.postId);
       if (!existing || comment.createdAt > existing) {
         postInteractions.set(comment.postId, comment.createdAt);
+      }
+    });
+
+    votedPolls.forEach((vote: any) => {
+      const postId = vote.poll?.postId;
+      if (postId) {
+        const existing = postInteractions.get(postId);
+        if (!existing || vote.createdAt > existing) {
+          postInteractions.set(postId, vote.createdAt);
+        }
       }
     });
 

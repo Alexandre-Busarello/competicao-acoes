@@ -15,6 +15,7 @@ interface FeedFilterDropdownProps {
   onValueChange: (value: 'global' | 'interactions') => void;
   variant?: 'default' | 'ghost';
   size?: 'default' | 'sm' | 'icon';
+  showText?: boolean; // Força exibição do texto mesmo no mobile
 }
 
 const filterLabels: Record<'global' | 'interactions', string> = {
@@ -27,9 +28,11 @@ export function FeedFilterDropdown({
   onValueChange,
   variant = 'ghost',
   size = 'icon',
+  showText = false,
 }: FeedFilterDropdownProps) {
   const selectedLabel = filterLabels[value];
-  const isIconOnly = size === 'icon';
+  const isIconOnly = size === 'icon' && !showText;
+  const shouldShowText = showText || !isIconOnly;
 
   return (
     <DropdownMenu>
@@ -38,19 +41,26 @@ export function FeedFilterDropdown({
           variant={variant} 
           size={isIconOnly ? 'icon' : 'sm'} 
           aria-label="Filtrar feed"
-          className={!isIconOnly ? 'gap-2' : ''}
+          className={shouldShowText ? 'gap-2' : ''}
         >
           <Filter className="h-4 w-4" />
-          {!isIconOnly && (
+          {shouldShowText && (
             <>
-              <span className="hidden sm:inline">{selectedLabel}</span>
+              <span>{selectedLabel}</span>
               <ChevronDown className="h-4 w-4 opacity-50" />
             </>
           )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuRadioGroup value={value} onValueChange={onValueChange}>
+        <DropdownMenuRadioGroup 
+          value={value} 
+          onValueChange={(val) => {
+            if (val === 'global' || val === 'interactions') {
+              onValueChange(val);
+            }
+          }}
+        >
           <DropdownMenuRadioItem value="global">
             Feed Global
           </DropdownMenuRadioItem>

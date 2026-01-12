@@ -3,11 +3,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Bold, Italic, Code, Link, List, ListOrdered, Eye, EyeOff } from 'lucide-react';
+import { Bold, Italic, BarChart3, Link, List, ListOrdered, Eye, EyeOff } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import { cn } from '@/lib/utils';
+import { PollConfigModal } from './PollConfigModal';
+import { generatePollComment } from '@/lib/utils/poll-parser';
 
 interface MarkdownEditorProps {
   value: string;
@@ -30,6 +32,7 @@ export function MarkdownEditor({
   const [showPreview, setShowPreview] = useState(initialShowPreview);
   const [selectionStart, setSelectionStart] = useState(0);
   const [selectionEnd, setSelectionEnd] = useState(0);
+  const [isPollModalOpen, setIsPollModalOpen] = useState(false);
 
   // Focar textarea ao montar
   useEffect(() => {
@@ -128,8 +131,47 @@ export function MarkdownEditor({
     insertText('*', '*', 'texto em itálico');
   };
 
-  const handleCode = () => {
-    insertText('`', '`', 'código');
+  const handlePoll = () => {
+    setIsPollModalOpen(true);
+  };
+
+  const handlePollInsert = (config: { question: string; options: string[] }) => {
+    const pollComment = generatePollComment(config);
+    // Inserir com quebra de linha antes e depois para melhor formatação
+    const textToInsert = `\n${pollComment}\n`;
+    
+    // Usar o estado atual e a seleção atual
+    const currentStart = selectionStart;
+    const currentEnd = selectionEnd;
+    const currentValue = value || '';
+    
+    // Calcular novo valor
+    const newValue =
+      currentValue.substring(0, currentStart) +
+      textToInsert +
+      currentValue.substring(currentEnd);
+    
+    // Atualizar o estado diretamente
+    onChange(newValue);
+    
+    // Usar setTimeout para garantir que o modal feche e o textarea esteja disponível
+    setTimeout(() => {
+      if (!textareaRef.current) return;
+      
+      const textarea = textareaRef.current;
+      
+      // Atualizar o valor do textarea para garantir sincronização
+      textarea.value = newValue;
+      
+      // Focar e posicionar cursor
+      textarea.focus();
+      const newCursorPos = currentStart + textToInsert.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+      
+      // Atualizar estado de seleção
+      setSelectionStart(newCursorPos);
+      setSelectionEnd(newCursorPos);
+    }, 50); // Pequeno delay para garantir que o modal feche primeiro
   };
 
   const handleLink = () => {
@@ -172,15 +214,21 @@ export function MarkdownEditor({
   const toolbarButtons = [
     { icon: Bold, label: 'Negrito', onClick: handleBold },
     { icon: Italic, label: 'Itálico', onClick: handleItalic },
-    { icon: Code, label: 'Código', onClick: handleCode },
+    { icon: BarChart3, label: 'Enquete', onClick: handlePoll },
     { icon: Link, label: 'Link', onClick: handleLink },
     { icon: List, label: 'Lista', onClick: handleUnorderedList },
     { icon: ListOrdered, label: 'Lista numerada', onClick: handleOrderedList },
   ];
 
   return (
-    <div className={cn('flex flex-col h-full min-h-0', className)}>
-      {/* Toolbar */}
+    <>
+      <PollConfigModal
+        open={isPollModalOpen}
+        onOpenChange={setIsPollModalOpen}
+        onInsert={handlePollInsert}
+      />
+      <div className={cn('flex flex-col h-full min-h-0', className)}>
+        {/* Toolbar */}
       <div className="flex items-center gap-1 p-2 border-b bg-muted/30 overflow-x-auto flex-shrink-0">
         <div className="flex items-center gap-1 flex-1 min-w-0">
           {toolbarButtons.map(({ icon: Icon, label, onClick }) => (
@@ -323,6 +371,7 @@ export function MarkdownEditor({
         )}
       </div>
     </div>
+    </>
   );
 }
 

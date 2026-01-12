@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { MarkdownEditor } from '@/components/feed/MarkdownEditor';
-import { PageHeader } from '@/components/navigation/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/client';
@@ -13,17 +12,17 @@ export default function CreatePostPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [content, setContent] = useState('');
-  const [editorHeight, setEditorHeight] = useState('calc(100vh - 355px)'); // Mobile por padrão
+  const [editorHeight, setEditorHeight] = useState('calc(100vh - 237px)'); // Mobile por padrão (sem header)
 
   // Ajustar altura baseado no tamanho da tela
   useEffect(() => {
     const updateHeight = () => {
       if (window.innerWidth >= 768) {
         // Desktop
-        setEditorHeight('calc(100vh - 327px)');
+        setEditorHeight('calc(100vh - 289px)');
       } else {
         // Mobile
-        setEditorHeight('calc(100vh - 300px)');
+        setEditorHeight('calc(100vh - 237px)');
       }
     };
 
@@ -64,7 +63,6 @@ export default function CreatePostPage() {
   if (authLoading) {
     return (
       <div className="min-h-screen">
-        <PageHeader title="Novo Post" backHref="/feed" />
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -79,8 +77,6 @@ export default function CreatePostPage() {
 
   return (
     <div className="flex flex-col overflow-hidden">
-      <PageHeader title="Novo Post" backHref="/feed" className="flex-shrink-0" />
-      
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Editor - altura calculada descontando header e footer (valores diferentes para mobile/desktop) */}
         <div 

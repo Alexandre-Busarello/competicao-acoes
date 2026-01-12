@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { GlobalFeed } from '@/components/feed/GlobalFeed';
 import { PublicFeed } from '@/components/feed/PublicFeed';
-import { PageHeader } from '@/components/navigation/PageHeader';
 import { CreatePostFAB } from '@/components/feed/CreatePostFAB';
 import { FeedFilterDropdown } from '@/components/feed/FeedFilterDropdown';
 import { Button } from '@/components/ui/button';
@@ -27,7 +26,6 @@ export default function FeedPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen">
-        <PageHeader title="Feed" backHref="/ranking" />
         <div className="flex items-center justify-center py-8">
           <p className="text-muted-foreground">Carregando...</p>
         </div>
@@ -39,36 +37,33 @@ export default function FeedPage() {
   if (isAuthenticated) {
     return (
       <div className="flex flex-col h-screen overflow-hidden">
-        <PageHeader 
-          title="Feed" 
-          backHref="/ranking"
-          leftAction={
-            <FeedFilterDropdown
-              value={filterInteractions ? 'interactions' : 'global'}
-              onValueChange={handleFilterChange}
-              variant="ghost"
-              size="sm"
-            />
-          }
-          rightAction={
-            <div className="flex items-center gap-2">
-              <FeedFilterDropdown
-                value={filterInteractions ? 'interactions' : 'global'}
-                onValueChange={handleFilterChange}
-                variant="ghost"
-                size="sm"
-              />
-              <Link href="/feed/create">
-                <Button size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Novo Post
-                </Button>
-              </Link>
-            </div>
-          }
-        />
         <div className="flex-1 container mx-auto px-4 py-4 max-w-4xl overflow-hidden">
-          <GlobalFeed filterInteractions={filterInteractions} />
+          <GlobalFeed 
+            filterInteractions={filterInteractions}
+            filterComponent={
+              <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-2 -mx-4 px-4 mb-3">
+                <div className="flex items-center justify-between gap-2">
+                  {/* Filtro - visível em mobile e desktop, alinhado à esquerda */}
+                  <FeedFilterDropdown
+                    value={filterInteractions ? 'interactions' : 'global'}
+                    onValueChange={handleFilterChange}
+                    variant="ghost"
+                    size="sm"
+                    showText={true}
+                  />
+                  {/* Novo Post - apenas desktop, alinhado à direita */}
+                  <div className="hidden lg:block">
+                    <Link href="/feed/create">
+                      <Button size="sm" className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Novo Post
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            }
+          />
         </div>
         <CreatePostFAB />
       </div>
@@ -78,7 +73,6 @@ export default function FeedPage() {
   // Se não autenticado, mostrar feed público limitado
   return (
     <div className="min-h-screen">
-      <PageHeader title="Feed" backHref="/ranking" />
       <div className="container mx-auto px-4 py-4 max-w-4xl">
         <PublicFeed />
       </div>

@@ -1,7 +1,6 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PageHeader } from '@/components/navigation/PageHeader';
 import { TrendingUp, DollarSign, Calendar, AlertCircle, Info } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -9,11 +8,6 @@ import { Button } from '@/components/ui/button';
 export default function ComoFuncionaPage() {
   return (
     <div className="min-h-screen">
-      <PageHeader 
-        title="Como Funciona" 
-        backHref="/ranking"
-      />
-
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Introdução */}
         <Card>

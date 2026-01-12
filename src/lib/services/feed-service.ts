@@ -34,6 +34,7 @@ export interface FeedPost {
     date: Date;
   };
   likedByCurrentUser?: boolean;
+  pollId?: string | null;
 }
 
 /**
@@ -183,6 +184,11 @@ export class FeedService {
             date: true,
           },
         },
+        poll: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
 
@@ -237,6 +243,11 @@ export class FeedService {
             quantity: true,
             price: true,
             date: true,
+          },
+        },
+        poll: {
+          select: {
+            id: true,
           },
         },
       },
@@ -476,6 +487,7 @@ export class FeedService {
         price: Number(post.transaction.price),
         date: post.transaction.date,
       } : undefined,
+      pollId: post.poll?.id || null,
     };
   }
 }

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Textarea } from '@/components/ui/textarea';
-import { PageHeader } from '@/components/navigation/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/client';
@@ -81,7 +80,6 @@ export default function EditCommentPage() {
   if (authLoading || commentLoading) {
     return (
       <div className="min-h-screen">
-        <PageHeader title="Editar Comentário" backHref="/feed" />
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -97,7 +95,6 @@ export default function EditCommentPage() {
   if (commentError) {
     return (
       <div className="min-h-screen">
-        <PageHeader title="Editar Comentário" backHref="/feed" />
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <div className="bg-destructive/10 text-destructive p-4 rounded-md">
             <p>
@@ -124,8 +121,6 @@ export default function EditCommentPage() {
 
   return (
     <div className="flex flex-col overflow-hidden">
-      <PageHeader title="Editar Comentário" backHref="/feed" className="flex-shrink-0" />
-      
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div className="flex-1 p-4 md:p-6 overflow-y-auto">
           <div className="max-w-4xl mx-auto">

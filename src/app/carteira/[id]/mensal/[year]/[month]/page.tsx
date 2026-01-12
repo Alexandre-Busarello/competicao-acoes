@@ -8,7 +8,6 @@ import { AssetList } from '@/components/portfolio/AssetList';
 import { UserTransactionList } from '@/components/portfolio/UserTransactionList';
 import { BlurOverlay } from '@/components/portfolio/BlurOverlay';
 import { PeriodFilters } from '@/components/ranking/PeriodFilters';
-import { PageHeader } from '@/components/navigation/PageHeader';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Edit, Info, Wallet } from 'lucide-react';
@@ -112,11 +111,6 @@ export default function PortfolioMensalPage() {
 
   return (
     <div className="min-h-screen max-w-4xl mx-auto">
-      <PageHeader 
-        title="Detalhes da Carteira" 
-        backHref={`/ranking/mensal/${year}/${month.toString().padStart(2, '0')}`}
-      />
-      
       {/* Seletor de Período e Indicador */}
       {canAccess && (
         <div className="container mx-auto px-4 py-4">

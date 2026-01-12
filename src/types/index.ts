@@ -68,3 +68,30 @@ export interface BrunoPortfolio {
   description?: string;
 }
 
+export interface PollConfig {
+  question: string;
+  options: string[];
+}
+
+export interface Poll {
+  id: string;
+  postId: string;
+  question: string;
+  options: string[];
+  totalVotes: number;
+  voteCounts: number[]; // Contagem de votos por opção [count0, count1, ...]
+  userVote?: {
+    optionIndex: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PollVote {
+  id: string;
+  pollId: string;
+  userId: string;
+  optionIndex: number;
+  createdAt: string;
+}
+
