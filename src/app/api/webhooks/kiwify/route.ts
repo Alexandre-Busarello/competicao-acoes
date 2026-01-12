@@ -74,20 +74,75 @@ export async function POST(request: NextRequest) {
     //   }
     // }
 
-    const body = await request.json();
-    const { event, data } = body;
+    // Log headers antes de consumir o body
+    const headers: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    console.log('Kiwify webhook headers:', JSON.stringify(headers, null, 2));
 
-    console.log('Kiwify webhook headers:', request.headers);
-    console.log('Kiwify webhook body:', request.body);
-    console.log('Kiwify webhook received:', { event, data });
+    // Ler o body como texto primeiro para debug
+    const bodyText = await request.text();
+    console.log('Kiwify webhook raw body:', bodyText);
+
+    // Parsear o JSON
+    let body: any;
+    try {
+      body = JSON.parse(bodyText);
+    } catch (parseError) {
+      console.error('Error parsing webhook body as JSON:', parseError);
+      console.error('Raw body received:', bodyText);
+      return NextResponse.json(
+        { error: 'Invalid JSON body' },
+        { status: 400 }
+      );
+    }
+
+    console.log('Kiwify webhook parsed body:', JSON.stringify(body, null, 2));
+
+    // O Kiwify pode enviar o webhook em diferentes formatos
+    // Formato 1: { event: 'order.paid', data: { order: {...} } }
+    // Formato 2: { event: 'order.paid', order: {...} }
+    // Formato 3: { type: 'order.paid', order: {...} }
+    let event = body.event || body.type || body.event_type;
+    let data = body.data || body;
+
+    // Se não encontrou event no nível superior, pode estar dentro de data
+    if (!event && data && typeof data === 'object') {
+      event = data.event || data.type || data.event_type;
+    }
+
+    console.log('Kiwify webhook extracted:', { event, dataKeys: data ? Object.keys(data) : null });
+
+    // Validar que temos um evento
+    if (!event) {
+      console.error('No event found in webhook body. Body structure:', JSON.stringify(body, null, 2));
+      return NextResponse.json(
+        { error: 'Evento não encontrado no webhook', receivedBody: body },
+        { status: 400 }
+      );
+    }
 
     // Processar apenas eventos de compra confirmada
     if (event === 'order.paid' || event === 'order.completed') {
-      const order = data.order || data;
-      const email = order.customer?.email || order.email;
-      const name = order.customer?.name || order.name;
-      const kiwifyOrderId = order.id || order.order_id;
-      const kiwifyId = order.subscription_id || order.product_id;
+      // O Kiwify pode enviar order em diferentes lugares:
+      // - data.order
+      // - data (quando data já é o order)
+      // - body.order (quando não há data)
+      const order = data?.order || data || body.order || body;
+      
+      if (!order || typeof order !== 'object') {
+        console.error('No order found in webhook data. Data structure:', JSON.stringify(data, null, 2));
+        return NextResponse.json(
+          { error: 'Dados do pedido não encontrados no webhook' },
+          { status: 400 }
+        );
+      }
+
+      const email = order.customer?.email || order.email || order.customer_email;
+      const name = order.customer?.name || order.name || order.customer_name;
+      const kiwifyOrderId = order.id || order.order_id || order.orderId;
+      const kiwifyId = order.subscription_id || order.product_id || order.subscriptionId || order.productId;
 
       if (!email) {
         console.error('No email found in webhook data');
@@ -322,8 +377,9 @@ export async function POST(request: NextRequest) {
       event === 'chargeback.created' ||
       event === 'subscription.cancelled'
     ) {
-      const order = data.order || data;
-      const email = order.customer?.email || order.email;
+      // O Kiwify pode enviar order em diferentes lugares
+      const order = data?.order || data || body.order || body;
+      const email = order?.customer?.email || order?.email || order?.customer_email || data?.email || body?.email;
 
       if (!email) {
         console.error('No email found in cancellation/refund/chargeback webhook data');
@@ -344,9 +400,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Evento não reconhecido ou não tratado
+    console.log('Kiwify webhook event not handled:', event);
     return NextResponse.json({
       success: true,
-      message: 'Evento processado',
+      message: 'Evento recebido mas não processado',
+      event,
     });
   } catch (error) {
     console.error('Error processing Kiwify webhook:', error);
