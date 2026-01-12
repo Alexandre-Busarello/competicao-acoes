@@ -70,9 +70,17 @@ export default function MyPortfolioPage() {
         </Collapsible>
       </div>
       
+      {/* Botão para desktop - antes das transações */}
+      <div className="hidden md:block container mx-auto px-4 py-4">
+        <Button onClick={() => setIsModalOpen(true)} className="w-full">
+          <Plus className="h-5 w-5 mr-2" />
+          Nova Transação
+        </Button>
+      </div>
+      
       <TransactionList />
       
-      {/* FAB - Floating Action Button */}
+      {/* FAB - Floating Action Button para mobile */}
       <Button
         className="fixed bottom-28 right-4 h-14 w-14 rounded-full shadow-lg z-40 md:hidden"
         size="icon"
@@ -80,14 +88,6 @@ export default function MyPortfolioPage() {
       >
         <Plus className="h-6 w-6" />
       </Button>
-
-      {/* Botão para desktop */}
-      <div className="hidden md:block container mx-auto px-4 py-4">
-        <Button onClick={() => setIsModalOpen(true)} className="w-full">
-          <Plus className="h-5 w-5 mr-2" />
-          Nova Transação
-        </Button>
-      </div>
 
       <TransactionModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </div>
