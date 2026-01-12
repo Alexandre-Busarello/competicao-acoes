@@ -415,3 +415,4 @@ const addCommentMutation = useMutation({
 - Monitorar taxa de erros para identificar problemas de rede
 - Considerar debounce para múltiplas ações rápidas
 
+

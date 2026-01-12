@@ -38,3 +38,4 @@ export interface CacheAdapter {
   clear(pattern?: string): Promise<void>;
 }
 
+

@@ -236,3 +236,4 @@ Você deve configurar o CRON em um serviço externo (org br) com as seguintes es
 
 O sistema está preparado para funcionar em múltiplos fusos horários, mas o CRON deve ser configurado para executar em UTC.
 
+

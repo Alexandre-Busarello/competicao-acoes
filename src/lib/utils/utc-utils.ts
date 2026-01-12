@@ -32,3 +32,4 @@ export function getUTCPreviousYear(): number {
   return new Date().getUTCFullYear() - 1;
 }
 
+

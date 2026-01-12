@@ -249,3 +249,4 @@ Quando um comentário é adicionado, os seguintes caches são invalidados:
    - Verificar se invalidação atualiza UI adequadamente
    - Verificar se não há queries desnecessárias
 
+

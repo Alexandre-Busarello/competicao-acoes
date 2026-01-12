@@ -94,3 +94,4 @@ Todas as 15 mensagens de venda foram atualizadas seguindo o mesmo padrão:
 3. Criar mensagens específicas para diferentes categorias de ETFs
 4. Adicionar formatação condicional baseada no valor da transação
 
+

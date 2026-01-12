@@ -140,3 +140,4 @@ if (posts.length === 0 && !isFetching) {
 - Mensagens personalizadas por tipo de ativo (ações vs FIIs vs ETFs)
 - Sistema de emojis variados baseado no ticker ou tipo de ativo
 
+

@@ -172,3 +172,4 @@ O BottomNav usa `safe-area-bottom` para respeitar áreas seguras em dispositivos
 3. Considerar adicionar mais itens de navegação no futuro (se necessário)
 4. Adicionar testes automatizados para navegação
 
+
