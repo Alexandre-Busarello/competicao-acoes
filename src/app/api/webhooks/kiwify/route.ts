@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
     const { event, data } = body;
 
     console.log('Kiwify webhook headers:', request.headers);
+    console.log('Kiwify webhook body:', request.body);
     console.log('Kiwify webhook received:', { event, data });
 
     // Processar apenas eventos de compra confirmada
