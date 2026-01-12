@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
     const isLoop = searchParams.get('loop') === 'true';
     const excludeIds = searchParams.get('excludeIds')?.split(',').filter(Boolean) || [];
     const filterInteractions = searchParams.get('filterInteractions') === 'true';
+    const filterMyPosts = searchParams.get('filterMyPosts') === 'true';
 
     const result = await globalFeedService.getFeed({
       limit,
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest) {
       isLoop,
       excludeIds,
       filterInteractions,
+      filterMyPosts,
     });
 
     // Registrar visualizações em batch (opcional, pode ser feito no frontend também)

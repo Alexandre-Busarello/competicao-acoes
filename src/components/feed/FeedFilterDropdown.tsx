@@ -11,16 +11,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 interface FeedFilterDropdownProps {
-  value: 'global' | 'interactions';
-  onValueChange: (value: 'global' | 'interactions') => void;
+  value: 'global' | 'interactions' | 'myPosts';
+  onValueChange: (value: 'global' | 'interactions' | 'myPosts') => void;
   variant?: 'default' | 'ghost';
   size?: 'default' | 'sm' | 'icon';
   showText?: boolean; // Força exibição do texto mesmo no mobile
 }
 
-const filterLabels: Record<'global' | 'interactions', string> = {
+const filterLabels: Record<'global' | 'interactions' | 'myPosts', string> = {
   global: 'Feed Global',
   interactions: 'Posts que Interagi',
+  myPosts: 'Meus Posts',
 };
 
 export function FeedFilterDropdown({
@@ -56,7 +57,7 @@ export function FeedFilterDropdown({
         <DropdownMenuRadioGroup 
           value={value} 
           onValueChange={(val) => {
-            if (val === 'global' || val === 'interactions') {
+            if (val === 'global' || val === 'interactions' || val === 'myPosts') {
               onValueChange(val);
             }
           }}
@@ -66,6 +67,9 @@ export function FeedFilterDropdown({
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="interactions">
             Posts que Interagi
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="myPosts">
+            Meus Posts
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>

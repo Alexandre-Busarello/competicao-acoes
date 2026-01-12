@@ -15,10 +15,13 @@ export default function FeedPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
   const [filterInteractions, setFilterInteractions] = useState(false);
+  const [filterMyPosts, setFilterMyPosts] = useState(false);
 
-  const handleFilterChange = (value: 'global' | 'interactions') => {
+  const handleFilterChange = (value: 'global' | 'interactions' | 'myPosts') => {
     const newFilterInteractions = value === 'interactions';
+    const newFilterMyPosts = value === 'myPosts';
     setFilterInteractions(newFilterInteractions);
+    setFilterMyPosts(newFilterMyPosts);
     // Resetar cache quando alternar
     queryClient.invalidateQueries({ queryKey: ['global-feed'] });
   };
@@ -40,12 +43,13 @@ export default function FeedPage() {
         <div className="flex-1 container mx-auto px-4 py-4 max-w-4xl overflow-hidden">
           <GlobalFeed 
             filterInteractions={filterInteractions}
+            filterMyPosts={filterMyPosts}
             filterComponent={
               <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-2 -mx-4 px-4 mb-3">
                 <div className="flex items-center justify-between gap-2">
                   {/* Filtro - visível em mobile e desktop, alinhado à esquerda */}
                   <FeedFilterDropdown
-                    value={filterInteractions ? 'interactions' : 'global'}
+                    value={filterMyPosts ? 'myPosts' : filterInteractions ? 'interactions' : 'global'}
                     onValueChange={handleFilterChange}
                     variant="ghost"
                     size="sm"

@@ -9,10 +9,11 @@ import { Button } from '@/components/ui/button';
 
 interface GlobalFeedProps {
   filterInteractions?: boolean;
+  filterMyPosts?: boolean;
   filterComponent?: React.ReactNode;
 }
 
-export function GlobalFeed({ filterInteractions = false, filterComponent }: GlobalFeedProps) {
+export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, filterComponent }: GlobalFeedProps) {
   const { user } = useUserStore();
   const queryClient = useQueryClient();
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -55,7 +56,7 @@ export function GlobalFeed({ filterInteractions = false, filterComponent }: Glob
     isFetching,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ['global-feed', filterInteractions],
+    queryKey: ['global-feed', filterInteractions, filterMyPosts],
     queryFn: async ({ pageParam }) => {
       const url = new URL('/api/feed/global', window.location.origin);
       url.searchParams.set('limit', '20');
@@ -63,13 +64,17 @@ export function GlobalFeed({ filterInteractions = false, filterComponent }: Glob
         url.searchParams.set('cursor', pageParam);
       }
       // Usar seed da sessão para consistência e cache eficiente (só para feed global)
-      if (!filterInteractions) {
+      if (!filterInteractions && !filterMyPosts) {
         const seed = sessionSeedRef.current || Date.now().toString();
         url.searchParams.set('seed', seed);
       }
       // Adicionar filtro de interações se ativo
       if (filterInteractions) {
         url.searchParams.set('filterInteractions', 'true');
+      }
+      // Adicionar filtro de meus posts se ativo
+      if (filterMyPosts) {
+        url.searchParams.set('filterMyPosts', 'true');
       }
 
       const response = await fetch(url.toString());
@@ -82,8 +87,8 @@ export function GlobalFeed({ filterInteractions = false, filterComponent }: Glob
       return response.json();
     },
     getNextPageParam: (lastPage) => {
-      // Para interações, não usar loop - retornar null quando não houver mais posts
-      if (filterInteractions) {
+      // Para interações ou meus posts, não usar loop - retornar null quando não houver mais posts
+      if (filterInteractions || filterMyPosts) {
         return lastPage.nextCursor || undefined;
       }
       // Se não há mais posts, retornar 'loop' para entrar em loop (apenas feed global)
@@ -144,7 +149,7 @@ export function GlobalFeed({ filterInteractions = false, filterComponent }: Glob
         if (entries[0].isIntersecting && !isFetchingNextPage) {
           if (hasNextPage) {
             fetchNextPage();
-          } else if (!filterInteractions) {
+          } else if (!filterInteractions && !filterMyPosts) {
             // Loop infinito: quando não há mais posts, buscar novamente (apenas feed global)
             // Usar mesmo seed da sessão para manter consistência
             loopPageRef.current += 1;
@@ -164,7 +169,7 @@ export function GlobalFeed({ filterInteractions = false, filterComponent }: Glob
               .then(res => res.json())
               .then(result => {
                 // Adicionar novos posts ao cache do React Query
-                queryClient.setQueryData(['global-feed', false], (old: any) => {
+                queryClient.setQueryData(['global-feed', false, false], (old: any) => {
                   if (!old) return old;
                   const newPages = [...old.pages];
                   newPages.push({
@@ -189,7 +194,7 @@ export function GlobalFeed({ filterInteractions = false, filterComponent }: Glob
     }
 
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, queryClient, filterInteractions]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, queryClient, filterInteractions, filterMyPosts]);
 
   // Função para atualizar o feed
   const handleRefresh = useCallback(async () => {
@@ -328,9 +333,15 @@ export function GlobalFeed({ filterInteractions = false, filterComponent }: Glob
 
   // Só mostrar mensagem vazia se não estiver carregando e realmente não houver posts
   if (posts.length === 0 && !isFetching) {
+    let emptyMessage = 'Nenhum post ainda.';
+    if (filterInteractions) {
+      emptyMessage = 'Você ainda não interagiu com nenhum post.';
+    } else if (filterMyPosts) {
+      emptyMessage = 'Você ainda não criou nenhum post.';
+    }
     return (
       <div className="text-center py-8 text-muted-foreground">
-        <p>{filterInteractions ? 'Você ainda não interagiu com nenhum post.' : 'Nenhum post ainda.'}</p>
+        <p>{emptyMessage}</p>
         <Button
           onClick={handleRefresh}
           disabled={isRefreshing}

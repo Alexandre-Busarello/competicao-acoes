@@ -9,6 +9,7 @@ export interface GlobalFeedQueryParams extends FeedQueryParams {
   isLoop?: boolean;
   excludeIds?: string[];
   filterInteractions?: boolean; // Se true, retorna apenas posts com interações recentes
+  filterMyPosts?: boolean; // Se true, retorna apenas posts do usuário atual
 }
 
 /**
@@ -223,6 +224,54 @@ export class GlobalFeedService extends BaseFeedService {
   }
 
   /**
+   * Obtém apenas os posts do usuário atual
+   * Ordenados pela data de criação (mais recentes primeiro)
+   */
+  async getMyPostsFeed(params: GlobalFeedQueryParams): Promise<FeedResult> {
+    const {
+      limit = this.DEFAULT_LIMIT,
+      cursor,
+      currentUserId,
+    } = params;
+
+    if (!currentUserId) {
+      return {
+        posts: [],
+        nextCursor: null,
+      };
+    }
+
+    // Buscar posts do usuário atual
+    const where: any = {
+      userId: currentUserId,
+      deletedAt: null,
+    };
+
+    // Buscar posts com paginação cursor-based
+    const posts = await this.fetchPostsFromPrisma({
+      where,
+      take: limit + 1, // Buscar um a mais para verificar se há próxima página
+      cursor: cursor ? { id: cursor } : undefined,
+      orderBy: { createdAt: 'desc' }, // Mais recentes primeiro
+    });
+
+    // Aplicar paginação cursor-based
+    const { resultPosts, nextCursor } = this.processCursorPagination(posts, limit);
+
+    // Mapear posts
+    const mappedPosts = resultPosts.map(post => this.mapToFeedPost(post));
+
+    // Enriquece com likes do usuário atual
+    const enrichedWithLikes = await this.enrichWithLikes(mappedPosts, currentUserId);
+    const enrichedPosts = await this.enrichWithRankingsAndProfitability(enrichedWithLikes);
+
+    return {
+      posts: enrichedPosts,
+      nextCursor: nextCursor || null,
+    };
+  }
+
+  /**
    * Obtém feed global com ordenação por camadas: DIA → SEMANA → ANTIGOS
    * Cada camada ordenada por engajamento
    * Posts mais recentes aparecem embaixo (precisam scrollar para ver)
@@ -236,11 +285,17 @@ export class GlobalFeedService extends BaseFeedService {
       isLoop = false,
       excludeIds = [],
       filterInteractions = false,
+      filterMyPosts = false,
     } = params;
 
     // Se filtro de interações está ativo, usar método específico
     if (filterInteractions) {
       return this.getInteractionsFeed(params);
+    }
+
+    // Se filtro de meus posts está ativo, usar método específico
+    if (filterMyPosts) {
+      return this.getMyPostsFeed(params);
     }
 
     // Se não há seed, gerar um baseado em período (por hora) para cache eficiente
