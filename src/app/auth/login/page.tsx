@@ -292,9 +292,14 @@ function LoginForm() {
               priority
             />
           </div>
-          <CardTitle className="text-2xl">Acessar Plataforma</CardTitle>
+          <CardTitle className="text-2xl">
+            {isSignup ? 'Criar Conta' : 'Acessar Plataforma'}
+          </CardTitle>
           <CardDescription className="text-base mt-2">
-            Escolha uma forma de acesso ou crie sua conta gratuita
+            {isSignup 
+              ? 'Crie sua conta gratuita e comece a competir agora mesmo'
+              : 'Escolha uma forma de acesso ou crie sua conta gratuita'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -409,7 +414,7 @@ function LoginForm() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">           
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -438,7 +443,7 @@ function LoginForm() {
                       className="w-full"
                       minLength={6}
                     />
-                    <p className="text-xs text-muted-foreground">
+                    {/* <p className="text-xs text-muted-foreground">
                       Se não tiver senha, use Magic Link ou{' '}
                       <button
                         type="button"
@@ -451,7 +456,7 @@ function LoginForm() {
                       >
                         crie uma conta
                       </button>
-                    </p>
+                    </p> */}
                   </div>
                 )}
 
@@ -474,7 +479,7 @@ function LoginForm() {
                           {isSignup ? (
                             <>
                               <Sparkles className="h-4 w-4 mr-2" />
-                              Criar Conta
+                              Logar ou Criar Conta
                             </>
                           ) : (
                             <>

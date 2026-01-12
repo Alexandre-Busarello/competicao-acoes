@@ -124,18 +124,18 @@ export function UserHeader() {
               );
             })}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2">
             <ThemeToggle />
             <Link href="/auth/login">
-              <Button variant="outline" size="sm">
-                <LogIn className="h-4 w-4 mr-2" />
-                Entrar
+              <Button variant="outline" size="sm" className="md:px-3 px-2">
+                <LogIn className="h-3.5 w-3.5 md:h-4 md:w-4 md:mr-2" />
+                <span className="hidden md:inline">Entrar</span>
               </Button>
             </Link>
             <Link href="/auth/login?signup=true">
-              <Button size="sm">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Criar Conta
+              <Button size="sm" className="flex-1 md:flex-none">
+                <UserPlus className="h-3.5 w-3.5 md:h-4 md:w-4 md:mr-2" />
+                <span className="text-xs md:text-sm">Criar Conta</span>
               </Button>
             </Link>
           </div>

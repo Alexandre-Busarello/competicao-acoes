@@ -64,12 +64,12 @@ export function PublicFeed() {
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <p className="text-xs text-muted-foreground text-center mt-3">
+            {/* <p className="text-xs text-muted-foreground text-center mt-3">
               Já tem uma conta?{' '}
               <Link href="/auth/login?returnUrl=/feed" className="text-primary hover:underline font-medium">
                 Fazer login
               </Link>
-            </p>
+            </p> */}
           </CardContent>
         </Card>
       )}

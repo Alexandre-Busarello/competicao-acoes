@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { LeadCaptureModal } from './LeadCaptureModal';
 import { Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth/client';
 import { redirectToKiwifyCheckout } from '@/lib/utils/checkout';
@@ -13,6 +15,7 @@ interface CheckoutCTAProps {
   variant?: 'default' | 'outline' | 'ghost' | 'link' | 'destructive' | 'secondary';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   className?: string;
+  useModal?: boolean; // Se true, usa modal quando não autenticado. Se false ou undefined, redireciona para signup
 }
 
 export function CheckoutCTA({
@@ -23,7 +26,9 @@ export function CheckoutCTA({
   variant = 'default',
   size = 'default',
   className,
+  useModal = false,
 }: CheckoutCTAProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { user, isAuthenticated } = useAuth();
 
   const handleClick = () => {
@@ -57,21 +62,38 @@ export function CheckoutCTA({
           redirectToKiwifyCheckout(user.email, source);
         });
     } else {
-      // Usuário não logado, redirecionar para página de criação de conta
-      window.location.href = '/auth/login?signup=true';
+      // Usuário não logado
+      if (useModal) {
+        // Usar modal para capturar email
+        setIsModalOpen(true);
+      } else {
+        // Redirecionar para página de criação de conta
+        window.location.href = '/auth/login?signup=true';
+      }
     }
   };
 
   return (
-    <Button
-      onClick={handleClick}
-      variant={variant}
-      size={size}
-      className={className}
-    >
-      <Lock className="h-4 w-4 mr-2" />
-      {buttonText}
-    </Button>
+    <>
+      <Button
+        onClick={handleClick}
+        variant={variant}
+        size={size}
+        className={className}
+      >
+        <Lock className="h-4 w-4 mr-2" />
+        {buttonText}
+      </Button>
+      {useModal && (
+        <LeadCaptureModal
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+          source={source}
+          title={title}
+          description={description}
+        />
+      )}
+    </>
   );
 }
 
