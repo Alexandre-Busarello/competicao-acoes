@@ -65,6 +65,27 @@ function validateKiwifySignature(bodyText: string, signature: string | null, sec
 }
 
 /**
+ * Verifica se o evento deve ser processado (incluído na fila)
+ * Apenas eventos que temos tratamento específico são incluídos na fila
+ */
+function shouldProcessEvent(webhookEventType: string | null): boolean {
+  if (!webhookEventType) {
+    return false;
+  }
+
+  const processedEvents = [
+    'order_approved',
+    'order_refunded',
+    'chargeback',
+    'subscription_canceled',
+    'subscription_renewed',
+    'subscription_late',
+  ];
+
+  return processedEvents.includes(webhookEventType);
+}
+
+/**
  * Webhook do Kiwify para processar compras confirmadas
  * 
  * Formato do webhook do Kiwify:
@@ -162,103 +183,142 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log('Kiwify webhook event:', { 
-      webhookEventType, 
-      orderStatus: body.order_status,
-      hasCustomer: !!body.Customer,
-      hasSubscription: !!body.Subscription
+    // Verificar se devemos processar este evento (incluir na fila)
+    const shouldProcess = shouldProcessEvent(webhookEventType);
+    
+    if (!shouldProcess) {
+      // Eventos não processados (billet_created, pix_created, order_rejected) não vão para a fila
+      console.log('Evento não processado, ignorando:', webhookEventType);
+      return NextResponse.json({
+        success: true,
+        message: 'Evento recebido mas não processado',
+        webhook_event_type: webhookEventType,
+      });
+    }
+
+    // Extrair informações para a fila
+    const orderId = body.order_id || null;
+    const customerEmail = body.Customer?.email || null;
+
+    // Registrar na fila como PENDENTE
+    const queueItem = await prisma.kiwifyWebhookQueue.create({
+      data: {
+        webhookEventType,
+        orderId,
+        customerEmail,
+        payload: body,
+        status: 'pending',
+      },
     });
 
-    // Processar eventos de acordo com o tipo
-    // order_approved: Compra aprovada - ativar premium
-    // IMPORTANTE: Só ativar premium se order_status === 'paid'
-    if (webhookEventType === 'order_approved') {
-      // Validar que o pedido está realmente pago
-      if (body.order_status !== 'paid') {
-        console.log('Order approved but status is not paid:', body.order_status);
-        return NextResponse.json({
-          success: true,
-          message: 'Pedido aprovado mas ainda não pago',
-          order_status: body.order_status,
-        });
-      }
+    console.log('Webhook registrado na fila:', {
+      queueId: queueItem.id,
+      webhookEventType,
+      orderId,
+      customerEmail,
+    });
 
-      // Formato do Kiwify: dados estão diretamente no body
-      // Customer está em body.Customer
-      // Subscription está em body.Subscription
-      // Order ID está em body.order_id
-      
-      const customer = body.Customer;
-      const kiwifySubscription = body.Subscription;
-      
-      if (!customer) {
-        console.error('No Customer found in webhook data. Body structure:', JSON.stringify(body, null, 2));
-        return NextResponse.json(
-          { error: 'Dados do cliente não encontrados no webhook' },
-          { status: 400 }
-        );
-      }
-
-      const email = customer.email;
-      const name = customer.full_name || customer.first_name;
-      const kiwifyOrderId = body.order_id;
-      // Subscription ID pode estar em body.subscription_id ou body.Subscription.id
-      const kiwifyId = body.subscription_id || kiwifySubscription?.id;
-
-      if (!email) {
-        console.error('No email found in webhook data');
-        return NextResponse.json(
-          { error: 'Email não encontrado nos dados do pedido' },
-          { status: 400 }
-        );
-      }
-
-      const emailLower = email.toLowerCase().trim();
-
-      // Verificar se existe lead com esse email
-      let lead = await prisma.lead.findUnique({
-        where: { email: emailLower },
+      // Tentar processar imediatamente
+      // Atualizar status para PROCESSING
+      await prisma.kiwifyWebhookQueue.update({
+        where: { id: queueItem.id },
+        data: { status: 'processing' },
       });
 
-      // Criar lead se não existir ou marcar como convertido se existir
-      if (!lead) {
-        // Criar lead e marcar como convertido imediatamente
-        lead = await prisma.lead.create({
-          data: {
-            email: emailLower,
-            converted: true,
-            convertedAt: new Date(),
-          },
-        });
-      } else if (!lead.converted) {
-        // Marcar lead existente como convertido
-        lead = await prisma.lead.update({
-          where: { id: lead.id },
-          data: {
-            converted: true,
-            convertedAt: new Date(),
-          },
-        });
-      }
-
-      // Verificar se usuário já existe no banco por EMAIL (chave principal)
-      let user = await prisma.user.findUnique({
-        where: { email: emailLower },
-        include: {
-          subscription: true,
-        },
+      console.log('Kiwify webhook event:', { 
+        webhookEventType, 
+        orderStatus: body.order_status,
+        hasCustomer: !!body.Customer,
+        hasSubscription: !!body.Subscription
       });
 
-      const supabase = createServerClient(true);
-      const userName = name?.trim() || generateInvestorName(emailLower);
+      // Processar o evento
+      let result: NextResponse;
+      
+      try {
+        // Processar eventos de acordo com o tipo
+        // order_approved: Compra aprovada - ativar premium
+        // IMPORTANTE: Só ativar premium se order_status === 'paid'
+        if (webhookEventType === 'order_approved') {
+          // Validar que o pedido está realmente pago
+          if (body.order_status !== 'paid') {
+            console.log('Order approved but status is not paid:', body.order_status);
+            result = NextResponse.json({
+              success: true,
+              message: 'Pedido aprovado mas ainda não pago',
+              order_status: body.order_status,
+            });
+          } else {
+            // Formato do Kiwify: dados estão diretamente no body
+            // Customer está em body.Customer
+            // Subscription está em body.Subscription
+            // Order ID está em body.order_id
+            
+            const customer = body.Customer;
+            const kiwifySubscription = body.Subscription;
+            
+            if (!customer) {
+              console.error('No Customer found in webhook data. Body structure:', JSON.stringify(body, null, 2));
+              throw new Error('Dados do cliente não encontrados no webhook');
+            }
 
-      // Verificar se existe no Supabase Auth por email
-      const { data: existingUsers } = await supabase.auth.admin.listUsers();
-      let authUser = existingUsers?.users?.find(
-        (u) => u.email === emailLower
-      );
+            const email = customer.email;
+            const name = customer.full_name || customer.first_name;
+            const kiwifyOrderId = body.order_id;
+            // Subscription ID pode estar em body.subscription_id ou body.Subscription.id
+            const kiwifyId = body.subscription_id || kiwifySubscription?.id;
 
-      if (user) {
+            if (!email) {
+              console.error('No email found in webhook data');
+              throw new Error('Email não encontrado nos dados do pedido');
+            }
+
+            const emailLower = email.toLowerCase().trim();
+
+                  // Verificar se existe lead com esse email
+            let lead = await prisma.lead.findUnique({
+              where: { email: emailLower },
+            });
+
+            // Criar lead se não existir ou marcar como convertido se existir
+            if (!lead) {
+              // Criar lead e marcar como convertido imediatamente
+              lead = await prisma.lead.create({
+                data: {
+                  email: emailLower,
+                  converted: true,
+                  convertedAt: new Date(),
+                },
+              });
+            } else if (!lead.converted) {
+              // Marcar lead existente como convertido
+              lead = await prisma.lead.update({
+                where: { id: lead.id },
+                data: {
+                  converted: true,
+                  convertedAt: new Date(),
+                },
+              });
+            }
+
+            // Verificar se usuário já existe no banco por EMAIL (chave principal)
+            let user = await prisma.user.findUnique({
+              where: { email: emailLower },
+              include: {
+                subscription: true,
+              },
+            });
+
+            const supabase = createServerClient(true);
+            const userName = name?.trim() || generateInvestorName(emailLower);
+
+            // Verificar se existe no Supabase Auth por email
+            const { data: existingUsers } = await supabase.auth.admin.listUsers();
+            let authUser = existingUsers?.users?.find(
+              (u) => u.email === emailLower
+            );
+
+            if (user) {
         // Usuário já existe no banco por email
         if (authUser) {
           // Se authUserId é diferente, pode ser que o usuário tenha múltiplos métodos de login
@@ -363,129 +423,122 @@ export async function POST(request: NextRequest) {
         if (!user) throw new Error('Failed to create user');
       }
 
-      if (!user || !authUser) {
-        throw new Error('Failed to get or create user');
-      }
+            if (!user || !authUser) {
+              throw new Error('Failed to get or create user');
+            }
 
-      // Calcular data de expiração
-      // Prioridade: usar next_payment da subscription do Kiwify, senão 12 meses
-      let expirationDate: Date;
-      if (kiwifySubscription?.next_payment) {
-        expirationDate = new Date(kiwifySubscription.next_payment);
-      } else {
-        // Fallback: 12 meses a partir de agora
-        const now = new Date();
-        expirationDate = new Date(now);
-        expirationDate.setMonth(expirationDate.getMonth() + 12);
-      }
+            // Calcular data de expiração
+            // Prioridade: usar next_payment da subscription do Kiwify, senão 12 meses
+            let expirationDate: Date;
+            if (kiwifySubscription?.next_payment) {
+              expirationDate = new Date(kiwifySubscription.next_payment);
+            } else {
+              // Fallback: 12 meses a partir de agora
+              const now = new Date();
+              expirationDate = new Date(now);
+              expirationDate.setMonth(expirationDate.getMonth() + 12);
+            }
 
-      // Criar ou atualizar assinatura
-      const subscription = await prisma.subscription.upsert({
-        where: { userId: user.id },
-        update: {
-          kiwifyId: kiwifyId?.toString(),
-          kiwifyOrderId: kiwifyOrderId?.toString(),
-          status: 'active',
-          currentPeriodEnd: expirationDate,
-          updatedAt: new Date(),
-        },
-        create: {
-          userId: user.id,
-          kiwifyId: kiwifyId?.toString(),
-          kiwifyOrderId: kiwifyOrderId?.toString(),
-          status: 'active',
-          currentPeriodEnd: expirationDate,
-        },
-      });
+            // Criar ou atualizar assinatura
+            const subscription = await prisma.subscription.upsert({
+              where: { userId: user.id },
+              update: {
+                kiwifyId: kiwifyId?.toString(),
+                kiwifyOrderId: kiwifyOrderId?.toString(),
+                status: 'active',
+                currentPeriodEnd: expirationDate,
+                updatedAt: new Date(),
+              },
+              create: {
+                userId: user.id,
+                kiwifyId: kiwifyId?.toString(),
+                kiwifyOrderId: kiwifyOrderId?.toString(),
+                status: 'active',
+                currentPeriodEnd: expirationDate,
+              },
+            });
 
-      // Atualizar isPremium do usuário baseado na subscription
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          isPremium: subscription.status === 'active',
-        },
-      });
+            // Atualizar isPremium do usuário baseado na subscription
+            await prisma.user.update({
+              where: { id: user.id },
+              data: {
+                isPremium: subscription.status === 'active',
+              },
+            });
 
-      // Validar email antes de enviar magic link
-      // Emails de teste são rejeitados pelo Supabase
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const testEmailDomains = ['example.com', 'test.com', 'example.org', 'test.org'];
-      const isTestEmail = testEmailDomains.some(domain => emailLower.includes(`@${domain}`));
-      const isValidEmail = emailRegex.test(emailLower) && !isTestEmail;
-      
-      if (isValidEmail) {
-        // Obter URL de redirecionamento
-        // Prioridade: APP_URL (server-side) > NEXT_PUBLIC_APP_URL (client-side) > localhost
-        const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-        const redirectUrl = `${appUrl}/auth/callback`;
-        
-        console.log('Magic link redirect URL:', redirectUrl);
+            // Validar email antes de enviar magic link
+            // Emails de teste são rejeitados pelo Supabase
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const testEmailDomains = ['example.com', 'test.com', 'example.org', 'test.org'];
+            const isTestEmail = testEmailDomains.some(domain => emailLower.includes(`@${domain}`));
+            const isValidEmail = emailRegex.test(emailLower) && !isTestEmail;
+            
+            if (isValidEmail) {
+              // Obter URL de redirecionamento
+              // Prioridade: APP_URL (server-side) > NEXT_PUBLIC_APP_URL (client-side) > localhost
+              const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+              const redirectUrl = `${appUrl}/auth/callback`;
+              
+              console.log('Magic link redirect URL:', redirectUrl);
 
-        // Enviar magic link via Supabase Auth
-        // Usar signInWithOtp para enviar magic link
-        const { error: linkError } = await supabase.auth.signInWithOtp({
-          email: emailLower,
-          options: {
-            emailRedirectTo: redirectUrl,
+              // Enviar magic link via Supabase Auth
+              // Usar signInWithOtp para enviar magic link
+              const { error: linkError } = await supabase.auth.signInWithOtp({
+                email: emailLower,
+                options: {
+                  emailRedirectTo: redirectUrl,
+                },
+              });
+
+              if (linkError) {
+                console.error('Error sending magic link:', linkError);
+                // Não falhar o webhook se não conseguir enviar email
+                // O usuário pode solicitar um novo link depois
+              } else {
+                console.log('Magic link sent successfully to:', emailLower);
+              }
+            } else {
+              console.warn('Email inválido ou de teste, pulando envio de magic link:', emailLower);
+              console.warn('O usuário foi criado mas precisará solicitar um novo link de acesso');
+            }
+
+            result = NextResponse.json({
+          success: true,
+          message: isValidEmail 
+            ? 'Usuário criado e magic link enviado' 
+            : 'Usuário criado (email inválido, magic link não enviado)',
+          user: {
+            id: user.id,
+            email: user.email,
           },
+          magicLinkSent: isValidEmail,
         });
+          }
+        } else if (
+          webhookEventType === 'order_refunded' ||
+          webhookEventType === 'chargeback' ||
+          webhookEventType === 'subscription_canceled'
+        ) {
 
-        if (linkError) {
-          console.error('Error sending magic link:', linkError);
-          // Não falhar o webhook se não conseguir enviar email
-          // O usuário pode solicitar um novo link depois
-        } else {
-          console.log('Magic link sent successfully to:', emailLower);
+        // Processar eventos que removem premium: reembolso, chargeback e cancelamento
+        // Formato do Kiwify: Customer está em body.Customer
+        const customer = body.Customer;
+        const email = customer?.email || body.email;
+
+        if (!email) {
+          throw new Error('Email não encontrado nos dados do evento');
         }
-      } else {
-        console.warn('Email inválido ou de teste, pulando envio de magic link:', emailLower);
-        console.warn('O usuário foi criado mas precisará solicitar um novo link de acesso');
-      }
 
-      return NextResponse.json({
-        success: true,
-        message: isValidEmail 
-          ? 'Usuário criado e magic link enviado' 
-          : 'Usuário criado (email inválido, magic link não enviado)',
-        user: {
-          id: user.id,
-          email: user.email,
-        },
-        magicLinkSent: isValidEmail,
-      });
-    }
+        const removed = await removePremiumFromUser(email);
 
-    // Processar eventos que removem premium: reembolso, chargeback e cancelamento
-    if (
-      webhookEventType === 'order_refunded' ||
-      webhookEventType === 'chargeback' ||
-      webhookEventType === 'subscription_canceled'
-    ) {
-      // Formato do Kiwify: Customer está em body.Customer
-      const customer = body.Customer;
-      const email = customer?.email || body.email;
-
-      if (!email) {
-        console.error('No email found in cancellation/refund/chargeback webhook data');
-        return NextResponse.json(
-          { error: 'Email não encontrado nos dados do evento' },
-          { status: 400 }
-        );
-      }
-
-      const removed = await removePremiumFromUser(email);
-
-      return NextResponse.json({
-        success: true,
-        message: removed
-          ? 'Premium removido do usuário'
-          : 'Usuário não encontrado',
-        webhook_event_type: webhookEventType,
-      });
-    }
-
-    // subscription_renewed: Assinatura renovada - renovar premium
-    if (webhookEventType === 'subscription_renewed') {
+        result = NextResponse.json({
+          success: true,
+          message: removed
+            ? 'Premium removido do usuário'
+            : 'Usuário não encontrado',
+          webhook_event_type: webhookEventType,
+        });
+      } else if (webhookEventType === 'subscription_renewed') {
       const customer = body.Customer;
       const kiwifySubscription = body.Subscription;
       
@@ -540,20 +593,17 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        return NextResponse.json({
+        result = NextResponse.json({
           success: true,
           message: 'Assinatura renovada e premium atualizado',
         });
+      } else {
+        result = NextResponse.json({
+          success: true,
+          message: 'Usuário não encontrado para renovação',
+        });
       }
-
-      return NextResponse.json({
-        success: true,
-        message: 'Usuário não encontrado para renovação',
-      });
-    }
-
-    // subscription_late: Assinatura atrasada - pode manter ou remover premium dependendo da política
-    if (webhookEventType === 'subscription_late') {
+      } else if (webhookEventType === 'subscription_late') {
       const customer = body.Customer;
       
       if (!customer?.email) {
@@ -564,49 +614,54 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Por enquanto, apenas logamos. Pode implementar lógica específica depois
-      console.log('Subscription late for customer:', customer.email);
+        // Por enquanto, apenas logamos. Pode implementar lógica específica depois
+        console.log('Subscription late for customer:', customer.email);
+        
+        result = NextResponse.json({
+          success: true,
+          message: 'Assinatura atrasada registrada',
+        });
+      } else {
+        // Evento não reconhecido (não deveria acontecer pois já filtramos antes)
+        throw new Error(`Evento não reconhecido: ${webhookEventType}`);
+      }
+
+      // Se chegou até aqui, o processamento foi bem-sucedido
+      // Atualizar status da fila para CONCLUIDO
+      await prisma.kiwifyWebhookQueue.update({
+        where: { id: queueItem.id },
+        data: {
+          status: 'completed',
+          processedAt: new Date(),
+        },
+      });
+
+      console.log('Webhook processado com sucesso:', queueItem.id);
+      return result;
+
+    } catch (processingError) {
+      // Erro no processamento - atualizar fila com status ERRO
+      const errorMessage = processingError instanceof Error 
+        ? processingError.message 
+        : 'Erro desconhecido ao processar webhook';
       
-      return NextResponse.json({
-        success: true,
-        message: 'Assinatura atrasada registrada',
+      await prisma.kiwifyWebhookQueue.update({
+        where: { id: queueItem.id },
+        data: {
+          status: 'error',
+          errorMessage: errorMessage,
+          processedAt: new Date(),
+        },
       });
-    }
 
-    // billet_created: Boleto gerado - aguardar pagamento (não fazer nada ainda)
-    if (webhookEventType === 'billet_created') {
-      console.log('Boleto created for order:', body.order_id);
-      return NextResponse.json({
-        success: true,
-        message: 'Boleto gerado - aguardando pagamento',
+      console.error('Erro ao processar webhook da fila:', {
+        queueId: queueItem.id,
+        error: errorMessage,
       });
-    }
 
-    // pix_created: Pix gerado - aguardar pagamento (não fazer nada ainda)
-    if (webhookEventType === 'pix_created') {
-      console.log('Pix created for order:', body.order_id);
-      return NextResponse.json({
-        success: true,
-        message: 'Pix gerado - aguardando pagamento',
-      });
+      // Retornar erro para o Kiwify (ele vai reenviar)
+      throw processingError;
     }
-
-    // order_rejected: Compra recusada - não ativar premium
-    if (webhookEventType === 'order_rejected') {
-      console.log('Order rejected:', body.order_id, 'Reason:', body.card_rejection_reason);
-      return NextResponse.json({
-        success: true,
-        message: 'Compra recusada registrada',
-      });
-    }
-
-    // Evento não reconhecido ou não tratado
-    console.log('Kiwify webhook event not handled:', webhookEventType);
-    return NextResponse.json({
-      success: true,
-      message: 'Evento recebido mas não processado',
-      webhook_event_type: webhookEventType,
-    });
   } catch (error) {
     console.error('Error processing Kiwify webhook:', error);
     return NextResponse.json(

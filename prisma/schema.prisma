@@ -367,3 +367,23 @@ model ActionQueue {
   @@index([actionType])
   @@index([createdAt])
 }
+
+model KiwifyWebhookQueue {
+  id              String   @id @default(uuid())
+  webhookEventType String   // 'order_approved' | 'order_refunded' | 'chargeback' | etc
+  orderId         String?   // order_id do Kiwify para facilitar busca
+  customerEmail   String?   // email do cliente para facilitar busca
+  payload         Json      // Body completo do webhook
+  status          String    @default("pending") // 'pending' | 'processing' | 'completed' | 'error'
+  errorMessage    String?   // Mensagem de erro se status = 'error'
+  processedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([status])
+  @@index([status, createdAt(sort: Asc)])
+  @@index([webhookEventType])
+  @@index([orderId])
+  @@index([customerEmail])
+  @@index([createdAt])
+}
