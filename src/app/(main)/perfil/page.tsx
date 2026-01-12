@@ -20,7 +20,8 @@ function ProfileContent() {
   const searchParams = useSearchParams();
   const isPremium = user?.isPremium ?? false;
   const fromCTA = searchParams.get('from') === 'cta';
-  const profileUrl = user ? useProfileUrl(user.id) : '/perfil';
+  // Hook deve ser chamado sempre, não condicionalmente
+  const profileUrl = useProfileUrl(user?.id || '');
 
   // Se não estiver autenticado, mostrar CheckoutSection que usa modal
   if (!isAuthenticated) {
@@ -43,7 +44,7 @@ function ProfileContent() {
           title="Perfil" 
           backHref="/ranking"
         />
-        {user && (
+        {user && profileUrl && (
           <div className="container mx-auto px-4 py-4">
             <Link href={profileUrl}>
               <Button variant="outline" className="w-full">
