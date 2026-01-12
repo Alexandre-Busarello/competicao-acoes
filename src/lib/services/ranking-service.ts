@@ -124,11 +124,31 @@ export class RankingService {
       transactions.map(t => ({ ticker: t.ticker }))
     );
 
-    // 5. Preparar transações dos usuários (uma vez para ambos)
-    const userTransactionsMap = new Map<string, any[]>();
+    // 5. Preparar transações dos usuários separadas por período
+    // Obter intervalo do mês atual para ranking mensal
+    const currentPeriod = getCurrentPeriod();
+    const { start: monthStart, end: monthEnd } = getPeriodRange('mensal', currentPeriod.year, currentPeriod.month);
+    
+    const userTransactionsMapMonthly = new Map<string, any[]>();
+    const userTransactionsMapAnnual = new Map<string, any[]>();
     
     for (const user of users) {
-      const userTransactions = transactions
+      // Transações do mês atual (para ranking mensal)
+      const monthlyTransactions = transactions
+        .filter(tx => tx.userId === user.id && tx.date >= monthStart && tx.date <= monthEnd)
+        .map(tx => ({
+          id: tx.id,
+          userId: tx.userId,
+          ticker: tx.ticker,
+          type: tx.type as 'compra' | 'venda',
+          quantity: tx.quantity.toNumber(),
+          price: tx.price.toNumber(),
+          date: tx.date,
+          createdAt: tx.createdAt,
+        }));
+      
+      // Transações do ano atual (para ranking anual)
+      const annualTransactions = transactions
         .filter(tx => tx.userId === user.id)
         .map(tx => ({
           id: tx.id,
@@ -141,8 +161,12 @@ export class RankingService {
           createdAt: tx.createdAt,
         }));
       
-      if (userTransactions.length > 0) {
-        userTransactionsMap.set(user.id, userTransactions);
+      if (monthlyTransactions.length > 0) {
+        userTransactionsMapMonthly.set(user.id, monthlyTransactions);
+      }
+      
+      if (annualTransactions.length > 0) {
+        userTransactionsMapAnnual.set(user.id, annualTransactions);
       }
     }
 
@@ -161,18 +185,28 @@ export class RankingService {
         return { userId: user.id, skipped: true };
       }
 
-      const userTransactions = userTransactionsMap.get(user.id);
-      if (!userTransactions || userTransactions.length === 0) {
+      const monthlyTransactions = userTransactionsMapMonthly.get(user.id);
+      const annualTransactions = userTransactionsMapAnnual.get(user.id);
+      
+      if ((!monthlyTransactions || monthlyTransactions.length === 0) && 
+          (!annualTransactions || annualTransactions.length === 0)) {
         // Usuário sem transações - marcar como processado mas não adicionar ao ranking
         return { userId: user.id, skipped: true };
       }
 
-      // Calcular posições usando os mesmos preços
-      const portfolio = calculatePortfolio(userTransactions, prices);
+      // Calcular portfolios separados para mensal e anual
+      const monthlyPortfolio = monthlyTransactions && monthlyTransactions.length > 0
+        ? calculatePortfolio(monthlyTransactions, prices)
+        : { positions: [], totalInvested: 0 };
+      
+      const annualPortfolio = annualTransactions && annualTransactions.length > 0
+        ? calculatePortfolio(annualTransactions, prices)
+        : { positions: [], totalInvested: 0 };
 
-      // Criar assets com tipo e nome (usando os mesmos preços)
-      const assets: Asset[] = await Promise.all(
-        portfolio.positions.map(async (pos) => {
+      // Função auxiliar para criar assets a partir de um portfolio
+      const createAssetsFromPortfolio = async (portfolio: typeof monthlyPortfolio): Promise<Asset[]> => {
+        return await Promise.all(
+          portfolio.positions.map(async (pos) => {
           const normalizedTicker = pos.ticker.endsWith('.SA') 
             ? pos.ticker 
             : `${pos.ticker}.SA`;
@@ -224,82 +258,110 @@ export class RankingService {
             ? ((positionValue - investedValue) / investedValue) * 100 
             : 0;
           
-          return {
-            id: `${user.id}-${pos.ticker}`,
-            ticker: pos.ticker,
-            name: assetName,
-            type: assetType,
-            etfCategory,
-            quantity: pos.quantity,
-            averagePrice: pos.averagePrice,
-            currentPrice: currentPrice,
-            return: Number(returnValue.toFixed(2)),
-          };
-        })
-      );
+            return {
+              id: `${user.id}-${pos.ticker}`,
+              ticker: pos.ticker,
+              name: assetName,
+              type: assetType,
+              etfCategory,
+              quantity: pos.quantity,
+              averagePrice: pos.averagePrice,
+              currentPrice: currentPrice,
+              return: Number(returnValue.toFixed(2)),
+            };
+          })
+        );
+      };
 
-      // Recalcular currentValue usando preços atualizados dos assets + dinheiro de vendas
-      const totalInvested = portfolio.totalInvested;
+      // Calcular assets separados para mensal e anual
+      const monthlyAssets = monthlyPortfolio.positions.length > 0
+        ? await createAssetsFromPortfolio(monthlyPortfolio)
+        : [];
       
-      // Calcular valor das posições com preços atualizados dos assets
-      const positionsValue = assets.reduce((sum, asset) => {
+      const annualAssets = annualPortfolio.positions.length > 0
+        ? await createAssetsFromPortfolio(annualPortfolio)
+        : [];
+
+      // Calcular valores mensais
+      const monthlyTotalInvested = monthlyPortfolio.totalInvested;
+      const monthlyPositionsValue = monthlyAssets.reduce((sum, asset) => {
         return sum + (asset.quantity * asset.currentPrice);
       }, 0);
+      const monthlyCashFromSales = monthlyTransactions && monthlyTransactions.length > 0
+        ? calculateTotalFromSales(monthlyTransactions)
+        : 0;
+      const monthlyCurrentValue = monthlyPositionsValue + monthlyCashFromSales;
       
-      // Calcular dinheiro recebido em vendas
-      const cashFromSales = calculateTotalFromSales(userTransactions);
-      
-      // Valor total atual = posições + dinheiro de vendas
-      const currentValue = positionsValue + cashFromSales;
-      
-      const firstTransactionDate = userTransactions.length > 0
-        ? new Date(Math.min(...userTransactions.map(tx => tx.date.getTime())))
+      const monthlyFirstTransactionDate = monthlyTransactions && monthlyTransactions.length > 0
+        ? new Date(Math.min(...monthlyTransactions.map(tx => tx.date.getTime())))
         : new Date();
-      
-      // Calcular data da última transação (para critério de desempate)
-      const lastTransactionDate = userTransactions.length > 0
-        ? new Date(Math.max(...userTransactions.map(tx => tx.createdAt.getTime())))
+      const monthlyLastTransactionDate = monthlyTransactions && monthlyTransactions.length > 0
+        ? new Date(Math.max(...monthlyTransactions.map(tx => tx.createdAt.getTime())))
         : new Date();
+
+      // Calcular valores anuais
+      const annualTotalInvested = annualPortfolio.totalInvested;
+      const annualPositionsValue = annualAssets.reduce((sum, asset) => {
+        return sum + (asset.quantity * asset.currentPrice);
+      }, 0);
+      const annualCashFromSales = annualTransactions && annualTransactions.length > 0
+        ? calculateTotalFromSales(annualTransactions)
+        : 0;
+      const annualCurrentValue = annualPositionsValue + annualCashFromSales;
       
+      const annualFirstTransactionDate = annualTransactions && annualTransactions.length > 0
+        ? new Date(Math.min(...annualTransactions.map(tx => tx.date.getTime())))
+        : new Date();
+      const annualLastTransactionDate = annualTransactions && annualTransactions.length > 0
+        ? new Date(Math.max(...annualTransactions.map(tx => tx.createdAt.getTime())))
+        : new Date();
+
       // Data de criação da conta (para critério de desempate)
       const accountCreatedAt = user.createdAt;
       
-      // Calcular retornos para ambos os períodos usando os mesmos valores
+      // Calcular retornos separados para cada período
       const { monthlyReturn, annualReturn: monthlyAnnualReturn } = calculateReturns(
-        currentValue,
-        totalInvested,
-        firstTransactionDate,
+        monthlyCurrentValue,
+        monthlyTotalInvested,
+        monthlyFirstTransactionDate,
         'mensal'
       );
       
       const { monthlyReturn: annualMonthlyReturn, annualReturn } = calculateReturns(
-        currentValue,
-        totalInvested,
-        firstTransactionDate,
+        annualCurrentValue,
+        annualTotalInvested,
+        annualFirstTransactionDate,
         'anual'
       );
 
-      const baseEntry = {
+      // Criar entradas separadas para mensal e anual
+      const monthlyEntry: RankingEntryForStorage | null = monthlyTransactions && monthlyTransactions.length > 0 ? {
         userId: user.id,
         rank: 0, // Será atribuído após ordenação
-        totalInvested: Number(totalInvested.toFixed(2)),
-        currentValue: Number(currentValue.toFixed(2)),
-        portfolio: assets,
-        lastTransactionDate,
+        totalInvested: Number(monthlyTotalInvested.toFixed(2)),
+        currentValue: Number(monthlyCurrentValue.toFixed(2)),
+        portfolio: monthlyAssets,
+        monthlyReturn,
+        annualReturn: monthlyAnnualReturn,
+        lastTransactionDate: monthlyLastTransactionDate,
         accountCreatedAt,
-      };
+      } : null;
+
+      const annualEntry: RankingEntryForStorage | null = annualTransactions && annualTransactions.length > 0 ? {
+        userId: user.id,
+        rank: 0, // Será atribuído após ordenação
+        totalInvested: Number(annualTotalInvested.toFixed(2)),
+        currentValue: Number(annualCurrentValue.toFixed(2)),
+        portfolio: annualAssets,
+        monthlyReturn: annualMonthlyReturn,
+        annualReturn,
+        lastTransactionDate: annualLastTransactionDate,
+        accountCreatedAt,
+      } : null;
 
       return {
-        monthly: {
-          ...baseEntry,
-          monthlyReturn,
-          annualReturn: monthlyAnnualReturn,
-        },
-        annual: {
-          ...baseEntry,
-          monthlyReturn: annualMonthlyReturn,
-          annualReturn,
-        },
+        monthly: monthlyEntry,
+        annual: annualEntry,
         userId: user.id,
       };
     };
@@ -337,11 +399,18 @@ export class RankingService {
         // Se foi pulado (sem transações), apenas marcar como processado
         if ('skipped' in result.result && result.result.skipped) {
           processedUserIds.add(result.result.userId);
-        } else if ('monthly' in result.result && 'annual' in result.result && result.result.monthly && result.result.annual) {
-          // Adicionar ao ranking e marcar como processado
-          monthlyRankings.push(result.result.monthly);
-          annualRankings.push(result.result.annual);
-          processedUserIds.add(result.result.userId);
+        } else if ('monthly' in result.result && 'annual' in result.result) {
+          // Adicionar ao ranking apenas se houver entrada válida para cada período
+          if (result.result.monthly) {
+            monthlyRankings.push(result.result.monthly);
+          }
+          if (result.result.annual) {
+            annualRankings.push(result.result.annual);
+          }
+          // Marcar como processado se pelo menos um período foi processado
+          if (result.result.monthly || result.result.annual) {
+            processedUserIds.add(result.result.userId);
+          }
         }
 
         // Atualizar checkpoint periodicamente
@@ -566,11 +635,31 @@ export class RankingService {
       transactions.map(t => ({ ticker: t.ticker }))
     );
 
-    // 5. Preparar transações dos usuários (uma vez para ambos)
-    const userTransactionsMap = new Map<string, any[]>();
+    // 5. Preparar transações dos usuários separadas por período
+    // Obter intervalo do mês atual para ranking mensal
+    const currentPeriod = getCurrentPeriod();
+    const { start: monthStart, end: monthEnd } = getPeriodRange('mensal', currentPeriod.year, currentPeriod.month);
+    
+    const userTransactionsMapMonthly = new Map<string, any[]>();
+    const userTransactionsMapAnnual = new Map<string, any[]>();
     
     for (const user of users) {
-      const userTransactions = transactions
+      // Transações do mês atual (para ranking mensal)
+      const monthlyTransactions = transactions
+        .filter(tx => tx.userId === user.id && tx.date >= monthStart && tx.date <= monthEnd)
+        .map(tx => ({
+          id: tx.id,
+          userId: tx.userId,
+          ticker: tx.ticker,
+          type: tx.type as 'compra' | 'venda',
+          quantity: tx.quantity.toNumber(),
+          price: tx.price.toNumber(),
+          date: tx.date,
+          createdAt: tx.createdAt,
+        }));
+      
+      // Transações do ano atual (para ranking anual)
+      const annualTransactions = transactions
         .filter(tx => tx.userId === user.id)
         .map(tx => ({
           id: tx.id,
@@ -583,8 +672,12 @@ export class RankingService {
           createdAt: tx.createdAt,
         }));
       
-      if (userTransactions.length > 0) {
-        userTransactionsMap.set(user.id, userTransactions);
+      if (monthlyTransactions.length > 0) {
+        userTransactionsMapMonthly.set(user.id, monthlyTransactions);
+      }
+      
+      if (annualTransactions.length > 0) {
+        userTransactionsMapAnnual.set(user.id, annualTransactions);
       }
     }
 
@@ -595,145 +688,182 @@ export class RankingService {
     const annualRankings: RankingEntryForStorage[] = [];
 
     const processUserTask = async (user: typeof users[0]) => {
-      const userTransactions = userTransactionsMap.get(user.id);
-      if (!userTransactions || userTransactions.length === 0) {
+      const monthlyTransactions = userTransactionsMapMonthly.get(user.id);
+      const annualTransactions = userTransactionsMapAnnual.get(user.id);
+      
+      if ((!monthlyTransactions || monthlyTransactions.length === 0) && 
+          (!annualTransactions || annualTransactions.length === 0)) {
         return null;
       }
 
-      // Calcular posições usando os mesmos preços
-      const portfolio = calculatePortfolio(userTransactions, prices);
-
-      // Criar assets com tipo e nome (usando os mesmos preços)
-      const assets: Asset[] = await Promise.all(
-        portfolio.positions.map(async (pos) => {
-          const normalizedTicker = pos.ticker.endsWith('.SA') 
-            ? pos.ticker 
-            : `${pos.ticker}.SA`;
-          
-          const tickerVariations = [
-            normalizedTicker,
-            pos.ticker,
-            normalizedTicker.toUpperCase(),
-            pos.ticker.toUpperCase(),
-          ];
-          
-          let currentPrice = 0;
-          for (const variation of tickerVariations) {
-            if (prices[variation] && prices[variation] > 0) {
-              currentPrice = prices[variation];
-              break;
-            }
-          }
-          
-          if (currentPrice === 0) {
-            try {
-              let price = await yahooFinanceService.getCurrentPrice(pos.ticker);
-              if (!price || price === 0) {
-                price = await yahooFinanceService.getCurrentPrice(normalizedTicker);
-              }
-              if (price && price > 0) {
-                currentPrice = price;
-              }
-            } catch (error) {
-              console.error(`Erro ao buscar preço de ${pos.ticker}:`, error);
-            }
-          }
-          
-          let quoteData: any = null;
-          try {
-            const normalized = normalizedTicker;
-            quoteData = await yahooFinanceService.getQuoteData(normalized);
-          } catch (error) {
-            // Ignorar erro
-          }
-          
-          const assetType = determineAssetType(pos.ticker, quoteData);
-          const assetName = getAssetName(pos.ticker, quoteData);
-          const etfCategory = assetType === 'etf' ? getETFCategory(pos.ticker) : undefined;
-          
-          const positionValue = pos.quantity * currentPrice;
-          const investedValue = pos.quantity * pos.averagePrice;
-          const returnValue = investedValue > 0 
-            ? ((positionValue - investedValue) / investedValue) * 100 
-            : 0;
-          
-          return {
-            id: `${user.id}-${pos.ticker}`,
-            ticker: pos.ticker,
-            name: assetName,
-            type: assetType,
-            etfCategory,
-            quantity: pos.quantity,
-            averagePrice: pos.averagePrice,
-            currentPrice: currentPrice,
-            return: Number(returnValue.toFixed(2)),
-          };
-        })
-      );
-
-      // Recalcular currentValue usando preços atualizados dos assets + dinheiro de vendas
-      const totalInvested = portfolio.totalInvested;
+      // Calcular portfolios separados para mensal e anual
+      const monthlyPortfolio = monthlyTransactions && monthlyTransactions.length > 0
+        ? calculatePortfolio(monthlyTransactions, prices)
+        : { positions: [], totalInvested: 0 };
       
-      // Calcular valor das posições com preços atualizados dos assets
-      const positionsValue = assets.reduce((sum, asset) => {
+      const annualPortfolio = annualTransactions && annualTransactions.length > 0
+        ? calculatePortfolio(annualTransactions, prices)
+        : { positions: [], totalInvested: 0 };
+
+      // Função auxiliar para criar assets a partir de um portfolio
+      const createAssetsFromPortfolio = async (portfolio: typeof monthlyPortfolio): Promise<Asset[]> => {
+        return await Promise.all(
+          portfolio.positions.map(async (pos) => {
+            const normalizedTicker = pos.ticker.endsWith('.SA') 
+              ? pos.ticker 
+              : `${pos.ticker}.SA`;
+            
+            const tickerVariations = [
+              normalizedTicker,
+              pos.ticker,
+              normalizedTicker.toUpperCase(),
+              pos.ticker.toUpperCase(),
+            ];
+            
+            let currentPrice = 0;
+            for (const variation of tickerVariations) {
+              if (prices[variation] && prices[variation] > 0) {
+                currentPrice = prices[variation];
+                break;
+              }
+            }
+            
+            if (currentPrice === 0) {
+              try {
+                let price = await yahooFinanceService.getCurrentPrice(pos.ticker);
+                if (!price || price === 0) {
+                  price = await yahooFinanceService.getCurrentPrice(normalizedTicker);
+                }
+                if (price && price > 0) {
+                  currentPrice = price;
+                }
+              } catch (error) {
+                console.error(`Erro ao buscar preço de ${pos.ticker}:`, error);
+              }
+            }
+            
+            let quoteData: any = null;
+            try {
+              const normalized = normalizedTicker;
+              quoteData = await yahooFinanceService.getQuoteData(normalized);
+            } catch (error) {
+              // Ignorar erro
+            }
+            
+            const assetType = determineAssetType(pos.ticker, quoteData);
+            const assetName = getAssetName(pos.ticker, quoteData);
+            const etfCategory = assetType === 'etf' ? getETFCategory(pos.ticker) : undefined;
+            
+            const positionValue = pos.quantity * currentPrice;
+            const investedValue = pos.quantity * pos.averagePrice;
+            const returnValue = investedValue > 0 
+              ? ((positionValue - investedValue) / investedValue) * 100 
+              : 0;
+            
+            return {
+              id: `${user.id}-${pos.ticker}`,
+              ticker: pos.ticker,
+              name: assetName,
+              type: assetType,
+              etfCategory,
+              quantity: pos.quantity,
+              averagePrice: pos.averagePrice,
+              currentPrice: currentPrice,
+              return: Number(returnValue.toFixed(2)),
+            };
+          })
+        );
+      };
+
+      // Calcular assets separados para mensal e anual
+      const monthlyAssets = monthlyPortfolio.positions.length > 0
+        ? await createAssetsFromPortfolio(monthlyPortfolio)
+        : [];
+      
+      const annualAssets = annualPortfolio.positions.length > 0
+        ? await createAssetsFromPortfolio(annualPortfolio)
+        : [];
+
+      // Calcular valores mensais
+      const monthlyTotalInvested = monthlyPortfolio.totalInvested;
+      const monthlyPositionsValue = monthlyAssets.reduce((sum, asset) => {
         return sum + (asset.quantity * asset.currentPrice);
       }, 0);
+      const monthlyCashFromSales = monthlyTransactions && monthlyTransactions.length > 0
+        ? calculateTotalFromSales(monthlyTransactions)
+        : 0;
+      const monthlyCurrentValue = monthlyPositionsValue + monthlyCashFromSales;
       
-      // Calcular dinheiro recebido em vendas
-      const cashFromSales = calculateTotalFromSales(userTransactions);
-      
-      // Valor total atual = posições + dinheiro de vendas
-      const currentValue = positionsValue + cashFromSales;
-      
-      const firstTransactionDate = userTransactions.length > 0
-        ? new Date(Math.min(...userTransactions.map(tx => tx.date.getTime())))
+      const monthlyFirstTransactionDate = monthlyTransactions && monthlyTransactions.length > 0
+        ? new Date(Math.min(...monthlyTransactions.map(tx => tx.date.getTime())))
         : new Date();
-      
-      // Calcular data da última transação (para critério de desempate)
-      const lastTransactionDate = userTransactions.length > 0
-        ? new Date(Math.max(...userTransactions.map(tx => tx.createdAt.getTime())))
+      const monthlyLastTransactionDate = monthlyTransactions && monthlyTransactions.length > 0
+        ? new Date(Math.max(...monthlyTransactions.map(tx => tx.createdAt.getTime())))
         : new Date();
+
+      // Calcular valores anuais
+      const annualTotalInvested = annualPortfolio.totalInvested;
+      const annualPositionsValue = annualAssets.reduce((sum, asset) => {
+        return sum + (asset.quantity * asset.currentPrice);
+      }, 0);
+      const annualCashFromSales = annualTransactions && annualTransactions.length > 0
+        ? calculateTotalFromSales(annualTransactions)
+        : 0;
+      const annualCurrentValue = annualPositionsValue + annualCashFromSales;
       
+      const annualFirstTransactionDate = annualTransactions && annualTransactions.length > 0
+        ? new Date(Math.min(...annualTransactions.map(tx => tx.date.getTime())))
+        : new Date();
+      const annualLastTransactionDate = annualTransactions && annualTransactions.length > 0
+        ? new Date(Math.max(...annualTransactions.map(tx => tx.createdAt.getTime())))
+        : new Date();
+
       // Data de criação da conta (para critério de desempate)
       const accountCreatedAt = user.createdAt;
       
-      // Calcular retornos para ambos os períodos usando os mesmos valores
+      // Calcular retornos separados para cada período
       const { monthlyReturn, annualReturn: monthlyAnnualReturn } = calculateReturns(
-        currentValue,
-        totalInvested,
-        firstTransactionDate,
+        monthlyCurrentValue,
+        monthlyTotalInvested,
+        monthlyFirstTransactionDate,
         'mensal'
       );
       
       const { monthlyReturn: annualMonthlyReturn, annualReturn } = calculateReturns(
-        currentValue,
-        totalInvested,
-        firstTransactionDate,
+        annualCurrentValue,
+        annualTotalInvested,
+        annualFirstTransactionDate,
         'anual'
       );
 
-      const baseEntry = {
+      // Criar entradas separadas para mensal e anual
+      const monthlyEntry: RankingEntryForStorage | null = monthlyTransactions && monthlyTransactions.length > 0 ? {
         userId: user.id,
-        // name e avatar não são salvos aqui - serão buscados da tabela User ao listar
         rank: 0, // Será atribuído após ordenação
-        totalInvested: Number(totalInvested.toFixed(2)),
-        currentValue: Number(currentValue.toFixed(2)),
-        portfolio: assets,
-        lastTransactionDate,
+        totalInvested: Number(monthlyTotalInvested.toFixed(2)),
+        currentValue: Number(monthlyCurrentValue.toFixed(2)),
+        portfolio: monthlyAssets,
+        monthlyReturn,
+        annualReturn: monthlyAnnualReturn,
+        lastTransactionDate: monthlyLastTransactionDate,
         accountCreatedAt,
-      };
+      } : null;
+
+      const annualEntry: RankingEntryForStorage | null = annualTransactions && annualTransactions.length > 0 ? {
+        userId: user.id,
+        rank: 0, // Será atribuído após ordenação
+        totalInvested: Number(annualTotalInvested.toFixed(2)),
+        currentValue: Number(annualCurrentValue.toFixed(2)),
+        portfolio: annualAssets,
+        monthlyReturn: annualMonthlyReturn,
+        annualReturn,
+        lastTransactionDate: annualLastTransactionDate,
+        accountCreatedAt,
+      } : null;
 
       return {
-        monthly: {
-          ...baseEntry,
-          monthlyReturn,
-          annualReturn: monthlyAnnualReturn,
-        },
-        annual: {
-          ...baseEntry,
-          monthlyReturn: annualMonthlyReturn,
-          annualReturn,
-        },
+        monthly: monthlyEntry,
+        annual: annualEntry,
       };
     };
 
@@ -748,8 +878,12 @@ export class RankingService {
     // Coleta resultados
     for (const result of results) {
       if (result.success && result.result) {
-        monthlyRankings.push(result.result.monthly);
-        annualRankings.push(result.result.annual);
+        if (result.result.monthly) {
+          monthlyRankings.push(result.result.monthly);
+        }
+        if (result.result.annual) {
+          annualRankings.push(result.result.annual);
+        }
       }
     }
 
