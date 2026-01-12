@@ -83,3 +83,24 @@
   }
 }
 
+/* Hide scrollbar on desktop */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+@media (max-width: 768px) {
+  .scrollbar-hide {
+    -ms-overflow-style: auto;
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: block;
+  }
+}
+

@@ -26,11 +26,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
     const cursor = searchParams.get('cursor') || undefined;
+    const seed = searchParams.get('seed') || undefined;
+    const isLoop = searchParams.get('loop') === 'true';
+    const excludeIds = searchParams.get('excludeIds')?.split(',').filter(Boolean) || [];
 
     const result = await globalFeedService.getFeed({
       limit,
-      cursor,
+      cursor: cursor === 'loop' ? undefined : cursor,
       currentUserId,
+      seed,
+      isLoop,
+      excludeIds,
     });
 
     // Registrar visualizações em batch (opcional, pode ser feito no frontend também)

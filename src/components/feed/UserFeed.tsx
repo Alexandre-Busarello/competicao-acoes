@@ -15,6 +15,7 @@ export function UserFeed({ userId, includePrivate = false }: UserFeedProps) {
   const { user } = useUserStore();
   const isOwner = user?.id === userId;
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const {
     data,
@@ -28,7 +29,7 @@ export function UserFeed({ userId, includePrivate = false }: UserFeedProps) {
     queryFn: async ({ pageParam }) => {
       const url = new URL(`/api/users/${userId}/feed`, window.location.origin);
       url.searchParams.set('limit', '20');
-      if (pageParam) {
+      if (pageParam && pageParam !== 'loop') {
         url.searchParams.set('cursor', pageParam);
       }
       if (includePrivate || isOwner) {
@@ -39,15 +40,27 @@ export function UserFeed({ userId, includePrivate = false }: UserFeedProps) {
       if (!response.ok) throw new Error('Failed to fetch feed');
       return response.json();
     },
-    getNextPageParam: (lastPage) => lastPage.nextCursor || undefined,
+    getNextPageParam: (lastPage) => {
+      // Se não há mais posts, entrar em loop
+      if (!lastPage.nextCursor && lastPage.posts && lastPage.posts.length > 0) {
+        return 'loop';
+      }
+      return lastPage.nextCursor || undefined;
+    },
     initialPageParam: undefined as string | undefined,
   });
 
+  // Detectar scroll no final para carregar mais posts
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
+        if (entries[0].isIntersecting && !isFetchingNextPage) {
+          if (hasNextPage) {
+            fetchNextPage();
+          } else {
+            // Loop infinito: quando não há mais posts, buscar novamente
+            fetchNextPage();
+          }
         }
       },
       { threshold: 0.1 }
@@ -81,11 +94,22 @@ export function UserFeed({ userId, includePrivate = false }: UserFeedProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {posts.map((post: any) => (
-        <FeedPost key={post.id} post={post} isOwner={isOwner} />
-      ))}
+    <div 
+      ref={containerRef} 
+      className="relative h-[600px] overflow-y-auto scrollbar-hide md:scrollbar-hide"
+      style={{ scrollBehavior: 'smooth' }}
+    >
+      {/* Container de posts - ordem correta (mais antigos no topo, mais recentes embaixo) */}
+      <div className="space-y-4 pb-4">
+        {posts.map((post: any) => (
+          <FeedPost key={post.id} post={post} isOwner={isOwner} />
+        ))}
+      </div>
+
+      {/* Trigger para carregar mais posts quando scrolla para o final */}
       <div ref={loadMoreRef} className="h-10" />
+      
+      {/* Loading quando carregando mais posts */}
       {isFetchingNextPage && (
         <div className="flex items-center justify-center py-4">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

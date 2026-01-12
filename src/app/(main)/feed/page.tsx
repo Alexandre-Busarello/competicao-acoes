@@ -36,7 +36,7 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="min-h-screen pb-4">
+    <div className="flex flex-col h-screen overflow-hidden">
       <PageHeader 
         title="Feed" 
         backHref="/ranking"
@@ -49,7 +49,7 @@ export default function FeedPage() {
           </Link>
         }
       />
-      <div className="container mx-auto px-4 py-4 max-w-4xl">
+      <div className="flex-1 container mx-auto px-4 py-4 max-w-4xl overflow-hidden">
         <GlobalFeed />
       </div>
       <CreatePostFAB />

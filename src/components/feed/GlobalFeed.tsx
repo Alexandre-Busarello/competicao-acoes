@@ -13,6 +13,8 @@ export function GlobalFeed() {
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const viewedPostIdsRef = useRef<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
+  const seenPostIdsRef = useRef<Set<string>>(new Set());
+  const loopPageRef = useRef<number>(0);
   
   // Estado para pull-to-refresh
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -36,6 +38,8 @@ export function GlobalFeed() {
       if (pageParam) {
         url.searchParams.set('cursor', pageParam);
       }
+      // Adicionar seed para aleatoriedade
+      url.searchParams.set('seed', Date.now().toString());
 
       const response = await fetch(url.toString());
       if (!response.ok) {
@@ -46,7 +50,13 @@ export function GlobalFeed() {
       }
       return response.json();
     },
-    getNextPageParam: (lastPage) => lastPage.nextCursor || undefined,
+    getNextPageParam: (lastPage) => {
+      // Se não há mais posts, retornar 'loop' para entrar em loop
+      if (!lastPage.nextCursor && lastPage.posts && lastPage.posts.length > 0) {
+        return 'loop';
+      }
+      return lastPage.nextCursor || undefined;
+    },
     initialPageParam: undefined as string | undefined,
     enabled: !!user, // Só busca se usuário estiver logado
   });
@@ -92,11 +102,46 @@ export function GlobalFeed() {
     };
   }, [data, user]);
 
+  // Detectar scroll no final para carregar mais posts (scroll infinito)
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
+        if (entries[0].isIntersecting && !isFetchingNextPage) {
+          if (hasNextPage) {
+            fetchNextPage();
+          } else {
+            // Loop infinito: quando não há mais posts, buscar novamente com seed diferente
+            loopPageRef.current += 1;
+            const url = new URL('/api/feed/global', window.location.origin);
+            url.searchParams.set('limit', '20');
+            url.searchParams.set('seed', Date.now().toString());
+            url.searchParams.set('loop', 'true');
+            
+            // Buscar posts que ainda não foram vistos
+            const allSeenIds = Array.from(seenPostIdsRef.current);
+            if (allSeenIds.length > 0) {
+              url.searchParams.set('excludeIds', allSeenIds.join(','));
+            }
+
+            fetch(url.toString())
+              .then(res => res.json())
+              .then(result => {
+                // Adicionar novos posts ao cache do React Query
+                queryClient.setQueryData(['global-feed'], (old: any) => {
+                  if (!old) return old;
+                  const newPages = [...old.pages];
+                  newPages.push({
+                    ...result,
+                    nextCursor: 'loop', // Continuar em loop
+                  });
+                  return {
+                    ...old,
+                    pages: newPages,
+                  };
+                });
+              })
+              .catch(err => console.error('Error fetching loop posts:', err));
+          }
         }
       },
       { threshold: 0.1 }
@@ -107,7 +152,7 @@ export function GlobalFeed() {
     }
 
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, queryClient]);
 
   // Função para atualizar o feed
   const handleRefresh = useCallback(async () => {
@@ -122,39 +167,60 @@ export function GlobalFeed() {
     }
   }, [queryClient, refetch]);
 
-  // Detectar scroll para verificar se está no topo
+  // Registrar posts vistos para loop
+  useEffect(() => {
+    const posts = data?.pages.flatMap((page) => page.posts) || [];
+    posts.forEach((post: any) => {
+      seenPostIdsRef.current.add(post.id);
+    });
+  }, [data]);
+
+  // Detectar scroll para pull-to-refresh
   useEffect(() => {
     const handleScroll = () => {
-      isAtTopRef.current = window.scrollY === 0;
+      if (!containerRef.current) return;
+      const container = containerRef.current;
+      isAtTopRef.current = container.scrollTop <= 10;
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Verificar estado inicial
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll, { passive: true });
+      handleScroll();
+    }
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      if (container) {
+        container.removeEventListener('scroll', handleScroll);
+      }
     };
   }, []);
 
-  // Pull-to-refresh handlers
+  // Pull-to-refresh handlers - adaptado para container interno
   useEffect(() => {
     let touchStartY = 0;
     let isDragging = false;
     let currentPullDistance = 0;
+    const container = containerRef.current;
 
     const handleTouchStart = (e: TouchEvent) => {
-      if (!isAtTopRef.current || isRefreshing) return;
-      touchStartY = e.touches[0].clientY;
-      isDragging = true;
+      if (!container || !isAtTopRef.current || isRefreshing) return;
+      const touch = e.touches[0];
+      const rect = container.getBoundingClientRect();
+      // Verificar se o toque está dentro do container
+      if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+        touchStartY = touch.clientY;
+        isDragging = true;
+      }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!isDragging || !isAtTopRef.current || isRefreshing) return;
+      if (!isDragging || !isAtTopRef.current || isRefreshing || !container) return;
       
       const currentY = e.touches[0].clientY;
       const distance = currentY - touchStartY;
       
-      if (distance > 0) {
+      if (distance > 0 && container.scrollTop === 0) {
         const maxPull = 100;
         const pull = Math.min(distance, maxPull);
         currentPullDistance = pull;
@@ -188,14 +254,18 @@ export function GlobalFeed() {
       currentPullDistance = 0;
     };
 
-    document.addEventListener('touchstart', handleTouchStart, { passive: false });
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd);
+    if (container) {
+      container.addEventListener('touchstart', handleTouchStart, { passive: false });
+      container.addEventListener('touchmove', handleTouchMove, { passive: false });
+      container.addEventListener('touchend', handleTouchEnd);
+    }
 
     return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
+      if (container) {
+        container.removeEventListener('touchstart', handleTouchStart);
+        container.removeEventListener('touchmove', handleTouchMove);
+        container.removeEventListener('touchend', handleTouchEnd);
+      }
     };
   }, [isRefreshing, handleRefresh]);
 
@@ -247,11 +317,14 @@ export function GlobalFeed() {
   }
 
   const pullProgress = Math.min(pullDistance / 100, 1);
-  // Só mostra o indicador de pull quando está realmente puxando (não durante refresh)
   const shouldShowPullIndicator = pullDistance > 10 && !isRefreshing;
 
   return (
-    <div ref={containerRef} className="relative">
+    <div 
+      ref={containerRef} 
+      className="relative h-full overflow-y-auto scrollbar-hide md:scrollbar-hide"
+      style={{ scrollBehavior: 'smooth' }}
+    >
       {/* Pull-to-refresh indicator - só mostra durante o pull, desaparece ao soltar */}
       {shouldShowPullIndicator && (
         <div
@@ -281,49 +354,24 @@ export function GlobalFeed() {
         </div>
       )}
 
-      {/* Indicador de refresh discreto no topo - só aparece quando está atualizando */}
-      {isRefreshing && (
-        <div className="flex items-center justify-center pt-2 pb-1">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-        </div>
-      )}
-
-      {/* Botão de refresh fixo */}
-      <div className="flex justify-end mb-4">
-        <Button
-          onClick={handleRefresh}
-          disabled={isRefreshing || isFetching}
-          variant="outline"
-          size="sm"
-          className="gap-2"
-        >
-          {isRefreshing || isFetching ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Atualizando...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4" />
-              Atualizar
-            </>
-          )}
-        </Button>
-      </div>
-
-      <div className="space-y-4">
+      {/* Container de posts - ordem correta do backend (mais antigos no topo, mais recentes embaixo) */}
+      <div className="space-y-4 pb-4">
         {posts.map((post: any) => (
           <div key={post.id} data-post-id={post.id}>
             <FeedPost post={post} isOwner={user?.id === post.userId} truncateContent={true} />
           </div>
         ))}
-        <div ref={loadMoreRef} className="h-10" />
-        {isFetchingNextPage && (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        )}
       </div>
+
+      {/* Trigger para carregar mais posts quando scrolla para o final */}
+      <div ref={loadMoreRef} className="h-10" />
+      
+      {/* Loading quando carregando mais posts */}
+      {isFetchingNextPage && (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
     </div>
   );
 }

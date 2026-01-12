@@ -1,0 +1,180 @@
+# Algoritmo do Feed Global
+
+## Visão Geral
+
+O algoritmo do feed global organiza os posts em **camadas temporais** priorizando conteúdo recente e engajamento, enquanto estimula o scroll do usuário para ver posts mais novos.
+
+## Estrutura de Camadas
+
+O feed é organizado em três camadas principais, na seguinte ordem de **prioridade** (do topo para baixo):
+
+1. **DIA** - Posts das últimas 24 horas (aparecem primeiro)
+2. **SEMANA** - Posts dos últimos 7 dias (excluindo o dia atual) - aparecem quando acabam os do DIA
+3. **ANTIGOS** - Posts com mais de 7 dias - aparecem quando acabam os da SEMANA
+
+### Ordem de Exibição
+
+```
+┌─────────────────────────┐
+│   DIA (topo)            │ ← Posts do dia aparecem primeiro
+│   - Ordenados por       │
+│     engajamento         │
+│   - Mais antigos do dia │
+│     primeiro            │
+│   - Mais novos do dia   │
+│     no final            │ ← Estimula scroll para ver posts mais recentes
+├─────────────────────────┤
+│   SEMANA (meio)         │ ← Aparecem quando acabam os do DIA
+│   - Ordenados por       │
+│     engajamento         │
+│   - Mais antigos primeiro│
+├─────────────────────────┤
+│   ANTIGOS (embaixo)     │ ← Aparecem quando acabam os da SEMANA
+│   - Ordenados por       │
+│     engajamento         │
+│   - Mais antigos primeiro│
+└─────────────────────────┘
+```
+
+### Fluxo de Carregamento
+
+1. **Primeiro**: Mostra posts do DIA ordenados por engajamento
+2. **Depois**: Quando usuário scrolla e acabam os do DIA, mostra posts da SEMANA
+3. **Por último**: Quando acabam os da SEMANA, mostra posts ANTIGOS
+
+## Cálculo de Engajamento
+
+Cada post recebe um **score de engajamento** calculado pela fórmula:
+
+```
+Score = (likes × 2) + (comentários × 3)
+```
+
+### Exemplo:
+- Post com 5 likes e 2 comentários: `(5 × 2) + (2 × 3) = 16 pontos`
+- Post com 10 likes e 0 comentários: `(10 × 2) + (0 × 3) = 20 pontos`
+
+## Aleatoriedade (Q = 30%)
+
+Para evitar que o feed fique sempre igual, aplicamos **30% de aleatoriedade** ao score de engajamento:
+
+```
+Score Final = Score Base × (1 + variação aleatória)
+```
+
+Onde a variação aleatória é baseada em um **seed** único por requisição, garantindo:
+- Consistência dentro da mesma página
+- Variação entre diferentes carregamentos
+- Diferentes experiências para diferentes usuários
+
+## Ordenação Dentro de Cada Camada
+
+### Camadas ANTIGOS e SEMANA:
+1. **Primário**: Score de engajamento (maior primeiro)
+2. **Secundário**: Data de criação (mais antigo primeiro)
+
+### Camada DIA:
+1. **Primário**: Score de engajamento (maior primeiro)
+2. **Secundário**: Data de criação (mais **novo** primeiro)
+   - Isso garante que os posts mais recentes do dia fiquem no final, estimulando scroll
+
+## Paginação e Scroll Infinito
+
+### Primeira Página
+- Busca até 500 posts de cada camada
+- Aplica algoritmo de ordenação
+- Retorna os primeiros `limit` posts (padrão: 20)
+
+### Páginas Seguintes
+- Usa cursor-based pagination
+- Busca posts seguintes mantendo ordem das camadas
+- Quando não há mais posts, entra em **loop infinito**
+
+## Loop Infinito
+
+Quando todos os posts disponíveis foram exibidos:
+
+1. Sistema tenta buscar posts que ainda não foram vistos
+2. Se não houver mais posts novos, reinicia mostrando todos novamente
+3. O scroll nunca acaba - sempre há conteúdo para carregar
+
+## Cache
+
+### Estratégia de Cache
+- **TTL**: 5 minutos
+- **Key**: Baseada em parâmetros da query (userId, limit, cursor, seed, etc.)
+- **Provider**: Atualmente em memória, preparado para migração para Redis
+
+### Cache Key Format
+```
+global-feed:{userId}:{limit}:{cursor}:{seed}:{isLoop}:{excludeIds}
+```
+
+## Visualizações (Usuários Logados)
+
+Para usuários autenticados:
+
+1. Posts são separados em **visualizados** e **não visualizados**
+2. Ordem mantida: não visualizados primeiro, visualizados depois
+3. Respeita ordem das camadas: ANTIGOS → SEMANA → DIA
+
+## Exemplo Prático
+
+### Cenário:
+- 10 posts ANTIGOS (7+ dias)
+- 15 posts da SEMANA (últimos 7 dias)
+- 20 posts do DIA (últimas 24h)
+
+### Resultado no Feed:
+```
+Topo do Scroll:
+├─ Post DIA #1 (engajamento: 80, criado há 20 horas) ← Mais antigo do dia, maior engajamento
+├─ Post DIA #2 (engajamento: 75, criado há 18 horas)
+├─ Post DIA #3 (engajamento: 70, criado há 15 horas)
+├─ ...
+├─ Post DIA #19 (engajamento: 35, criado há 2 horas)
+└─ Post DIA #20 (engajamento: 30, criado há 1 hora) ← Mais novo do dia (embaixo)
+
+Quando acabam os do DIA, aparecem os da SEMANA:
+├─ Post SEMANA #1 (engajamento: 60, criado há 5 dias)
+├─ Post SEMANA #2 (engajamento: 55, criado há 4 dias)
+└─ ...
+
+Quando acabam os da SEMANA, aparecem os ANTIGOS:
+├─ Post ANTIGO #1 (engajamento: 50, criado há 30 dias)
+└─ Post ANTIGO #2 (engajamento: 45, criado há 25 dias)
+```
+
+## Benefícios do Algoritmo
+
+1. **Descoberta de Conteúdo**: Usuários veem posts antigos que podem ter perdido
+2. **Engajamento**: Posts com mais interação aparecem primeiro em cada camada
+3. **Novidade**: Posts mais recentes ficam embaixo, estimulando scroll
+4. **Variedade**: Aleatoriedade evita feed repetitivo
+5. **Performance**: Cache reduz carga no banco de dados
+
+## Configurações
+
+### Parâmetros Ajustáveis
+
+- **Q de Aleatoriedade**: 30% (configurável em `applyRandomness`)
+- **TTL do Cache**: 5 minutos (300 segundos)
+- **Limite por Página**: 20 posts (padrão)
+- **Buffer de Busca**: 500 posts por camada na primeira página
+
+## Migração para Redis
+
+O sistema está preparado para migração para Redis:
+
+1. Cache service já usa adapter pattern
+2. Basta configurar `REDIS_URL` no ambiente
+3. Sistema detecta automaticamente e usa Redis se disponível
+4. Fallback automático para memória se Redis não estiver disponível
+
+## Notas Técnicas
+
+- Ordenação por data usa `createdAt` do Prisma
+- Seed aleatório usa timestamp atual para garantir unicidade
+- Visualizações são consideradas apenas para usuários logados
+- Posts privados são filtrados automaticamente para usuários não-autorizados
+

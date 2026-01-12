@@ -2,9 +2,12 @@ import { BaseFeedService, type FeedResult, type FeedQueryParams } from './base-f
 import { prisma } from '@/lib/prisma/client';
 import type { FeedPost } from './feed-service';
 import { followService } from './follow-service';
+import { cacheService } from '@/lib/cache/cache-service';
 
 export interface GlobalFeedQueryParams extends FeedQueryParams {
-  // Sem parâmetros adicionais específicos
+  seed?: string;
+  isLoop?: boolean;
+  excludeIds?: string[];
 }
 
 /**
@@ -22,461 +25,231 @@ export class GlobalFeedService extends BaseFeedService {
   }
 
   /**
-   * Obtém feed global com ordenação por engajamento
+   * Gera número aleatório baseado em seed (para consistência)
+   */
+  private seededRandom(seed: string, index: number): number {
+    const hash = seed.split('').reduce((acc, char) => {
+      const charCode = char.charCodeAt(0);
+      return ((acc << 5) - acc) + charCode;
+    }, index);
+    return (Math.sin(hash) * 10000) % 1;
+  }
+
+  /**
+   * Aplica aleatoriedade ao score de engajamento
+   * Q de aleatoriedade: 0.3 (30% de variação aleatória)
+   */
+  private applyRandomness(score: number, seed: string, index: number, randomnessFactor: number = 0.3): number {
+    const random = this.seededRandom(seed, index);
+    const randomVariation = (random - 0.5) * randomnessFactor; // -0.15 a +0.15
+    return score * (1 + randomVariation);
+  }
+
+  /**
+   * Obtém feed global com ordenação por camadas: DIA → SEMANA → ANTIGOS
+   * Cada camada ordenada por engajamento
+   * Posts mais recentes aparecem embaixo (precisam scrollar para ver)
    */
   async getFeed(params: GlobalFeedQueryParams): Promise<FeedResult> {
     const {
       limit = this.DEFAULT_LIMIT,
       cursor,
       currentUserId,
+      seed = Date.now().toString(),
+      isLoop = false,
+      excludeIds = [],
     } = params;
 
-    // Buscar posts públicos (com buffer para compensar visualizados)
-    // Usamos um buffer maior para ter posts suficientes após filtrar visualizados
-    const bufferMultiplier = 2;
-    const fetchLimit = limit * bufferMultiplier;
+    // Cache key baseado nos parâmetros
+    const cacheKey = `global-feed:${currentUserId || 'anonymous'}:${limit}:${cursor || 'first'}:${seed}:${isLoop}:${excludeIds.join(',')}`;
+    
+    // Tentar buscar do cache primeiro
+    const cached = await cacheService.get<FeedResult>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
-    // Sempre buscar posts muito recentes (últimas 24 horas) para garantir que apareçam
-    const twentyFourHoursAgo = new Date();
-    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+    // Datas para separar camadas
+    const now = new Date();
+    const oneDayAgo = new Date(now);
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+    const oneWeekAgo = new Date(now);
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
     const where: any = {
       isPublic: true,
       deletedAt: null,
     };
 
-    // Buscar posts do banco
-    // Sempre garantir que posts muito recentes sejam incluídos, mesmo na primeira página
-    let posts: any[] = [];
-    
-    if (!cursor) {
-      // Primeira página: buscar TODOS os posts públicos disponíveis
-      // Quando há poucos posts, precisamos buscar todos para garantir que apareçam
-      // Buscar posts recentes (últimas 24 horas) primeiro
-      const recentPosts = await this.fetchPostsFromPrisma({
+    // Se está em loop e há IDs para excluir, tentar excluir
+    if (isLoop && excludeIds.length > 0) {
+      const countWithoutExcluded = await prisma.feedPost.count({
         where: {
           ...where,
-          createdAt: {
-            gte: twentyFourHoursAgo,
-          },
-        },
-        take: 500, // Buscar até 500 posts das últimas 24 horas
-        orderBy: {
-          createdAt: 'desc',
+          id: { notIn: excludeIds },
         },
       });
-
-      // Buscar TODOS os posts públicos (sem limite de data) para garantir cobertura completa
-      // Isso é importante quando há poucos posts no sistema
-      const allPosts = await this.fetchPostsFromPrisma({
-        where,
-        take: 1000, // Buscar até 1000 posts públicos (garantir que todos apareçam)
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
-
-      // Combinar e remover duplicatas (priorizar posts mais recentes)
-      const postMap = new Map<string, any>();
       
-      // Adicionar todos os posts (garantir que nenhum seja perdido)
-      allPosts.forEach(post => {
-        postMap.set(post.id, post);
-      });
-      
-      // Adicionar posts recentes novamente para garantir ordem (não sobrescrever)
-      recentPosts.forEach(post => {
-        postMap.set(post.id, post);
-      });
-
-      posts = Array.from(postMap.values());
-      
-      // Ordenar por data de criação (mais recentes primeiro)
-      posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-      
-      // NÃO limitar aqui - vamos limitar depois da ordenação por engajamento
-      // para garantir que posts muito recentes sempre apareçam
-    } else {
-      // Páginas seguintes: buscar normalmente com cursor
-      const cursorPosts = await this.fetchPostsFromPrisma({
-        where,
-        take: fetchLimit + 1, // +1 para verificar se tem mais
-        cursor: { id: cursor },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
-
-      // Também buscar posts muito recentes que podem ter sido criados após o cursor
-      // Isso garante que posts novos sempre apareçam, mesmo em páginas seguintes
-      const recentPosts = await this.fetchPostsFromPrisma({
-        where: {
-          ...where,
-          createdAt: {
-            gte: twentyFourHoursAgo,
-          },
-        },
-        take: 50, // Buscar até 50 posts recentes
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
-
-      // Combinar e remover duplicatas (priorizar posts mais recentes)
-      const postMap = new Map<string, any>();
-      
-      // Adicionar posts recentes primeiro (têm prioridade)
-      recentPosts.forEach(post => {
-        postMap.set(post.id, post);
-      });
-      
-      // Adicionar posts do cursor (não sobrescrever se já existe)
-      cursorPosts.forEach(post => {
-        if (!postMap.has(post.id)) {
-          postMap.set(post.id, post);
-        }
-      });
-
-      posts = Array.from(postMap.values());
-      
-      // Ordenar por data de criação (mais recentes primeiro)
-      posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-      
-      // NÃO limitar aqui - vamos limitar depois da ordenação completa incluindo visualizados
+      if (countWithoutExcluded > 0) {
+        where.id = { notIn: excludeIds };
+      }
     }
 
-    // Se não há usuário logado, ordenar apenas por engajamento e data
-    if (!currentUserId) {
-      // Posts muito recentes (últimas 2 horas) sempre aparecem primeiro
-      const twoHoursAgo = new Date();
-      twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
-      
-      // Separar posts muito recentes dos demais
-      const veryRecentPosts: any[] = [];
-      const otherPosts: any[] = [];
-      
-      posts.forEach(post => {
-        if (post.createdAt >= twoHoursAgo) {
-          veryRecentPosts.push(post);
-        } else {
-          otherPosts.push(post);
-        }
+    // Buscar posts do banco e separar por camadas: DIA → SEMANA → ANTIGOS
+    let allPosts: any[] = [];
+    
+    if (!cursor) {
+      // Primeira página: buscar posts por camadas
+      // Ordenar por 'asc' para que mais antigos venham primeiro dentro de cada camada
+      const [dayPosts, weekPosts, olderPosts] = await Promise.all([
+        // Posts do DIA (últimas 24 horas)
+        this.fetchPostsFromPrisma({
+          where: {
+            ...where,
+            createdAt: { gte: oneDayAgo },
+          },
+          take: 500,
+          orderBy: { createdAt: 'asc' }, // Mais antigos primeiro
+        }),
+        // Posts da SEMANA (últimos 7 dias, excluindo o dia atual)
+        this.fetchPostsFromPrisma({
+          where: {
+            ...where,
+            createdAt: { 
+              gte: oneWeekAgo,
+              lt: oneDayAgo,
+            },
+          },
+          take: 500,
+          orderBy: { createdAt: 'asc' }, // Mais antigos primeiro
+        }),
+        // Posts ANTIGOS (mais de 7 dias)
+        this.fetchPostsFromPrisma({
+          where: {
+            ...where,
+            createdAt: { lt: oneWeekAgo },
+          },
+          take: 500,
+          orderBy: { createdAt: 'asc' }, // Mais antigos primeiro
+        }),
+      ]);
+
+      allPosts = [...dayPosts, ...weekPosts, ...olderPosts];
+    } else {
+      // Páginas seguintes: buscar com cursor
+      const cursorPosts = await this.fetchPostsFromPrisma({
+        where,
+        take: limit * 3 + 1, // Buffer para ter posts suficientes
+        cursor: { id: cursor },
+        orderBy: { createdAt: 'asc' }, // Mais antigos primeiro
       });
-      
-      // Ordenar posts muito recentes apenas por data (mais recentes primeiro)
-      veryRecentPosts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-      
-      // Calcular scores e ordenar posts não muito recentes por engajamento
-      // Posts recentes (últimas 24 horas mas mais de 2 horas) recebem boost de +5 pontos
-      const twentyFourHoursAgoForNotLogged = new Date();
-      twentyFourHoursAgoForNotLogged.setHours(twentyFourHoursAgoForNotLogged.getHours() - 24);
-      
-      const otherPostsWithScores = otherPosts.map(post => {
+
+      allPosts = cursorPosts;
+    }
+
+    // Separar posts por camadas: DIA, SEMANA, ANTIGOS
+    // Ordem de prioridade: DIA primeiro, depois SEMANA, depois ANTIGOS
+    const dayLayer: any[] = [];
+    const weekLayer: any[] = [];
+    const olderLayer: any[] = [];
+
+    allPosts.forEach(post => {
+      const postDate = new Date(post.createdAt);
+      if (postDate >= oneDayAgo) {
+        dayLayer.push(post);
+      } else if (postDate >= oneWeekAgo) {
+        weekLayer.push(post);
+      } else {
+        olderLayer.push(post);
+      }
+    });
+
+    // Aplicar engajamento e aleatoriedade em cada camada
+    const processLayer = (layer: any[], layerName: string, isDayLayer: boolean = false) => {
+      return layer.map((post, index) => {
         const baseScore = this.calculateEngagementScore(post);
-        // Boost de +5 pontos para posts recentes (últimas 24h mas mais de 2h)
-        const isRecent = post.createdAt >= twentyFourHoursAgoForNotLogged && post.createdAt < twoHoursAgo;
-        const boostedScore = isRecent ? baseScore + 5 : baseScore;
+        const finalScore = this.applyRandomness(baseScore, seed, index, 0.3);
         return {
           post,
-          score: baseScore,
-          boostedScore,
+          score: finalScore,
+          layer: layerName,
         };
-      });
-
-      // Ordenar posts não muito recentes: primeiro por boostedScore DESC, depois por createdAt DESC
-      otherPostsWithScores.sort((a, b) => {
-        if (b.boostedScore !== a.boostedScore) {
-          return b.boostedScore - a.boostedScore;
+      }).sort((a, b) => {
+        // Ordenar por score de engajamento (com aleatoriedade)
+        if (Math.abs(b.score - a.score) > 0.01) {
+          return b.score - a.score;
         }
-        return b.post.createdAt.getTime() - a.post.createdAt.getTime();
+        // Em caso de empate:
+        // - Para camada DIA: mais NOVO primeiro (para que os mais novos fiquem no final/embaixo)
+        // - Para outras camadas: mais ANTIGO primeiro
+        if (isDayLayer) {
+          return b.post.createdAt.getTime() - a.post.createdAt.getTime(); // Mais novo primeiro
+        } else {
+          return a.post.createdAt.getTime() - b.post.createdAt.getTime(); // Mais antigo primeiro
+        }
       });
+    };
 
-      // Combinar: posts muito recentes primeiro, depois posts ordenados por engajamento
-      const sortedPosts = [
-        ...veryRecentPosts,
-        ...otherPostsWithScores.map(item => item.post),
-      ];
-      
+    const processedDay = processLayer(dayLayer, 'day', true); // DIA: mais novos no final
+    const processedWeek = processLayer(weekLayer, 'week', false);
+    const processedOlder = processLayer(olderLayer, 'older', false);
+
+    // Combinar camadas respeitando ordem: DIA → SEMANA → ANTIGOS
+    // DIA primeiro: ordenados por engajamento, com mais novos no final (embaixo)
+    // SEMANA depois: quando acabarem os do DIA
+    // ANTIGOS por último: quando acabarem os da SEMANA
+    const sortedPosts = [
+      ...processedDay.map(item => item.post),   // DIA primeiro (topo)
+      ...processedWeek.map(item => item.post),  // SEMANA depois
+      ...processedOlder.map(item => item.post), // ANTIGOS por último (embaixo)
+    ];
+
+    // Se não há usuário logado, retornar resultado direto
+    if (!currentUserId) {
       const { resultPosts, nextCursor } = this.processCursorPagination(sortedPosts, limit);
 
       const mappedPosts = resultPosts.map(post => this.mapToFeedPost(post));
       const enrichedPosts = await this.enrichWithLikes(mappedPosts, currentUserId);
 
-      return {
+      const result: FeedResult = {
         posts: enrichedPosts,
-        nextCursor,
+        nextCursor: nextCursor || 'loop',
       };
+
+      // Cachear resultado por 5 minutos
+      await cacheService.set(cacheKey, result, 300);
+
+      return result;
     }
 
-    // Buscar usuários que o usuário atual segue
-    const followingUsers = await followService.getFollowing(currentUserId, 100);
-    const followingUserIds = new Set(followingUsers.map(u => u.id));
-
-    // Buscar visualizações do usuário nas últimas 24 horas
-    // (twentyFourHoursAgo já foi definido acima)
-    
-    // IMPORTANTE: Sempre buscar posts visualizados separadamente para garantir que apareçam
-    // mesmo quando há cursor (páginas seguintes)
-    // @ts-ignore - Prisma types may not be updated immediately after migration
-    const viewedPostsFromDB = await prisma.feedPost.findMany({
-      where: {
-        isPublic: true,
-        deletedAt: null,
-        views: {
-          some: {
-            userId: currentUserId,
-            viewedAt: {
-              gte: twentyFourHoursAgo,
-            },
-          },
-        },
-      },
-      take: 100, // Buscar até 100 posts visualizados
-      orderBy: {
-        createdAt: 'desc',
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            avatarUrl: true,
-          },
-        },
-        transaction: {
-          select: {
-            ticker: true,
-            type: true,
-            quantity: true,
-            price: true,
-            date: true,
-          },
-        },
-      },
-    });
-
-    // Buscar posts recentes de pessoas que o usuário segue (últimas 24 horas)
-    let followingPosts: any[] = [];
-    if (followingUserIds.size > 0) {
-      // @ts-ignore
-      followingPosts = await prisma.feedPost.findMany({
-        where: {
-          userId: { in: Array.from(followingUserIds) },
-          isPublic: true,
-          deletedAt: null,
-          createdAt: {
-            gte: twentyFourHoursAgo,
-          },
-        },
-        take: Math.min(limit, 10), // Limitar a 10 posts de pessoas seguidas
-        orderBy: {
-          createdAt: 'desc',
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              avatarUrl: true,
-            },
-          },
-          transaction: {
-            select: {
-              ticker: true,
-              type: true,
-              quantity: true,
-              price: true,
-              date: true,
-            },
-          },
-        },
-      });
-    }
-
-    // @ts-ignore - Prisma types may not be updated immediately after migration
+    // Para usuários logados, buscar visualizações e separar posts visualizados
+    // @ts-ignore
     const recentViews = await prisma.feedView.findMany({
       where: {
         userId: currentUserId,
-        viewedAt: {
-          gte: twentyFourHoursAgo,
-        },
+        viewedAt: { gte: oneDayAgo },
       },
-      select: {
-        postId: true,
-        viewedAt: true,
-      },
+      select: { postId: true },
     });
+    const viewedPostIds = new Set(recentViews.map((v: any) => v.postId));
 
-    const viewedPostIds = new Set(recentViews.map(v => v.postId));
-    const followingPostIds = new Set(followingPosts.map(p => p.id));
-    const viewedPostIdsFromDB = new Set(viewedPostsFromDB.map(p => p.id));
-
-    // Separar posts em grupos:
-    // 1. Posts de pessoas seguidas (não visualizados)
-    // 2. Posts não visualizados (geral)
-    // 3. Posts visualizados
-    const followingNotViewed: any[] = [];
+    // Separar posts visualizados dos não visualizados, mantendo ordem de camadas
     const notViewed: any[] = [];
     const viewed: any[] = [];
 
-    // Processar posts de pessoas seguidas primeiro
-    followingPosts.forEach(post => {
-      if (!viewedPostIds.has(post.id) && !viewedPostIdsFromDB.has(post.id)) {
-        followingNotViewed.push(post);
-      } else {
-        // Posts de pessoas seguidas que foram visualizados também devem aparecer
-        // Adicionar a viewed para garantir que apareçam
-        viewed.push(post);
-      }
-    });
-
-    // Processar posts gerais
-    // IMPORTANTE: Garantir que TODOS os posts sejam incluídos
-    const processedPostIds = new Set<string>();
-    
-    // Adicionar IDs de posts de pessoas seguidas que já foram processados
-    followingPosts.forEach(post => {
-      processedPostIds.add(post.id);
-    });
-    
-    posts.forEach(post => {
-      // Ignorar posts de pessoas seguidas (já processados acima)
-      if (followingPostIds.has(post.id)) {
-        if (!processedPostIds.has(post.id)) {
-          processedPostIds.add(post.id);
-        }
-        return;
-      }
-
-      // Verificar se está visualizado (em qualquer uma das listas)
-      const isViewed = viewedPostIds.has(post.id) || viewedPostIdsFromDB.has(post.id);
-      
-      if (isViewed) {
+    sortedPosts.forEach(post => {
+      if (viewedPostIds.has(post.id)) {
         viewed.push(post);
       } else {
         notViewed.push(post);
       }
-      
-      processedPostIds.add(post.id);
-    });
-    
-    // Adicionar posts visualizados buscados separadamente que não estão em `posts`
-    // Isso garante que apareçam mesmo quando há cursor
-    viewedPostsFromDB.forEach(post => {
-      // Ignorar se já está em posts de pessoas seguidas ou já foi processado
-      if (!followingPostIds.has(post.id) && !processedPostIds.has(post.id)) {
-        viewed.push(post);
-      }
     });
 
-    // Calcular scores para posts não visualizados (geral)
-    // Posts muito recentes (últimas 2 horas) têm boost de prioridade
-    const twoHoursAgo = new Date();
-    twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
+    // Combinar: não visualizados primeiro, depois visualizados
+    // Ordem final: ANTIGOS → SEMANA → DIA (mais recentes embaixo)
+    const finalSortedPosts = [...notViewed, ...viewed];
     
-    // Separar posts muito recentes dos demais
-    const veryRecentPosts: any[] = [];
-    const otherPosts: any[] = [];
-    
-    notViewed.forEach(post => {
-      if (post.createdAt >= twoHoursAgo) {
-        veryRecentPosts.push(post);
-      } else {
-        otherPosts.push(post);
-      }
-    });
-    
-    // Ordenar posts muito recentes apenas por data (mais recentes primeiro)
-    veryRecentPosts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    
-    // Calcular scores e ordenar posts não muito recentes por engajamento
-    // Posts recentes (últimas 24 horas mas mais de 2 horas) recebem boost de +5 pontos
-    const twentyFourHoursAgoForLogged = new Date();
-    twentyFourHoursAgoForLogged.setHours(twentyFourHoursAgoForLogged.getHours() - 24);
-    
-    const otherPostsWithScores = otherPosts.map(post => {
-      const baseScore = this.calculateEngagementScore(post);
-      // Boost de +5 pontos para posts recentes (últimas 24h mas mais de 2h)
-      const isRecent = post.createdAt >= twentyFourHoursAgoForLogged && post.createdAt < twoHoursAgo;
-      const boostedScore = isRecent ? baseScore + 5 : baseScore;
-      return {
-        post,
-        score: baseScore,
-        boostedScore,
-      };
-    });
-
-    // Ordenar posts não muito recentes: primeiro por boostedScore DESC, depois por createdAt DESC
-    otherPostsWithScores.sort((a, b) => {
-      if (b.boostedScore !== a.boostedScore) {
-        return b.boostedScore - a.boostedScore;
-      }
-      return b.post.createdAt.getTime() - a.post.createdAt.getTime();
-    });
-
-    // Combinar: posts muito recentes primeiro, depois posts ordenados por engajamento
-    const sortedNotViewed = [
-      ...veryRecentPosts,
-      ...otherPostsWithScores.map(item => item.post),
-    ];
-
-    // Ordenar posts de pessoas seguidas: apenas por createdAt DESC (mais recentes primeiro)
-    followingNotViewed.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-    // Ordenar grupo visualizado: apenas por createdAt DESC
-    viewed.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-    // Concatenar: posts de pessoas seguidas + posts não visualizados (geral) + posts visualizados
-    // IMPORTANTE: Quando há poucos posts, mostrar TODOS para nunca zerar o feed
-    const totalAvailablePosts = followingNotViewed.length + sortedNotViewed.length + viewed.length;
-    
-    let sortedPosts: any[] = [];
-    let nextCursor: string | null = null;
-    
-    if (totalAvailablePosts <= limit) {
-      // Poucos posts: mostrar TODOS (nunca zerar o feed)
-      // Ordem: seguidos não visualizados + não visualizados + visualizados
-      sortedPosts = [
-        ...followingNotViewed,
-        ...sortedNotViewed,
-        ...viewed,
-      ];
-      // Não há mais páginas quando mostramos todos os posts
-      nextCursor = null;
-    } else {
-      // Muitos posts: aplicar limites e paginação
-      const followingCount = Math.min(followingNotViewed.length, Math.floor(limit * 0.3)); // 30% do feed
-      const followingSlice = followingNotViewed.slice(0, followingCount);
-      
-      // Garantir que posts visualizados sempre apareçam, mesmo quando há cursor
-      // Reservar espaço para posts visualizados (até 20% do feed)
-      const viewedReserve = Math.floor(limit * 0.2);
-      const availableForNonViewed = limit - followingSlice.length - viewedReserve;
-      
-      // Limitar posts não visualizados para deixar espaço para visualizados
-      const nonViewedSlice = sortedNotViewed.slice(0, Math.max(0, availableForNonViewed));
-      
-      // Incluir posts visualizados (garantir que sempre apareçam)
-      const viewedSlice = viewed.slice(0, viewedReserve);
-      
-      sortedPosts = [
-        ...followingSlice,
-        ...nonViewedSlice,
-        ...viewedSlice,
-      ];
-      
-      // Processar paginação
-      // Se há mais posts não visualizados ou visualizados além do limite, definir cursor
-      const hasMoreNonViewed = sortedNotViewed.length > nonViewedSlice.length;
-      const hasMoreViewed = viewed.length > viewedSlice.length;
-      const hasMore = hasMoreNonViewed || hasMoreViewed || (cursor && sortedPosts.length >= limit);
-      
-      nextCursor = hasMore && sortedPosts.length > 0 
-        ? sortedPosts[sortedPosts.length - 1].id 
-        : null;
-    }
-    
-    const resultPosts = sortedPosts;
+    const { resultPosts, nextCursor } = this.processCursorPagination(finalSortedPosts, limit);
 
     // Mapear posts
     const mappedPosts = resultPosts.map(post => this.mapToFeedPost(post));
@@ -484,10 +257,15 @@ export class GlobalFeedService extends BaseFeedService {
     // Enriquece com likes do usuário atual
     const enrichedPosts = await this.enrichWithLikes(mappedPosts, currentUserId);
 
-    return {
+    const result: FeedResult = {
       posts: enrichedPosts,
-      nextCursor,
+      nextCursor: nextCursor || 'loop',
     };
+
+    // Cachear resultado por 5 minutos
+    await cacheService.set(cacheKey, result, 300);
+
+    return result;
   }
 }
 
