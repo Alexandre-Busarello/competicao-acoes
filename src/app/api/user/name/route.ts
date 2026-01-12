@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/server';
 import { prisma } from '@/lib/prisma/client';
+import { updateUserSlug } from '@/lib/utils/user-slug-generator';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Atualiza o nome do usuário
+ * Atualiza o nome do usuário e o slug automaticamente
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -44,6 +45,9 @@ export async function PATCH(request: NextRequest) {
         name: true,
       },
     });
+
+    // Atualizar slug automaticamente após mudança de nome
+    await updateUserSlug(session.user.id);
 
     return NextResponse.json({ 
       success: true,
