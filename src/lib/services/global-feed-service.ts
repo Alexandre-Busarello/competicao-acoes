@@ -46,6 +46,20 @@ export class GlobalFeedService extends BaseFeedService {
   }
 
   /**
+   * Gera seed baseado em período (por hora) para cache eficiente
+   * Permite cache mesmo sem seed explícito, mas com variação periódica
+   */
+  private generatePeriodSeed(): string {
+    const now = new Date();
+    const hour = now.getHours();
+    const day = now.getDate();
+    const month = now.getMonth();
+    const year = now.getFullYear();
+    // Seed muda a cada hora, permitindo cache eficiente mas com variação periódica
+    return `${year}-${month}-${day}-${hour}`;
+  }
+
+  /**
    * Obtém feed global com ordenação por camadas: DIA → SEMANA → ANTIGOS
    * Cada camada ordenada por engajamento
    * Posts mais recentes aparecem embaixo (precisam scrollar para ver)
@@ -55,13 +69,18 @@ export class GlobalFeedService extends BaseFeedService {
       limit = this.DEFAULT_LIMIT,
       cursor,
       currentUserId,
-      seed = Date.now().toString(),
+      seed,
       isLoop = false,
       excludeIds = [],
     } = params;
 
+    // Se não há seed, gerar um baseado em período (por hora) para cache eficiente
+    // Isso permite cache mesmo sem seed explícito, mas com variação periódica
+    const effectiveSeed = seed || this.generatePeriodSeed();
+
     // Cache key baseado nos parâmetros
-    const cacheKey = `global-feed:${currentUserId || 'anonymous'}:${limit}:${cursor || 'first'}:${seed}:${isLoop}:${excludeIds.join(',')}`;
+    // Usar effectiveSeed para garantir que seed sempre existe
+    const cacheKey = `global-feed:${currentUserId || 'anonymous'}:${limit}:${cursor || 'first'}:${effectiveSeed}:${isLoop}:${excludeIds.join(',')}`;
     
     // Tentar buscar do cache primeiro
     const cached = await cacheService.get<FeedResult>(cacheKey);
@@ -168,7 +187,7 @@ export class GlobalFeedService extends BaseFeedService {
     const processLayer = (layer: any[], layerName: string, isDayLayer: boolean = false) => {
       return layer.map((post, index) => {
         const baseScore = this.calculateEngagementScore(post);
-        const finalScore = this.applyRandomness(baseScore, seed, index, 0.3);
+        const finalScore = this.applyRandomness(baseScore, effectiveSeed, index, 0.3);
         return {
           post,
           score: finalScore,

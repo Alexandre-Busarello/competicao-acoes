@@ -16,6 +16,25 @@ export function GlobalFeed() {
   const seenPostIdsRef = useRef<Set<string>>(new Set());
   const loopPageRef = useRef<number>(0);
   
+  // Seed consistente por sessão - gerado uma vez e reutilizado
+  const sessionSeedRef = useRef<string | null>(null);
+  
+  // Gerar ou recuperar seed da sessão
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storageKey = 'feed-session-seed';
+      let seed = sessionStorage.getItem(storageKey);
+      
+      if (!seed) {
+        // Gerar novo seed para esta sessão
+        seed = Date.now().toString() + '-' + Math.random().toString(36).substring(2, 9);
+        sessionStorage.setItem(storageKey, seed);
+      }
+      
+      sessionSeedRef.current = seed;
+    }
+  }, []);
+  
   // Estado para pull-to-refresh
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
@@ -38,8 +57,9 @@ export function GlobalFeed() {
       if (pageParam) {
         url.searchParams.set('cursor', pageParam);
       }
-      // Adicionar seed para aleatoriedade
-      url.searchParams.set('seed', Date.now().toString());
+      // Usar seed da sessão para consistência e cache eficiente
+      const seed = sessionSeedRef.current || Date.now().toString();
+      url.searchParams.set('seed', seed);
 
       const response = await fetch(url.toString());
       if (!response.ok) {
@@ -110,11 +130,13 @@ export function GlobalFeed() {
           if (hasNextPage) {
             fetchNextPage();
           } else {
-            // Loop infinito: quando não há mais posts, buscar novamente com seed diferente
+            // Loop infinito: quando não há mais posts, buscar novamente
+            // Usar mesmo seed da sessão para manter consistência
             loopPageRef.current += 1;
             const url = new URL('/api/feed/global', window.location.origin);
             url.searchParams.set('limit', '20');
-            url.searchParams.set('seed', Date.now().toString());
+            const seed = sessionSeedRef.current || Date.now().toString();
+            url.searchParams.set('seed', seed);
             url.searchParams.set('loop', 'true');
             
             // Buscar posts que ainda não foram vistos

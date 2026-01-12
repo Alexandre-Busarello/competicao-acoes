@@ -62,10 +62,17 @@ Para evitar que o feed fique sempre igual, aplicamos **30% de aleatoriedade** ao
 Score Final = Score Base × (1 + variação aleatória)
 ```
 
-Onde a variação aleatória é baseada em um **seed** único por requisição, garantindo:
-- Consistência dentro da mesma página
-- Variação entre diferentes carregamentos
-- Diferentes experiências para diferentes usuários
+Onde a variação aleatória é baseada em um **seed** único por **sessão**, garantindo:
+- **Consistência na mesma sessão**: Seed armazenado no `sessionStorage`, mantido durante toda a sessão do usuário
+- **Cache eficiente**: Como o seed é consistente na sessão, o cache funciona corretamente
+- **Variação entre sessões**: Cada nova sessão recebe um seed diferente
+- **Fallback inteligente**: Se não houver seed explícito, usa seed baseado em período (por hora)
+
+### Gerenciamento de Seed
+
+- **Frontend**: Gera seed único ao iniciar sessão e armazena em `sessionStorage`
+- **Backend**: Se não receber seed, gera um baseado em período (ano-mês-dia-hora)
+- **Benefício**: Permite cache eficiente mantendo aleatoriedade controlada
 
 ## Ordenação Dentro de Cada Camada
 
