@@ -95,3 +95,25 @@ export async function requirePremium() {
   return session;
 }
 
+/**
+ * Lista de emails permitidos para acesso admin
+ */
+const ADMIN_EMAILS = [
+  'bmchimarelli@gmail.com',
+  'busamar@gmail.com',
+].map(email => email.toLowerCase());
+
+/**
+ * Verifica se o usuário é admin
+ */
+export async function requireAdmin() {
+  const session = await requireAuth();
+  const userEmail = session.user.email?.toLowerCase();
+  
+  if (!userEmail || !ADMIN_EMAILS.includes(userEmail)) {
+    throw new Error('Admin access required');
+  }
+  
+  return session;
+}
+
