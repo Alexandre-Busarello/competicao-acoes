@@ -38,8 +38,8 @@ export function AssetList({ assets, isPremium, isOwner = false }: AssetListProps
                 {isMocked && !canView && (
                   <div className="mb-2 p-2 bg-muted/50 rounded-md border border-dashed border-muted-foreground/30">
                     <p className="text-xs text-muted-foreground text-center">
-                      <strong>Ativo ofuscado:</strong> Este dado foi mockado para proteger a privacidade. 
-                      Assine o plano premium para visualizar todos os ativos do portfólio.
+                      <strong>Ativo ofuscado:</strong> Este dado foi mockado para evitar acesso indevido. 
+                      Torne-se Membro Pro para visualizar todos os ativos do portfólio.
                     </p>
                   </div>
                 )}

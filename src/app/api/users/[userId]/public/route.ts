@@ -29,6 +29,13 @@ export async function GET(
         avatarUrl: true,
         slug: true,
         createdAt: true,
+        isPremium: true,
+        subscription: {
+          select: {
+            status: true,
+            currentPeriodEnd: true,
+          },
+        },
         stats: {
           select: {
             followerCount: true,
@@ -81,12 +88,24 @@ export async function GET(
       // Não falha a requisição se houver erro ao buscar rankings
     }
 
+    // Verificar se é PRO baseado na subscription
+    let isPro = false;
+    if (user.subscription) {
+      isPro =
+        user.subscription.status === 'active' &&
+        user.subscription.currentPeriodEnd !== null &&
+        user.subscription.currentPeriodEnd > new Date();
+    } else {
+      isPro = user.isPremium;
+    }
+
     return NextResponse.json({
       id: user.id,
       name: user.name,
       avatarUrl: user.avatarUrl,
       slug: user.slug,
       createdAt: user.createdAt.toISOString(),
+      isPro,
       stats: user.stats ? {
         followerCount: user.stats.followerCount,
         followingCount: user.stats.followingCount,

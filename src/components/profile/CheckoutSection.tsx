@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, Trophy, Eye, Star, AlertTriangle } from 'lucide-react';
+import { Check, Trophy, Eye, Star, AlertTriangle, Gift } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
 import { useAuth } from '@/lib/auth/client';
 import { useState } from 'react';
@@ -25,7 +25,7 @@ export function CheckoutSection() {
       <CardContent className="p-6">
         <div className="text-center mb-6">
           <Trophy className="h-12 w-12 text-primary mx-auto mb-3" />
-          <h2 className="text-2xl font-bold mb-2">Upgrade para Premium</h2>
+          <h2 className="text-2xl font-bold mb-2">Torne-se Membro Pro</h2>
           <p className="text-muted-foreground">
             Desbloqueie funcionalidades exclusivas e acesse carteiras completas
           </p>
@@ -58,6 +58,30 @@ export function CheckoutSection() {
             </div>
           )}
 
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 mt-0.5">
+              <Gift className="h-5 w-5 text-warning" />
+            </div>
+            <div>
+              <p className="font-semibold">Premiação dobrada no ranking anual</p>
+              <p className="text-sm text-muted-foreground">
+                Membros Pro recebem o dobro do prêmio em dinheiro nas premiações anuais (Top 3)
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 mt-0.5">
+              <Trophy className="h-5 w-5 text-warning" />
+            </div>
+            <div>
+              <p className="font-semibold">Elegível para prêmios anuais em dinheiro</p>
+              <p className="text-sm text-muted-foreground">
+                Participe do ranking anual e concorra a prêmios em dinheiro + medalhas exclusivas
+              </p>
+            </div>
+          </div>
+
         </div>
 
         <div className="border-t border-border pt-6">
@@ -87,7 +111,7 @@ export function CheckoutSection() {
             // Se não estiver autenticado, usar CheckoutCTA que abre modal
             <CheckoutCTA
               source="profile_page"
-              buttonText="Fazer Upgrade para Premium"
+              buttonText="Tornar-se Membro Pro"
               size="lg"
               variant="default"
               className="w-full"
@@ -100,12 +124,9 @@ export function CheckoutSection() {
               onClick={handleSubscribe}
               disabled={isProcessing}
             >
-              {isProcessing ? 'Processando...' : 'Fazer Upgrade para Premium'}
+              {isProcessing ? 'Processando...' : 'Tornar-se Membro Pro'}
             </Button>
           )}
-          <p className="text-xs text-center text-muted-foreground mt-3">
-            Cancele a qualquer momento. Sem compromisso.
-          </p>
         </div>
       </CardContent>
     </Card>

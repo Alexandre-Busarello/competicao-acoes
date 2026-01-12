@@ -77,7 +77,7 @@ export function obfuscatePortfolioAssets(
  * Isso será usado no componente para mostrar mensagem ao usuário
  */
 export function getObfuscationMessage(): string {
-  return 'Este ativo foi ofuscado. Assine o plano premium para visualizar todos os ativos do portfólio.';
+  return 'Este ativo foi ofuscado. Torne-se Membro Pro para visualizar todos os ativos do portfólio.';
 }
 
 /**

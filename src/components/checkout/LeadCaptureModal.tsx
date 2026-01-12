@@ -28,8 +28,8 @@ export function LeadCaptureModal({
   open,
   onOpenChange,
   source = 'checkout_cta',
-  title = 'Upgrade para Premium',
-  description = 'Upgrade para Premium e desbloqueie funcionalidades exclusivas',
+  title = 'Torne-se Membro Pro',
+  description = 'Torne-se Membro Pro e desbloqueie funcionalidades exclusivas',
 }: LeadCaptureModalProps) {
   const { user } = useAuth();
   const [email, setEmail] = useState(user?.email || '');
@@ -137,7 +137,7 @@ export function LeadCaptureModal({
               <div className="text-center space-y-2">
                 <h3 className="text-lg font-semibold">Link de acesso enviado!</h3>
                 <p className="text-sm text-muted-foreground">
-                  Enviamos um link de acesso para <strong>{email}</strong>. Verifique sua caixa de entrada e clique no link para acessar sua conta premium.
+                  Enviamos um link de acesso para <strong>{email}</strong>. Verifique sua caixa de entrada e clique no link para acessar sua conta Pro.
                 </p>
               </div>
             </div>

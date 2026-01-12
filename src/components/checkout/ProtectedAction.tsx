@@ -39,7 +39,7 @@ export function ProtectedAction({
       return (
         <div className="flex flex-col items-center justify-center p-6 gap-4">
           <p className="text-muted-foreground text-center">
-            Esta funcionalidade é exclusiva para assinantes premium.
+            Esta funcionalidade é exclusiva para Membros Pro.
           </p>
           <CheckoutCTA source={source} buttonText={ctaText} />
         </div>

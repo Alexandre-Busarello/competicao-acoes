@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ShareButton } from '@/components/shared/ShareButton';
-import { UserPlus, UserMinus, Loader2, TrendingUp, TrendingDown, Trophy } from 'lucide-react';
+import { UserPlus, UserMinus, Loader2, TrendingUp, TrendingDown, Trophy, Crown } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
 import { getShareUrl } from '@/lib/utils/share';
 import { formatDistanceToNow } from 'date-fns';
@@ -184,9 +184,17 @@ export function PublicProfileHeader({ userId }: PublicProfileHeaderProps) {
           <div className="flex-1 min-w-0 w-full sm:w-auto">
             {/* Desktop: Nome + Rentabilidade + Botões alinhados */}
             <div className="flex items-start sm:items-end justify-between gap-3 mb-0.5 sm:mb-1">
-              <h1 className="text-xl sm:text-2xl font-bold truncate flex-1 min-w-0">
-                {profile.name}
-              </h1>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold truncate">
+                  {profile.name}
+                </h1>
+                {profile.isPro && (
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-warning/20 dark:bg-warning/10 border border-warning/30 dark:border-warning/20 rounded-md flex-shrink-0">
+                    <Crown className="h-3.5 w-3.5 text-warning" />
+                    <span className="text-xs font-semibold text-warning">PRO</span>
+                  </div>
+                )}
+              </div>
               
               {/* Desktop: Rentabilidade + Botões em coluna vertical alinhados */}
               <div className="hidden sm:flex flex-col items-end gap-2 flex-shrink-0">

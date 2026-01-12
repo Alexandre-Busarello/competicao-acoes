@@ -9,7 +9,7 @@ import { useUserStore } from '@/lib/store/userStore';
 import { useRankingStore } from '@/lib/store/rankingStore';
 import { formatUserNameWithId, getNameWithoutId } from '@/lib/utils/format-user-name';
 import { AvatarSelector } from './AvatarSelector';
-import { Pencil, Check, X, Loader2 } from 'lucide-react';
+import { Pencil, Check, X, Loader2, Crown } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
 export function ProfileInfo() {
@@ -150,18 +150,26 @@ export function ProfileInfo() {
                   </div>
                 ) : (
                   <>
-                    <h2 className="text-xl font-bold">
-                      {formatUserNameWithId(user.name || 'Usuário', user.id)}
-                    </h2>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleStartEditName}
-                      className="h-6 w-6"
-                      aria-label="Editar nome"
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-bold">
+                        {formatUserNameWithId(user.name || 'Usuário', user.id)}
+                      </h2>
+                      {user.isPremium && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 bg-warning/20 dark:bg-warning/10 border border-warning/30 dark:border-warning/20 rounded-md">
+                          <Crown className="h-3.5 w-3.5 text-warning" />
+                          <span className="text-xs font-semibold text-warning">PRO</span>
+                        </div>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleStartEditName}
+                        className="h-6 w-6"
+                        aria-label="Editar nome"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </>
                 )}
               </div>

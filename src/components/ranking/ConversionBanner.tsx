@@ -19,7 +19,7 @@ export function ConversionBanner() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground">
                 <Sparkles className="h-3.5 w-3.5 inline-block mr-1.5 text-yellow-500" />
-                Desbloqueie carteiras de todos os usuários e participe dos prêmios anuais em dinheiro.{' '}
+                Desbloqueie carteiras de todos os usuários e receba premiação dobrada nos prêmios anuais.{' '}
                 <span className="text-muted-foreground">Ou entre agora e teste suas habilidades de investimento na prática com outros competidores, ganhando medalhas mensais</span>
               </p>
             </div>
@@ -27,7 +27,7 @@ export function ConversionBanner() {
           <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
             <CheckoutCTA
               source="ranking_banner"
-              buttonText="Desbloquear Premium"
+              buttonText="Tornar-se Membro Pro"
               size="sm"
               variant="default"
               className="flex-1 sm:flex-none"

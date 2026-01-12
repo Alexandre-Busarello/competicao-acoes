@@ -202,9 +202,9 @@ export function TransactionModal({ open, onOpenChange }: TransactionModalProps) 
     
     if (!ticker || !quantity) return;
     
-    // Verificar se tem assinatura premium
+    // Verificar se tem assinatura Pro
     if (!user.isPremium) {
-      setSubmitError('Assinatura premium necessária para cadastrar transações');
+      setSubmitError('Assinatura Pro necessária para cadastrar transações');
       return;
     }
     

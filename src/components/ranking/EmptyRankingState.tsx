@@ -126,7 +126,7 @@ export function EmptyRankingState() {
                 </div>
                 <p className="text-sm md:text-base text-muted-foreground max-w-xl mx-auto px-2">
                   Cadastre transações para aparecer no ranking. 
-                  Faça upgrade para premium e desbloqueie acesso completo às carteiras de outros competidores.
+                  Torne-se Membro Pro e desbloqueie acesso completo às carteiras de outros competidores, além de receber premiação dobrada nos prêmios anuais.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-stretch sm:items-center px-2">
                   <Link href="/minha-carteira" className="w-full sm:w-auto">

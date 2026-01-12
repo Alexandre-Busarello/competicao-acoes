@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { Crown, Check } from 'lucide-react';
+import { Crown, Check, Gift } from 'lucide-react';
 import { SHOW_MIC_METHOD } from '@/lib/config/features';
 
 export function PremiumCard() {
@@ -11,7 +11,7 @@ export function PremiumCard() {
         <div className="flex items-center gap-3 mb-4">
           <Crown className="h-6 w-6 text-warning" />
           <div>
-            <h3 className="text-lg font-bold">Conta Premium</h3>
+            <h3 className="text-lg font-bold">Membro Pro</h3>
             <p className="text-sm text-muted-foreground">Acesso completo ativado</p>
           </div>
         </div>
@@ -29,6 +29,10 @@ export function PremiumCard() {
           <div className="flex items-center gap-2 text-sm">
             <Check className="h-4 w-4 text-success" />
             <span>Elegível para prêmios anuais em dinheiro</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <Gift className="h-4 w-4 text-warning" />
+            <span className="font-semibold text-warning">Premiação dobrada no ranking anual</span>
           </div>
         </div>
       </CardContent>

@@ -19,9 +19,9 @@ interface CheckoutCTAProps {
 
 export function CheckoutCTA({
   source = 'checkout_cta',
-  title = 'Upgrade para Premium',
-  description = 'Desbloqueie funcionalidades exclusivas com assinatura premium',
-  buttonText = 'Fazer Upgrade',
+  title = 'Torne-se Membro Pro',
+  description = 'Desbloqueie funcionalidades exclusivas, acesse todas as carteiras e receba premiação dobrada nos prêmios anuais',
+  buttonText = 'Tornar-se Membro Pro',
   variant = 'default',
   size = 'default',
   className,

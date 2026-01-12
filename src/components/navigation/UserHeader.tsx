@@ -194,12 +194,15 @@ export function UserHeader() {
               </AvatarFallback>
             </Avatar>
             <div className="hidden sm:block min-w-0 flex-1 overflow-hidden">
-              <div className="flex items-center gap-1 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
                 <p className="font-semibold text-xs md:text-sm truncate min-w-0">
                   {formatUserNameWithId(user.name || 'Usuário', user.id)}
                 </p>
                 {user.isPremium && (
-                  <Crown className="h-3 w-3 md:h-3.5 md:w-3.5 text-warning flex-shrink-0" />
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-warning/20 dark:bg-warning/10 border border-warning/30 dark:border-warning/20 rounded-md flex-shrink-0">
+                    <Crown className="h-3 w-3 md:h-3.5 md:w-3.5 text-warning" />
+                    <span className="text-[10px] md:text-xs font-semibold text-warning">PRO</span>
+                  </div>
                 )}
               </div>
               <p className="text-[10px] md:text-xs text-muted-foreground truncate">

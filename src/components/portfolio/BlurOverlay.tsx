@@ -20,14 +20,14 @@ export function BlurOverlay({ competitorName }: BlurOverlayProps) {
               Quer saber a estratégia completa do {competitorName}?
             </h3>
             <p className="text-sm text-muted-foreground">
-              Faça upgrade para premium e desbloqueie acesso completo a todas as carteiras
+              Torne-se Membro Pro e desbloqueie acesso completo a todas as carteiras, além de receber premiação dobrada nos prêmios anuais
             </p>
           </div>
           <div className="space-y-3">
             <Link href="/perfil?from=cta" className="block">
               <Button className="w-full" size="lg">
                 <Trophy className="h-5 w-5 mr-2" />
-                Fazer Upgrade para Premium
+                Tornar-se Membro Pro
               </Button>
             </Link>
             <Link href="/perfil?from=cta">

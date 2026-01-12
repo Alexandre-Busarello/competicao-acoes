@@ -50,7 +50,7 @@ export class UserFeedService extends BaseFeedService {
       take: limit + 1, // +1 para verificar se tem mais
       cursor: cursor ? { id: cursor } : undefined,
       orderBy: {
-        createdAt: 'asc', // Mais antigos primeiro, mais recentes embaixo
+        createdAt: 'desc', // Mais recentes primeiro, mais antigos embaixo
       },
     });
 
