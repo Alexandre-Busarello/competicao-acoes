@@ -8,6 +8,7 @@ export interface GlobalFeedQueryParams extends FeedQueryParams {
   seed?: string;
   isLoop?: boolean;
   excludeIds?: string[];
+  filterInteractions?: boolean; // Se true, retorna apenas posts com interações recentes
 }
 
 /**
@@ -60,6 +61,122 @@ export class GlobalFeedService extends BaseFeedService {
   }
 
   /**
+   * Obtém posts com interações recentes do usuário (likes ou comentários)
+   * Ordenados pela data da interação mais recente
+   */
+  async getInteractionsFeed(params: GlobalFeedQueryParams): Promise<FeedResult> {
+    const {
+      limit = this.DEFAULT_LIMIT,
+      cursor,
+      currentUserId,
+    } = params;
+
+    if (!currentUserId) {
+      return {
+        posts: [],
+        nextCursor: null,
+      };
+    }
+
+    // Buscar posts onde o usuário interagiu (like ou comentário)
+    // Ordenar pela data da interação mais recente
+    const [likedPosts, commentedPosts] = await Promise.all([
+      // Posts com likes do usuário
+      prisma.feedLike.findMany({
+        where: {
+          userId: currentUserId,
+        },
+        select: {
+          postId: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      // Posts com comentários do usuário
+      prisma.feedComment.findMany({
+        where: {
+          userId: currentUserId,
+          deletedAt: null,
+        },
+        select: {
+          postId: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+    ]);
+
+    // Combinar e deduplicar posts, mantendo a data da interação mais recente
+    const postInteractions = new Map<string, Date>();
+
+    likedPosts.forEach((like: any) => {
+      const existing = postInteractions.get(like.postId);
+      if (!existing || like.createdAt > existing) {
+        postInteractions.set(like.postId, like.createdAt);
+      }
+    });
+
+    commentedPosts.forEach((comment: any) => {
+      const existing = postInteractions.get(comment.postId);
+      if (!existing || comment.createdAt > existing) {
+        postInteractions.set(comment.postId, comment.createdAt);
+      }
+    });
+
+    if (postInteractions.size === 0) {
+      return {
+        posts: [],
+        nextCursor: null,
+      };
+    }
+
+    // Buscar os posts completos
+    const postIds = Array.from(postInteractions.keys());
+    const posts = await this.fetchPostsFromPrisma({
+      where: {
+        id: { in: postIds },
+        isPublic: true,
+        deletedAt: null,
+      },
+      take: postIds.length,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Ordenar posts pela data da interação mais recente
+    const sortedPosts = posts.sort((a, b) => {
+      const aInteractionDate = postInteractions.get(a.id) || new Date(0);
+      const bInteractionDate = postInteractions.get(b.id) || new Date(0);
+      return bInteractionDate.getTime() - aInteractionDate.getTime();
+    });
+
+    // Aplicar paginação cursor-based
+    let filteredPosts = sortedPosts;
+    if (cursor) {
+      const cursorIndex = sortedPosts.findIndex(p => p.id === cursor);
+      if (cursorIndex >= 0) {
+        filteredPosts = sortedPosts.slice(cursorIndex + 1);
+      }
+    }
+
+    const { resultPosts, nextCursor } = this.processCursorPagination(filteredPosts, limit);
+
+    // Mapear posts
+    const mappedPosts = resultPosts.map(post => this.mapToFeedPost(post));
+
+    // Enriquece com likes do usuário atual
+    const enrichedPosts = await this.enrichWithLikes(mappedPosts, currentUserId);
+
+    return {
+      posts: enrichedPosts,
+      nextCursor: nextCursor || null,
+    };
+  }
+
+  /**
    * Obtém feed global com ordenação por camadas: DIA → SEMANA → ANTIGOS
    * Cada camada ordenada por engajamento
    * Posts mais recentes aparecem embaixo (precisam scrollar para ver)
@@ -72,7 +189,13 @@ export class GlobalFeedService extends BaseFeedService {
       seed,
       isLoop = false,
       excludeIds = [],
+      filterInteractions = false,
     } = params;
+
+    // Se filtro de interações está ativo, usar método específico
+    if (filterInteractions) {
+      return this.getInteractionsFeed(params);
+    }
 
     // Se não há seed, gerar um baseado em período (por hora) para cache eficiente
     // Isso permite cache mesmo sem seed explícito, mas com variação periódica

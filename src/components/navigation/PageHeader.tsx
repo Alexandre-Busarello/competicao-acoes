@@ -10,6 +10,7 @@ interface PageHeaderProps {
   backHref?: string;
   onBack?: () => void;
   rightAction?: ReactNode;
+  leftAction?: ReactNode; // Para ações no lado esquerdo (mobile)
   className?: string;
 }
 
@@ -18,6 +19,7 @@ export function PageHeader({
   backHref, 
   onBack,
   rightAction,
+  leftAction,
   className = ''
 }: PageHeaderProps) {
   const router = useRouter();
@@ -47,7 +49,10 @@ export function PageHeader({
         <div className="text-lg font-semibold flex-1 truncate">
           {typeof title === 'string' ? <h1>{title}</h1> : title}
         </div>
-        {rightAction && <div className="flex-shrink-0">{rightAction}</div>}
+        {/* Action para mobile (lado direito do header) */}
+        {leftAction && <div className="flex-shrink-0 lg:hidden">{leftAction}</div>}
+        {/* Action para desktop (lado direito do header) */}
+        {rightAction && <div className="flex-shrink-0 hidden lg:flex items-center gap-2">{rightAction}</div>}
       </div>
     </div>
   );

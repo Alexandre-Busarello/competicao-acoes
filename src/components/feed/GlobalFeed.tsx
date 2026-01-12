@@ -7,7 +7,11 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
 import { Button } from '@/components/ui/button';
 
-export function GlobalFeed() {
+interface GlobalFeedProps {
+  filterInteractions?: boolean;
+}
+
+export function GlobalFeed({ filterInteractions = false }: GlobalFeedProps) {
   const { user } = useUserStore();
   const queryClient = useQueryClient();
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -50,16 +54,22 @@ export function GlobalFeed() {
     isFetching,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ['global-feed'],
+    queryKey: ['global-feed', filterInteractions],
     queryFn: async ({ pageParam }) => {
       const url = new URL('/api/feed/global', window.location.origin);
       url.searchParams.set('limit', '20');
       if (pageParam) {
         url.searchParams.set('cursor', pageParam);
       }
-      // Usar seed da sessão para consistência e cache eficiente
-      const seed = sessionSeedRef.current || Date.now().toString();
-      url.searchParams.set('seed', seed);
+      // Usar seed da sessão para consistência e cache eficiente (só para feed global)
+      if (!filterInteractions) {
+        const seed = sessionSeedRef.current || Date.now().toString();
+        url.searchParams.set('seed', seed);
+      }
+      // Adicionar filtro de interações se ativo
+      if (filterInteractions) {
+        url.searchParams.set('filterInteractions', 'true');
+      }
 
       const response = await fetch(url.toString());
       if (!response.ok) {
@@ -71,7 +81,11 @@ export function GlobalFeed() {
       return response.json();
     },
     getNextPageParam: (lastPage) => {
-      // Se não há mais posts, retornar 'loop' para entrar em loop
+      // Para interações, não usar loop - retornar null quando não houver mais posts
+      if (filterInteractions) {
+        return lastPage.nextCursor || undefined;
+      }
+      // Se não há mais posts, retornar 'loop' para entrar em loop (apenas feed global)
       if (!lastPage.nextCursor && lastPage.posts && lastPage.posts.length > 0) {
         return 'loop';
       }
@@ -129,8 +143,8 @@ export function GlobalFeed() {
         if (entries[0].isIntersecting && !isFetchingNextPage) {
           if (hasNextPage) {
             fetchNextPage();
-          } else {
-            // Loop infinito: quando não há mais posts, buscar novamente
+          } else if (!filterInteractions) {
+            // Loop infinito: quando não há mais posts, buscar novamente (apenas feed global)
             // Usar mesmo seed da sessão para manter consistência
             loopPageRef.current += 1;
             const url = new URL('/api/feed/global', window.location.origin);
@@ -149,7 +163,7 @@ export function GlobalFeed() {
               .then(res => res.json())
               .then(result => {
                 // Adicionar novos posts ao cache do React Query
-                queryClient.setQueryData(['global-feed'], (old: any) => {
+                queryClient.setQueryData(['global-feed', false], (old: any) => {
                   if (!old) return old;
                   const newPages = [...old.pages];
                   newPages.push({
@@ -174,7 +188,7 @@ export function GlobalFeed() {
     }
 
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, queryClient]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, queryClient, filterInteractions]);
 
   // Função para atualizar o feed
   const handleRefresh = useCallback(async () => {
@@ -315,7 +329,7 @@ export function GlobalFeed() {
   if (posts.length === 0 && !isFetching) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        <p>Nenhum post ainda.</p>
+        <p>{filterInteractions ? 'Você ainda não interagiu com nenhum post.' : 'Nenhum post ainda.'}</p>
         <Button
           onClick={handleRefresh}
           disabled={isRefreshing}
@@ -347,54 +361,54 @@ export function GlobalFeed() {
       className="relative h-full overflow-y-auto scrollbar-hide md:scrollbar-hide"
       style={{ scrollBehavior: 'smooth' }}
     >
-      {/* Pull-to-refresh indicator - só mostra durante o pull, desaparece ao soltar */}
-      {shouldShowPullIndicator && (
-        <div
-          className="flex items-center justify-center transition-all duration-200 absolute top-0 left-0 right-0 z-10 pointer-events-none"
-          style={{
-            opacity: pullProgress,
-            transform: `translateY(${Math.max(-20, pullDistance - 20)}px)`,
-            height: `${Math.max(0, pullDistance)}px`,
-          }}
-        >
-          {pullDistance > 50 ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              <span className="ml-2 text-sm text-muted-foreground">
-                Solte para atualizar
-              </span>
-            </>
-          ) : (
-            <RefreshCw
-              className="h-5 w-5 text-muted-foreground"
-              style={{
-                transform: `rotate(${pullProgress * 180}deg)`,
-                transition: 'transform 0.2s',
-              }}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Container de posts - ordem correta do backend (mais antigos no topo, mais recentes embaixo) */}
-      <div className="space-y-4 pb-4">
-        {posts.map((post: any) => (
-          <div key={post.id} data-post-id={post.id}>
-            <FeedPost post={post} isOwner={user?.id === post.userId} truncateContent={true} />
+        {/* Pull-to-refresh indicator - só mostra durante o pull, desaparece ao soltar */}
+        {shouldShowPullIndicator && (
+          <div
+            className="flex items-center justify-center transition-all duration-200 absolute top-0 left-0 right-0 z-10 pointer-events-none"
+            style={{
+              opacity: pullProgress,
+              transform: `translateY(${Math.max(-20, pullDistance - 20)}px)`,
+              height: `${Math.max(0, pullDistance)}px`,
+            }}
+          >
+            {pullDistance > 50 ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <span className="ml-2 text-sm text-muted-foreground">
+                  Solte para atualizar
+                </span>
+              </>
+            ) : (
+              <RefreshCw
+                className="h-5 w-5 text-muted-foreground"
+                style={{
+                  transform: `rotate(${pullProgress * 180}deg)`,
+                  transition: 'transform 0.2s',
+                }}
+              />
+            )}
           </div>
-        ))}
-      </div>
+        )}
 
-      {/* Trigger para carregar mais posts quando scrolla para o final */}
-      <div ref={loadMoreRef} className="h-10" />
-      
-      {/* Loading quando carregando mais posts */}
-      {isFetchingNextPage && (
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        {/* Container de posts - ordem correta do backend (mais antigos no topo, mais recentes embaixo) */}
+        <div className="space-y-4 pb-4">
+          {posts.map((post: any) => (
+            <div key={post.id} data-post-id={post.id}>
+              <FeedPost post={post} isOwner={user?.id === post.userId} truncateContent={true} />
+            </div>
+          ))}
         </div>
-      )}
-    </div>
+
+        {/* Trigger para carregar mais posts quando scrolla para o final */}
+        <div ref={loadMoreRef} className="h-10" />
+        
+        {/* Loading quando carregando mais posts */}
+        {isFetchingNextPage && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
+      </div>
   );
 }
 
