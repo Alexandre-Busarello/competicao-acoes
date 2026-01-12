@@ -133,22 +133,28 @@ export async function GET(request: NextRequest) {
         take: 50,
       }),
 
-      // Total de assinaturas
-      prisma.subscription.count(),
+      // Total de assinaturas (excluindo emails de teste)
+      prisma.subscription.count({
+        where: {
+          user: excludeTestEmailsFilter,
+        },
+      }),
 
-      // Assinaturas ativas
+      // Assinaturas ativas (excluindo emails de teste)
       prisma.subscription.count({
         where: {
           status: 'active',
           currentPeriodEnd: {
             gt: new Date(),
           },
+          user: excludeTestEmailsFilter,
         },
       }),
 
-      // Assinaturas expiradas
+      // Assinaturas expiradas (excluindo emails de teste)
       prisma.subscription.count({
         where: {
+          user: excludeTestEmailsFilter,
           OR: [
             { status: { not: 'active' } },
             {

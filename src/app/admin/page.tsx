@@ -191,7 +191,7 @@ export default function AdminPage() {
               {stats.subscriptions.active.toLocaleString('pt-BR')}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              De {stats.subscriptions.total} total
+              De {stats.subscriptions.total} total (excluindo testes)
             </p>
           </CardContent>
         </Card>
@@ -205,7 +205,7 @@ export default function AdminPage() {
               {stats.subscriptions.expired.toLocaleString('pt-BR')}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Canceladas ou expiradas
+              Canceladas ou expiradas (excluindo testes)
             </p>
           </CardContent>
         </Card>
