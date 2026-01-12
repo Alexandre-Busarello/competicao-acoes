@@ -62,7 +62,7 @@ export class RankingService {
     const startTime = Date.now();
     const deadline = startTime + timeoutMs;
 
-    // 1. Carrega transações e usuários do banco (uma vez para ambos)
+    // 1. Carrega transações do ano atual primeiro
     const now = new Date();
     const yearStart = startOfYear(now);
     const yearEnd = endOfYear(now);
@@ -79,12 +79,17 @@ export class RankingService {
       },
     });
 
-    // Filtrar apenas usuários com assinatura ativa
+    // 2. Extrair IDs únicos de usuários que têm transações
+    const userIdsWithTransactions = new Set(
+      transactions.map(tx => tx.userId)
+    );
+
+    // 3. Buscar todos os usuários que têm transações (qualquer usuário pode participar do ranking)
+    // Isso garante que novos usuários com transações sejam incluídos
     const users = await prisma.user.findMany({
       where: {
-        isPremium: true,
-        subscription: {
-          status: 'active',
+        id: {
+          in: Array.from(userIdsWithTransactions),
         },
       },
       include: {
@@ -141,7 +146,7 @@ export class RankingService {
       }
     }
 
-    // 6. Inicializar rankings (carregar do checkpoint se existir)
+    // 8. Inicializar rankings (carregar do checkpoint se existir)
     const monthlyRankings: RankingEntryForStorage[] = checkpoint.monthlyRankings || [];
     const annualRankings: RankingEntryForStorage[] = checkpoint.annualRankings || [];
     const processedUserIds = new Set(checkpoint.processedUserIds || []);
@@ -149,7 +154,7 @@ export class RankingService {
     // Filtrar usuários não processados
     const usersToProcess = users.filter(user => !processedUserIds.has(user.id));
 
-    // 7. Processar usuários restantes com timeout
+    // 9. Processar usuários restantes com timeout
     const processUserTask = async (user: typeof users[0]) => {
       // Verificar timeout antes de processar
       if (Date.now() >= deadline) {
@@ -521,12 +526,16 @@ export class RankingService {
       },
     });
 
-    // Filtrar apenas usuários com assinatura ativa
+    // Extrair IDs únicos de usuários que têm transações
+    const userIdsWithTransactions = new Set(
+      transactions.map(tx => tx.userId)
+    );
+
+    // Buscar todos os usuários que têm transações (qualquer usuário pode participar do ranking)
     const users = await prisma.user.findMany({
       where: {
-        isPremium: true,
-        subscription: {
-          status: 'active',
+        id: {
+          in: Array.from(userIdsWithTransactions),
         },
       },
       include: {
@@ -899,12 +908,17 @@ export class RankingService {
       },
     });
 
-    // Filtrar apenas usuários com assinatura ativa
+    // 3. Extrair IDs únicos de usuários que têm transações
+    const userIdsWithTransactions = new Set(
+      transactions.map(tx => tx.userId)
+    );
+
+    // 4. Buscar todos os usuários que têm transações (qualquer usuário pode participar do ranking)
+    // Isso garante que novos usuários com transações sejam incluídos
     const users = await prisma.user.findMany({
       where: {
-        isPremium: true,
-        subscription: {
-          status: 'active',
+        id: {
+          in: Array.from(userIdsWithTransactions),
         },
       },
       include: {
@@ -1303,7 +1317,7 @@ export class RankingService {
       type: tx.type as 'compra' | 'venda',
       quantity: tx.quantity.toNumber(),
       price: tx.price.toNumber(),
-      currency: tx.currency,
+      currency: (tx as any).currency || undefined,
       date: tx.date,
       createdAt: tx.createdAt,
     }));
