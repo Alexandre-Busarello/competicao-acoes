@@ -284,3 +284,4 @@ Inclui:
 Implementação completa do backend para página pública de perfil com feed e medalhas, seguindo boas práticas de redes sociais e preparada para escalar. A estrutura permite migração transparente para tecnologias mais robustas (Redis, RabbitMQ) sem mudanças significativas no código dos serviços.
 
 
+

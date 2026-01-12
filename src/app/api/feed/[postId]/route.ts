@@ -5,6 +5,46 @@ import { feedService } from '@/lib/services/feed-service';
 export const dynamic = 'force-dynamic';
 
 /**
+ * GET /api/feed/[postId]
+ * Buscar post por ID
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { postId: string } }
+) {
+  try {
+    const postId = params.postId;
+    const session = await requireAuth();
+    const userId = session.user.id;
+
+    const post = await feedService.getPostById(postId, userId);
+
+    if (!post) {
+      return NextResponse.json(
+        { error: 'Post not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(post);
+  } catch (error) {
+    console.error('Error fetching post:', error);
+    
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * PUT /api/feed/[postId]
  * Editar post (apenas dono)
  */
@@ -135,5 +175,6 @@ export async function PATCH(
     );
   }
 }
+
 
 

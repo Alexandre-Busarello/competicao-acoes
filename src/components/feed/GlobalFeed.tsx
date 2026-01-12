@@ -314,7 +314,7 @@ export function GlobalFeed() {
       <div className="space-y-4">
         {posts.map((post: any) => (
           <div key={post.id} data-post-id={post.id}>
-            <FeedPost post={post} isOwner={user?.id === post.userId} />
+            <FeedPost post={post} isOwner={user?.id === post.userId} truncateContent={true} />
           </div>
         ))}
         <div ref={loadMoreRef} className="h-10" />

@@ -96,6 +96,123 @@ export class FeedService {
     await cacheService.clear(`feed:${transaction.userId}:*`);
   }
 
+  /**
+   * Cria post customizado (não vinculado a transação)
+   * Gera slug único baseado no conteúdo e data
+   */
+  async createCustomPost(userId: string, content: string): Promise<FeedPost> {
+    // Gera slug único baseado no conteúdo
+    const date = new Date();
+    const contentPreview = content.substring(0, 50).trim();
+    const baseSlug = contentPreview
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .substring(0, 50) || 'post';
+    
+    const dateStr = date.toISOString().split('T')[0];
+    let slug = `${baseSlug}-${dateStr}`;
+    
+    // Garante que slug é único
+    let attempt = 0;
+    while (await prisma.feedPost.findUnique({ where: { slug } })) {
+      attempt++;
+      slug = `${baseSlug}-${dateStr}-${attempt}`;
+      if (attempt > 1000) {
+        // Fallback: usar timestamp
+        slug = `post-${Date.now()}`;
+        break;
+      }
+    }
+
+    // Cria post
+    const post = await prisma.feedPost.create({
+      data: {
+        userId,
+        slug,
+        content,
+        type: 'custom',
+        isPublic: true,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    // Enfileira ação para atualizar timeline de seguidores
+    await queueService.enqueue('timeline_update', {
+      postId: post.id,
+      userId,
+    }, 5); // Prioridade média
+
+    // Invalida cache do feed do usuário
+    await cacheService.clear(`feed:${userId}:*`);
+
+    return this.mapToFeedPost(post);
+  }
+
+  /**
+   * Obtém post por ID
+   */
+  async getPostById(postId: string, currentUserId?: string): Promise<FeedPost | null> {
+    const post = await prisma.feedPost.findUnique({
+      where: { id: postId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        transaction: {
+          select: {
+            ticker: true,
+            type: true,
+            quantity: true,
+            price: true,
+            date: true,
+          },
+        },
+      },
+    });
+
+    if (!post || post.deletedAt) {
+      return null;
+    }
+
+    // Verifica se é público ou se usuário é dono
+    if (!post.isPublic && post.userId !== currentUserId) {
+      return null;
+    }
+
+    // Verifica se usuário curtiu
+    let likedByCurrentUser = false;
+    if (currentUserId) {
+      const like = await prisma.feedLike.findUnique({
+        where: {
+          postId_userId: {
+            postId: post.id,
+            userId: currentUserId,
+          },
+        },
+      });
+      likedByCurrentUser = !!like;
+    }
+
+    return {
+      ...this.mapToFeedPost(post),
+      likedByCurrentUser,
+    };
+  }
 
   /**
    * Obtém post pelo slug

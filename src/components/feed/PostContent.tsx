@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ShareButton } from '@/components/shared/ShareButton';
-import { Heart, MessageCircle, Loader2 } from 'lucide-react';
+import { Heart, MessageCircle, Loader2, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/navigation/PageHeader';
 import { useUserStore } from '@/lib/store/userStore';
 import { formatDistanceToNow } from 'date-fns';
@@ -15,6 +15,26 @@ import Link from 'next/link';
 import { getShareUrl } from '@/lib/utils/share';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { PostComments } from './PostComments';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
+import { useRouter } from 'next/navigation';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface PostContentProps {
   slug: string;
@@ -23,6 +43,7 @@ interface PostContentProps {
 export function PostContent({ slug }: PostContentProps) {
   const { user } = useUserStore();
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const { data: post, isLoading } = useQuery({
     queryKey: ['post', slug],
@@ -41,6 +62,7 @@ export function PostContent({ slug }: PostContentProps) {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Função helper para atualizar post em todas as queries relacionadas
   const updatePostInAllQueries = (updater: (post: any) => any) => {
@@ -174,6 +196,74 @@ export function PostContent({ slug }: PostContentProps) {
     }
   }, [post]);
 
+  const handleEdit = () => {
+    if (!post) return;
+    router.push(`/feed/${post.id}/edit`);
+  };
+
+  const deletePostMutation = useMutation({
+    mutationFn: async () => {
+      if (!post) throw new Error('Post not loaded');
+      const response = await fetch(`/api/feed/${post.id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete post');
+      return response.json();
+    },
+    // UI Otimista: remove imediatamente
+    onMutate: async () => {
+      if (!post) return;
+
+      // Remover de todos os caches
+      queryClient.setQueriesData(
+        { queryKey: ['user-feed'] },
+        (old: any) => {
+          if (!old || !old.pages) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page: any) => ({
+              ...page,
+              posts: page.posts.filter((p: any) => p.id !== post.id),
+            })),
+          };
+        }
+      );
+
+      queryClient.setQueriesData(
+        { queryKey: ['global-feed'] },
+        (old: any) => {
+          if (!old || !old.pages) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page: any) => ({
+              ...page,
+              posts: page.posts.filter((p: any) => p.id !== post.id),
+            })),
+          };
+        }
+      );
+
+      // Remover do cache do post individual
+      queryClient.setQueryData(['post', slug], null);
+    },
+    // Em caso de erro, reverter (não fazemos rollback porque é difícil)
+    onError: (err) => {
+      console.error('Error deleting post:', err);
+    },
+    // Após sucesso, redirecionar para o feed
+    onSuccess: () => {
+      router.push('/feed');
+    },
+    // Sincronizar em background
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['user-feed'] });
+        queryClient.invalidateQueries({ queryKey: ['global-feed'] });
+        queryClient.invalidateQueries({ queryKey: ['post', slug] });
+      }, 500);
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen">
@@ -245,19 +335,83 @@ export function PostContent({ slug }: PostContentProps) {
                   </p>
                 </div>
               </div>
-              <ShareButton
-                url={shareUrl}
-                title={post.content}
-                description={`Post de ${post.user.name}`}
-                variant="icon"
-                size="default"
-              />
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <ShareButton
+                  url={shareUrl}
+                  title={post.content}
+                  description={`Post de ${post.user.name}`}
+                  variant="icon"
+                  size="default"
+                />
+                {isOwner && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="flex-shrink-0"
+                        aria-label="Mais opções"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={handleEdit}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setIsDeleteDialogOpen(true)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <p className="mb-4 whitespace-pre-wrap break-words text-lg">
-              {post.content}
-            </p>
+            <div className="mb-4 break-words text-lg">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkBreaks]}
+                components={{
+                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                  em: ({ children }) => <em className="italic">{children}</em>,
+                  code: ({ children }) => (
+                    <code className="px-1.5 py-0.5 bg-muted rounded text-sm font-mono">
+                      {children}
+                    </code>
+                  ),
+                  a: ({ href, children }) => (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      {children}
+                    </a>
+                  ),
+                  ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                  li: ({ children }) => <li className="ml-2">{children}</li>,
+                  h1: ({ children }) => <h1 className="text-xl font-bold mb-2 mt-4 first:mt-0">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-lg font-bold mb-2 mt-4 first:mt-0">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-base font-bold mb-2 mt-4 first:mt-0">{children}</h3>,
+                  blockquote: ({ children }) => (
+                    <blockquote className="border-l-4 border-muted-foreground/30 pl-4 italic my-2">
+                      {children}
+                    </blockquote>
+                  ),
+                }}
+              >
+                {post.content}
+              </ReactMarkdown>
+            </div>
 
             {post.transaction && (
               <div className="mb-6 p-4 bg-muted/50 rounded-md">
@@ -309,6 +463,42 @@ export function PostContent({ slug }: PostContentProps) {
             />
           </CardContent>
         </Card>
+
+        {/* Dialog de Excluir Post */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Post</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir este post? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={async () => {
+                  try {
+                    await deletePostMutation.mutateAsync();
+                    setIsDeleteDialogOpen(false);
+                  } catch (error) {
+                    // Erro já tratado na mutation
+                  }
+                }}
+                disabled={deletePostMutation.isPending}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deletePostMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  'Excluir'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

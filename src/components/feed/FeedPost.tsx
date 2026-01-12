@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ShareButton } from '@/components/shared/ShareButton';
 import { Heart, MessageCircle, Eye, EyeOff, MoreVertical, Edit, Trash2, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUserStore } from '@/lib/store/userStore';
 import { formatDistanceToNow } from 'date-fns';
@@ -13,6 +14,8 @@ import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
 import { getShareUrl } from '@/lib/utils/share';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import { PostComments } from './PostComments';
 import {
   Dialog,
@@ -55,19 +58,19 @@ interface FeedPostProps {
     likedByCurrentUser?: boolean;
   };
   isOwner?: boolean;
+  truncateContent?: boolean; // Se true, trunca conteúdo para 255 caracteres no feed global
 }
 
-export function FeedPost({ post, isOwner = false }: FeedPostProps) {
+export function FeedPost({ post, isOwner = false, truncateContent = false }: FeedPostProps) {
   const { user } = useUserStore();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [isTogglingVisibility, setIsTogglingVisibility] = useState(false);
   const [liked, setLiked] = useState(post.likedByCurrentUser || false);
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [commentCount, setCommentCount] = useState(post.commentCount);
   const [showComments, setShowComments] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [editContent, setEditContent] = useState(post.content);
 
   // Função helper para atualizar post em todas as queries relacionadas
   const updatePostInAllQueries = (updater: (post: any) => any) => {
@@ -255,44 +258,9 @@ export function FeedPost({ post, isOwner = false }: FeedPostProps) {
     }
   };
 
-  const updatePostMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const response = await fetch(`/api/feed/${post.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content }),
-      });
-      if (!response.ok) throw new Error('Failed to update post');
-      return response.json();
-    },
-    // UI Otimista: atualiza imediatamente
-    onMutate: async (newContent: string) => {
-      // Atualizar em todos os caches
-      updatePostInAllQueries((p) => ({
-        ...p,
-        content: newContent,
-      }));
-    },
-    // Em caso de erro, reverter
-    onError: (err, variables, context) => {
-      console.error('Error updating post:', err);
-      // Reverter para conteúdo original
-      updatePostInAllQueries((p) => ({
-        ...p,
-        content: post.content,
-      }));
-    },
-    // Sincronizar em background
-    onSettled: () => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['user-feed'] });
-        queryClient.invalidateQueries({ queryKey: ['global-feed'] });
-        queryClient.invalidateQueries({ queryKey: ['post', post.slug] });
-      }, 500);
-    },
-  });
+  const handleEdit = () => {
+    router.push(`/feed/${post.id}/edit`);
+  };
 
   const deletePostMutation = useMutation({
     mutationFn: async () => {
@@ -351,6 +319,26 @@ export function FeedPost({ post, isOwner = false }: FeedPostProps) {
   const profileUrl = `/perfil/${post.user.id}`;
   const postUrl = `/post/${post.slug}`;
 
+  // Truncar conteúdo para 255 caracteres no feed global
+  const MAX_CONTENT_LENGTH = 255;
+  const shouldTruncate = truncateContent && post.content.length > MAX_CONTENT_LENGTH;
+  
+  const truncateText = (text: string, maxLength: number): string => {
+    if (text.length <= maxLength) return text;
+    // Truncar e procurar o último espaço antes do limite para não cortar palavras
+    const truncated = text.slice(0, maxLength);
+    const lastSpace = truncated.lastIndexOf(' ');
+    // Se encontrou um espaço próximo ao limite (dentro de 20 caracteres), usar ele
+    if (lastSpace > maxLength - 20) {
+      return truncated.slice(0, lastSpace) + '...';
+    }
+    return truncated + '...';
+  };
+  
+  const displayContent = shouldTruncate 
+    ? truncateText(post.content, MAX_CONTENT_LENGTH)
+    : post.content;
+
   const initials = post.user.name
     .split(' ')
     .map((n) => n[0])
@@ -388,27 +376,100 @@ export function FeedPost({ post, isOwner = false }: FeedPostProps) {
             </div>
           </div>
           {isOwner && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleToggleVisibility}
-              disabled={isTogglingVisibility}
-              className="flex-shrink-0"
-              aria-label={isPublic ? 'Ocultar post' : 'Mostrar post'}
-            >
-              {isPublic ? (
-                <Eye className="h-4 w-4" />
-              ) : (
-                <EyeOff className="h-4 w-4" />
-              )}
-            </Button>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleToggleVisibility}
+                disabled={isTogglingVisibility}
+                className="flex-shrink-0"
+                aria-label={isPublic ? 'Ocultar post' : 'Mostrar post'}
+              >
+                {isPublic ? (
+                  <Eye className="h-4 w-4" />
+                ) : (
+                  <EyeOff className="h-4 w-4" />
+                )}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="flex-shrink-0"
+                    aria-label="Mais opções"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleEdit}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           )}
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <Link href={postUrl} className="block">
+        {shouldTruncate ? (
+          <Link href={postUrl} className="block">
+            <div className="mb-4 break-words">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkBreaks]}
+                components={{
+                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                  em: ({ children }) => <em className="italic">{children}</em>,
+                  code: ({ children }) => (
+                    <code className="px-1.5 py-0.5 bg-muted rounded text-sm font-mono">
+                      {children}
+                    </code>
+                  ),
+                  a: ({ href, children }) => (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {children}
+                    </a>
+                  ),
+                  ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                  li: ({ children }) => <li className="ml-2">{children}</li>,
+                  h1: ({ children }) => <h1 className="text-xl font-bold mb-2 mt-4 first:mt-0">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-lg font-bold mb-2 mt-4 first:mt-0">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-base font-bold mb-2 mt-4 first:mt-0">{children}</h3>,
+                  blockquote: ({ children }) => (
+                    <blockquote className="border-l-4 border-muted-foreground/30 pl-4 italic my-2">
+                      {children}
+                    </blockquote>
+                  ),
+                }}
+              >
+                {displayContent}
+              </ReactMarkdown>
+              <span className="text-primary font-semibold mt-2 inline-block">
+                Ver mais
+              </span>
+            </div>
+          </Link>
+        ) : (
           <div className="mb-4 break-words">
             <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkBreaks]}
               components={{
                 p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                 strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
@@ -442,10 +503,10 @@ export function FeedPost({ post, isOwner = false }: FeedPostProps) {
                 ),
               }}
             >
-              {post.content}
+              {displayContent}
             </ReactMarkdown>
           </div>
-        </Link>
+        )}
 
         {post.transaction && (
           <div className="mb-4 p-3 bg-muted/50 rounded-md">
@@ -510,55 +571,6 @@ export function FeedPost({ post, isOwner = false }: FeedPostProps) {
           />
         )}
       </CardContent>
-
-      {/* Dialog de Editar Post */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Post</DialogTitle>
-            <DialogDescription>
-              Edite o conteúdo do seu post.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
-            className="min-h-[120px]"
-            placeholder="Digite seu post..."
-          />
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsEditDialogOpen(false);
-                setEditContent(post.content);
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={async () => {
-                try {
-                  await updatePostMutation.mutateAsync(editContent.trim());
-                  setIsEditDialogOpen(false);
-                } catch (error) {
-                  // Erro já tratado na mutation
-                }
-              }}
-              disabled={!editContent.trim() || updatePostMutation.isPending}
-            >
-              {updatePostMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                'Salvar'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Dialog de Excluir Post */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

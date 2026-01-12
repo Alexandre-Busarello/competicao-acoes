@@ -70,3 +70,4 @@ O `UserHeader` foi atualizado para usar os logos com texto:
 Os logos são exibidos dinamicamente baseados no tema selecionado pelo usuário.
 
 
+

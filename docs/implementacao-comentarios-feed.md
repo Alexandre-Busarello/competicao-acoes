@@ -250,3 +250,4 @@ Quando um comentário é adicionado, os seguintes caches são invalidados:
    - Verificar se não há queries desnecessárias
 
 
+

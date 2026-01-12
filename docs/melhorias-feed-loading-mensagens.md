@@ -141,3 +141,4 @@ if (posts.length === 0 && !isFetching) {
 - Sistema de emojis variados baseado no ticker ou tipo de ativo
 
 
+
