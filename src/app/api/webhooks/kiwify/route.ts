@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma/client';
 import { createServerClient } from '@/lib/supabase/server';
 import { generateAvatarUrlWithFallback } from '@/lib/utils/avatar';
 import { generateInvestorName } from '@/lib/utils/generate-investor-name';
+import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,52 +46,56 @@ async function removePremiumFromUser(email: string) {
 }
 
 /**
+ * Valida a assinatura do webhook do Kiwify usando HMAC SHA1
+ * 
+ * A validação segue a fórmula: signature = hmac_sha1(JSON.stringify(request.body), secretKey)
+ * O signature vem na querystring e o secretKey é o token do webhook configurado no painel
+ */
+function validateKiwifySignature(bodyText: string, signature: string | null, secretKey: string): boolean {
+  if (!signature || !secretKey) {
+    return false;
+  }
+
+  const calculatedSignature = crypto
+    .createHmac('sha1', secretKey)
+    .update(bodyText)
+    .digest('hex');
+
+  return calculatedSignature === signature;
+}
+
+/**
  * Webhook do Kiwify para processar compras confirmadas
  * 
  * Formato do webhook do Kiwify:
- * - O evento vem em webhook_event_type (ex: "order_approved", "order_refunded", "subscription_cancelled")
+ * - O evento vem em webhook_event_type
  * - Os dados do cliente estão em Customer (Customer.email, Customer.full_name)
  * - Os dados da subscription estão em Subscription (Subscription.id, Subscription.next_payment)
  * - O order_id está em order_id
- * - O token de validação vem em body.token (se configurado)
+ * - A validação usa signature na querystring com HMAC SHA1
  * 
- * Eventos mapeados:
- * - order_approved → order.paid (ativa premium)
- * - order_refunded → order.refunded (remove premium)
- * - subscription_cancelled → subscription.cancelled (remove premium)
+ * Eventos suportados:
+ * - order_approved: Compra aprovada (ativa premium)
+ * - order_refunded: Reembolso (remove premium)
+ * - chargeback: Chargeback (remove premium)
+ * - subscription_canceled: Assinatura cancelada (remove premium)
+ * - subscription_renewed: Assinatura renovada (renova premium)
+ * - subscription_late: Assinatura atrasada (pode manter ou remover premium)
+ * - billet_created: Boleto gerado (aguardar pagamento)
+ * - pix_created: Pix gerado (aguardar pagamento)
+ * - order_rejected: Compra recusada (não ativa premium)
  * 
  * IMPORTANTE: 
  * - O email é sempre a chave entre Kiwify e a aplicação
- * - Configure KIWIFY_WEBHOOK_TOKEN nas variáveis de ambiente para validar webhooks
+ * - Configure KIWIFY_WEBHOOK_TOKEN nas variáveis de ambiente com o token do painel
  */
 export async function POST(request: NextRequest) {
   try {
     // Em desenvolvimento, permitir bypass se ALLOW_TEST_WEBHOOK estiver configurado
     const isTestMode = process.env.NODE_ENV === 'development' && process.env.ALLOW_TEST_WEBHOOK === 'true';
     
-    // Verificar autenticação do webhook (se configurado e não estiver em modo de teste)
-    // if (!isTestMode) {
-    //   const webhookSecret = process.env.KIWIFY_WEBHOOK_SECRET;
-    //   const authHeader = request.headers.get('authorization');
-      
-    //   if (webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
-    //     return NextResponse.json(
-    //       { error: 'Unauthorized' },
-    //       { status: 401 }
-    //     );
-    //   }
-    // }
-
-    // Log headers antes de consumir o body
-    const headers: Record<string, string> = {};
-    request.headers.forEach((value, key) => {
-      headers[key] = value;
-    });
-    console.log('Kiwify webhook headers:', JSON.stringify(headers, null, 2));
-
-    // Ler o body como texto primeiro para debug
+    // Ler o body como texto primeiro (precisamos do texto bruto para validação)
     const bodyText = await request.text();
-    console.log('Kiwify webhook raw body:', bodyText);
 
     // Parsear o JSON
     let body: any;
@@ -105,61 +110,79 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Kiwify webhook parsed body:', JSON.stringify(body, null, 2));
+    console.log('Kiwify webhook received:', {
+      webhook_event_type: body.webhook_event_type,
+      order_status: body.order_status,
+      order_id: body.order_id,
+      customer_email: body.Customer?.email,
+    });
 
-    // Validar token do webhook (se configurado)
-    // O token do webhook do Kiwify vem no campo "token" do body
-    // Configure KIWIFY_WEBHOOK_TOKEN nas variáveis de ambiente com o token fornecido no painel
-    // Exemplo: KIWIFY_WEBHOOK_TOKEN=h0c8vrgzo71
-    const webhookToken = process.env.KIWIFY_WEBHOOK_TOKEN;
-    if (webhookToken && body.token !== webhookToken) {
-      console.error('Invalid webhook token. Expected:', webhookToken, 'Received:', body.token);
-      return NextResponse.json(
-        { error: 'Token inválido' },
-        { status: 401 }
-      );
+    // Validar assinatura do webhook usando HMAC SHA1
+    // O signature vem na querystring: ?signature=xxx
+    // A fórmula é: signature = hmac_sha1(JSON.stringify(request.body), secretKey)
+    if (!isTestMode) {
+      const webhookToken = process.env.KIWIFY_WEBHOOK_TOKEN;
+      const { searchParams } = new URL(request.url);
+      const signature = searchParams.get('signature');
+
+      if (webhookToken) {
+        if (!signature) {
+          console.error('Missing signature in querystring');
+          return NextResponse.json(
+            { error: 'Assinatura não encontrada' },
+            { status: 401 }
+          );
+        }
+
+        const isValid = validateKiwifySignature(bodyText, signature, webhookToken);
+        if (!isValid) {
+          console.error('Invalid webhook signature. Expected signature from HMAC SHA1 of body with token');
+          return NextResponse.json(
+            { error: 'Assinatura inválida' },
+            { status: 401 }
+          );
+        }
+
+        console.log('Webhook signature validated successfully');
+      } else {
+        console.warn('KIWIFY_WEBHOOK_TOKEN not configured. Skipping signature validation.');
+      }
     }
 
     // O Kiwify envia o evento em webhook_event_type
-    // Formatos possíveis: "order_approved", "order_refunded", "subscription_cancelled", etc.
     const webhookEventType = body.webhook_event_type;
     
-    // Mapear eventos do Kiwify para eventos internos
-    // order_approved = pedido aprovado/pago
-    // order_refunded = pedido reembolsado
-    // subscription_cancelled = assinatura cancelada
-    let event: string | null = null;
-    
-    if (webhookEventType === 'order_approved') {
-      event = 'order.paid';
-    } else if (webhookEventType === 'order_refunded') {
-      event = 'order.refunded';
-    } else if (webhookEventType === 'subscription_cancelled') {
-      event = 'subscription.cancelled';
-    } else if (webhookEventType) {
-      // Manter o evento original se não houver mapeamento específico
-      event = webhookEventType;
+    // Validar que temos um evento (exceto para carrinho abandonado que não tem webhook_event_type)
+    if (!webhookEventType) {
+      // Carrinho abandonado não tem webhook_event_type, podemos ignorar ou logar
+      console.log('Webhook sem webhook_event_type recebido (possivelmente carrinho abandonado)');
+      return NextResponse.json({
+        success: true,
+        message: 'Evento não processado (carrinho abandonado ou evento desconhecido)',
+      });
     }
 
-    console.log('Kiwify webhook extracted:', { 
+    console.log('Kiwify webhook event:', { 
       webhookEventType, 
-      mappedEvent: event,
       orderStatus: body.order_status,
       hasCustomer: !!body.Customer,
       hasSubscription: !!body.Subscription
     });
 
-    // Validar que temos um evento
-    if (!event) {
-      console.error('No event found in webhook body. Body structure:', JSON.stringify(body, null, 2));
-      return NextResponse.json(
-        { error: 'Evento não encontrado no webhook', receivedBody: body },
-        { status: 400 }
-      );
-    }
+    // Processar eventos de acordo com o tipo
+    // order_approved: Compra aprovada - ativar premium
+    // IMPORTANTE: Só ativar premium se order_status === 'paid'
+    if (webhookEventType === 'order_approved') {
+      // Validar que o pedido está realmente pago
+      if (body.order_status !== 'paid') {
+        console.log('Order approved but status is not paid:', body.order_status);
+        return NextResponse.json({
+          success: true,
+          message: 'Pedido aprovado mas ainda não pago',
+          order_status: body.order_status,
+        });
+      }
 
-    // Processar apenas eventos de compra confirmada
-    if (event === 'order.paid' || event === 'order.completed') {
       // Formato do Kiwify: dados estão diretamente no body
       // Customer está em body.Customer
       // Subscription está em body.Subscription
@@ -417,10 +440,9 @@ export async function POST(request: NextRequest) {
 
     // Processar eventos que removem premium: reembolso, chargeback e cancelamento
     if (
-      event === 'order.refunded' ||
-      event === 'order.chargeback' ||
-      event === 'chargeback.created' ||
-      event === 'subscription.cancelled'
+      webhookEventType === 'order_refunded' ||
+      webhookEventType === 'chargeback' ||
+      webhookEventType === 'subscription_canceled'
     ) {
       // Formato do Kiwify: Customer está em body.Customer
       const customer = body.Customer;
@@ -441,16 +463,132 @@ export async function POST(request: NextRequest) {
         message: removed
           ? 'Premium removido do usuário'
           : 'Usuário não encontrado',
-        event,
+        webhook_event_type: webhookEventType,
+      });
+    }
+
+    // subscription_renewed: Assinatura renovada - renovar premium
+    if (webhookEventType === 'subscription_renewed') {
+      const customer = body.Customer;
+      const kiwifySubscription = body.Subscription;
+      
+      if (!customer?.email) {
+        console.error('No Customer email found in subscription_renewed webhook');
+        return NextResponse.json(
+          { error: 'Email não encontrado nos dados do evento' },
+          { status: 400 }
+        );
+      }
+
+      const emailLower = customer.email.toLowerCase().trim();
+      const user = await prisma.user.findUnique({
+        where: { email: emailLower },
+        include: { subscription: true },
+      });
+
+      if (user && user.subscription) {
+        // Calcular nova data de expiração baseada no next_payment do Kiwify
+        let expirationDate: Date;
+        if (kiwifySubscription?.next_payment) {
+          expirationDate = new Date(kiwifySubscription.next_payment);
+        } else {
+          // Fallback: adicionar período baseado na frequência
+          const now = new Date();
+          expirationDate = new Date(now);
+          const frequency = kiwifySubscription?.plan?.frequency || 'monthly';
+          if (frequency === 'weekly') {
+            expirationDate.setDate(expirationDate.getDate() + 7);
+          } else if (frequency === 'monthly') {
+            expirationDate.setMonth(expirationDate.getMonth() + 1);
+          } else if (frequency === 'yearly') {
+            expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+          } else {
+            expirationDate.setMonth(expirationDate.getMonth() + 1);
+          }
+        }
+
+        await prisma.subscription.update({
+          where: { id: user.subscription.id },
+          data: {
+            status: 'active',
+            currentPeriodEnd: expirationDate,
+            updatedAt: new Date(),
+          },
+        });
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            isPremium: true,
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: 'Assinatura renovada e premium atualizado',
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Usuário não encontrado para renovação',
+      });
+    }
+
+    // subscription_late: Assinatura atrasada - pode manter ou remover premium dependendo da política
+    if (webhookEventType === 'subscription_late') {
+      const customer = body.Customer;
+      
+      if (!customer?.email) {
+        console.error('No Customer email found in subscription_late webhook');
+        return NextResponse.json(
+          { error: 'Email não encontrado nos dados do evento' },
+          { status: 400 }
+        );
+      }
+
+      // Por enquanto, apenas logamos. Pode implementar lógica específica depois
+      console.log('Subscription late for customer:', customer.email);
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Assinatura atrasada registrada',
+      });
+    }
+
+    // billet_created: Boleto gerado - aguardar pagamento (não fazer nada ainda)
+    if (webhookEventType === 'billet_created') {
+      console.log('Boleto created for order:', body.order_id);
+      return NextResponse.json({
+        success: true,
+        message: 'Boleto gerado - aguardando pagamento',
+      });
+    }
+
+    // pix_created: Pix gerado - aguardar pagamento (não fazer nada ainda)
+    if (webhookEventType === 'pix_created') {
+      console.log('Pix created for order:', body.order_id);
+      return NextResponse.json({
+        success: true,
+        message: 'Pix gerado - aguardando pagamento',
+      });
+    }
+
+    // order_rejected: Compra recusada - não ativar premium
+    if (webhookEventType === 'order_rejected') {
+      console.log('Order rejected:', body.order_id, 'Reason:', body.card_rejection_reason);
+      return NextResponse.json({
+        success: true,
+        message: 'Compra recusada registrada',
       });
     }
 
     // Evento não reconhecido ou não tratado
-    console.log('Kiwify webhook event not handled:', event);
+    console.log('Kiwify webhook event not handled:', webhookEventType);
     return NextResponse.json({
       success: true,
       message: 'Evento recebido mas não processado',
-      event,
+      webhook_event_type: webhookEventType,
     });
   } catch (error) {
     console.error('Error processing Kiwify webhook:', error);
