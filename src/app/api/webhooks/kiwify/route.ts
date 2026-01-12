@@ -406,35 +406,52 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Obter URL de redirecionamento
-      // Prioridade: APP_URL (server-side) > NEXT_PUBLIC_APP_URL (client-side) > localhost
-      const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const redirectUrl = `${appUrl}/auth/callback`;
+      // Validar email antes de enviar magic link
+      // Emails de teste são rejeitados pelo Supabase
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const testEmailDomains = ['example.com', 'test.com', 'example.org', 'test.org'];
+      const isTestEmail = testEmailDomains.some(domain => emailLower.includes(`@${domain}`));
+      const isValidEmail = emailRegex.test(emailLower) && !isTestEmail;
       
-      console.log('Magic link redirect URL:', redirectUrl);
+      if (isValidEmail) {
+        // Obter URL de redirecionamento
+        // Prioridade: APP_URL (server-side) > NEXT_PUBLIC_APP_URL (client-side) > localhost
+        const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const redirectUrl = `${appUrl}/auth/callback`;
+        
+        console.log('Magic link redirect URL:', redirectUrl);
 
-      // Enviar magic link via Supabase Auth
-      // Usar signInWithOtp para enviar magic link
-      const { error: linkError } = await supabase.auth.signInWithOtp({
-        email: email.toLowerCase().trim(),
-        options: {
-          emailRedirectTo: redirectUrl,
-        },
-      });
+        // Enviar magic link via Supabase Auth
+        // Usar signInWithOtp para enviar magic link
+        const { error: linkError } = await supabase.auth.signInWithOtp({
+          email: emailLower,
+          options: {
+            emailRedirectTo: redirectUrl,
+          },
+        });
 
-      if (linkError) {
-        console.error('Error sending magic link:', linkError);
-        // Não falhar o webhook se não conseguir enviar email
-        // O usuário pode solicitar um novo link depois
+        if (linkError) {
+          console.error('Error sending magic link:', linkError);
+          // Não falhar o webhook se não conseguir enviar email
+          // O usuário pode solicitar um novo link depois
+        } else {
+          console.log('Magic link sent successfully to:', emailLower);
+        }
+      } else {
+        console.warn('Email inválido ou de teste, pulando envio de magic link:', emailLower);
+        console.warn('O usuário foi criado mas precisará solicitar um novo link de acesso');
       }
 
       return NextResponse.json({
         success: true,
-        message: 'Usuário criado e magic link enviado',
+        message: isValidEmail 
+          ? 'Usuário criado e magic link enviado' 
+          : 'Usuário criado (email inválido, magic link não enviado)',
         user: {
           id: user.id,
           email: user.email,
         },
+        magicLinkSent: isValidEmail,
       });
     }
 
