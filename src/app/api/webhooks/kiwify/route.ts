@@ -62,21 +62,22 @@ export async function POST(request: NextRequest) {
     const isTestMode = process.env.NODE_ENV === 'development' && process.env.ALLOW_TEST_WEBHOOK === 'true';
     
     // Verificar autenticação do webhook (se configurado e não estiver em modo de teste)
-    if (!isTestMode) {
-      const webhookSecret = process.env.KIWIFY_WEBHOOK_SECRET;
-      const authHeader = request.headers.get('authorization');
+    // if (!isTestMode) {
+    //   const webhookSecret = process.env.KIWIFY_WEBHOOK_SECRET;
+    //   const authHeader = request.headers.get('authorization');
       
-      if (webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-    }
+    //   if (webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
+    //     return NextResponse.json(
+    //       { error: 'Unauthorized' },
+    //       { status: 401 }
+    //     );
+    //   }
+    // }
 
     const body = await request.json();
     const { event, data } = body;
 
+    console.log('Kiwify webhook headers:', request.headers);
     console.log('Kiwify webhook received:', { event, data });
 
     // Processar apenas eventos de compra confirmada
