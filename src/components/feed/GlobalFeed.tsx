@@ -243,12 +243,24 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
     let touchStartY = 0;
     let isDragging = false;
     let currentPullDistance = 0;
+    let touchTarget: EventTarget | null = null;
     const container = containerRef.current;
 
     const handleTouchStart = (e: TouchEvent) => {
       if (!container || !isAtTopRef.current || isRefreshing) return;
       const touch = e.touches[0];
       const rect = container.getBoundingClientRect();
+      touchTarget = e.target;
+      
+      // Verificar se o toque está em um elemento interativo (botão, link, etc)
+      const target = e.target as HTMLElement;
+      const isInteractive = target.closest('button, a, [role="button"], input, textarea, select');
+      
+      // Se tocou em elemento interativo, não iniciar pull-to-refresh
+      if (isInteractive) {
+        return;
+      }
+      
       // Verificar se o toque está dentro do container
       if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
         touchStartY = touch.clientY;
@@ -259,9 +271,23 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
     const handleTouchMove = (e: TouchEvent) => {
       if (!isDragging || !isAtTopRef.current || isRefreshing || !container) return;
       
+      // Verificar se ainda está tocando em elemento interativo
+      const target = e.target as HTMLElement;
+      const isInteractive = target.closest('button, a, [role="button"], input, textarea, select');
+      
+      // Se moveu para um elemento interativo, cancelar pull-to-refresh
+      if (isInteractive) {
+        currentPullDistance = 0;
+        setPullDistance(0);
+        setIsPulling(false);
+        isDragging = false;
+        return;
+      }
+      
       const currentY = e.touches[0].clientY;
       const distance = currentY - touchStartY;
       
+      // Só prevenir scroll se realmente estiver puxando para baixo no topo
       if (distance > 0 && container.scrollTop === 0) {
         const maxPull = 100;
         const pull = Math.min(distance, maxPull);
@@ -269,14 +295,16 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
         setPullDistance(pull);
         setIsPulling(true);
         
-        // Prevenir scroll padrão quando puxando
+        // Prevenir scroll padrão apenas quando puxando significativamente
         if (pull > 10) {
           e.preventDefault();
         }
       } else {
+        // Se não está no topo ou está scrollando para cima, não prevenir
         currentPullDistance = 0;
         setPullDistance(0);
         setIsPulling(false);
+        isDragging = false;
       }
     };
 
@@ -294,12 +322,13 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
       }
       isDragging = false;
       currentPullDistance = 0;
+      touchTarget = null;
     };
 
     if (container) {
-      container.addEventListener('touchstart', handleTouchStart, { passive: false });
+      container.addEventListener('touchstart', handleTouchStart, { passive: true });
       container.addEventListener('touchmove', handleTouchMove, { passive: false });
-      container.addEventListener('touchend', handleTouchEnd);
+      container.addEventListener('touchend', handleTouchEnd, { passive: true });
     }
 
     return () => {
@@ -368,11 +397,12 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
   const shouldShowPullIndicator = pullDistance > 10 && !isRefreshing;
 
   return (
-    <div 
-      ref={containerRef} 
-      className="relative h-full overflow-y-auto scrollbar-hide md:scrollbar-hide"
-      style={{ scrollBehavior: 'smooth' }}
-    >
+    <div className="relative flex-1 min-h-0 overflow-hidden">
+      <div 
+        ref={containerRef} 
+        className="relative h-full overflow-y-auto overflow-x-hidden scrollbar-hide md:scrollbar-hide"
+        style={{ scrollBehavior: 'smooth' }}
+      >
         {/* Pull-to-refresh indicator - só mostra durante o pull, desaparece ao soltar */}
         {shouldShowPullIndicator && (
           <div
@@ -410,9 +440,9 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
         )}
 
         {/* Container de posts - ordem correta do backend (mais antigos no topo, mais recentes embaixo) */}
-        <div className="space-y-4 pb-4">
+        <div className="space-y-4 pb-4 w-full">
           {posts.map((post: any) => (
-            <div key={post.id} data-post-id={post.id}>
+            <div key={post.id} data-post-id={post.id} className="w-full">
               <FeedPost post={post} isOwner={user?.id === post.userId} truncateContent={true} />
             </div>
           ))}
@@ -428,6 +458,7 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
           </div>
         )}
       </div>
+    </div>
   );
 }
 

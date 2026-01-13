@@ -268,3 +268,4 @@ Implementação completa de funcionalidades para permitir que usuários editem e
 - Esquecer de invalidar cache após mutações
 - Permitir edição/exclusão sem verificação de propriedade
 
+

@@ -174,3 +174,4 @@ O BottomNav usa `safe-area-bottom` para respeitar áreas seguras em dispositivos
 
 
 
+

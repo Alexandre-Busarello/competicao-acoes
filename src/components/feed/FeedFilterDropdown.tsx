@@ -36,7 +36,7 @@ export function FeedFilterDropdown({
   const shouldShowText = showText || !isIconOnly;
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button 
           variant={variant} 

@@ -384,9 +384,9 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
     .slice(0, 2);
 
   return (
-    <Card className="mb-4">
+    <Card className="mb-4 w-full overflow-hidden">
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between min-w-0">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <Link href={profileUrl}>
               <Avatar className="h-10 w-10 flex-shrink-0">
@@ -438,7 +438,7 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
                   <EyeOff className="h-4 w-4" />
                 )}
               </Button>
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
@@ -536,9 +536,16 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleLikeClick}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLikeClick();
+              }}
+              onTouchStart={(e) => {
+                // Permitir scroll mesmo quando toca no botão
+                e.stopPropagation();
+              }}
               disabled={toggleLikeMutation.isPending}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 touch-manipulation"
             >
               <Heart
                 className={`h-4 w-4 ${
@@ -552,8 +559,15 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleCommentClick}
-              className="flex items-center gap-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCommentClick();
+              }}
+              onTouchStart={(e) => {
+                // Permitir scroll mesmo quando toca no botão
+                e.stopPropagation();
+              }}
+              className="flex items-center gap-2 touch-manipulation"
             >
               <MessageCircle className={`h-4 w-4 ${showComments ? 'text-primary' : 'text-muted-foreground'}`} />
               <span className="text-sm">{commentCount}</span>

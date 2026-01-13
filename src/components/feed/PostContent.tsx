@@ -352,7 +352,7 @@ export function PostContent({ slug }: PostContentProps) {
                   size="default"
                 />
                 {isOwner && (
-                  <DropdownMenu>
+                  <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"

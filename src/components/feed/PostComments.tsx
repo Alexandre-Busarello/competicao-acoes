@@ -435,7 +435,7 @@ function CommentItem({ comment, postId }: { comment: Comment; postId: string }) 
                 })}
               </p>
               {isOwner && !isEditing && (
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"

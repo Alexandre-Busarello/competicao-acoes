@@ -108,7 +108,7 @@ export function ShareButton({
 
   // Desktop: dropdown com opções
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant={variant === 'icon' ? 'ghost' : 'outline'}

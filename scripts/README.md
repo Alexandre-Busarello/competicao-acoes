@@ -80,3 +80,4 @@ Para usar os scripts Python, instale as dependências:
 pip3 install -r requirements.txt
 ```
 
+
