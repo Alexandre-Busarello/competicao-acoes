@@ -5,19 +5,32 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 /**
+ * Verifica se estamos em um ambiente Node.js (servidor)
+ * Prisma Client só deve ser usado no servidor, nunca no cliente (browser)
+ */
+function isServer(): boolean {
+  return typeof window === 'undefined' && typeof process !== 'undefined';
+}
+
+/**
  * Constrói a URL de conexão com parâmetros de connection pooling otimizados para serverless
  * Esses parâmetros ajudam a evitar esgotamento de conexões em ambientes como Vercel
  */
 function getDatabaseUrl(): string | undefined {
+  // Se não estamos no servidor, retornar undefined imediatamente
+  // Isso evita que o código seja executado no cliente (browser)
+  if (!isServer()) {
+    return undefined;
+  }
+
   const baseUrl = process.env.DATABASE_URL;
   
   // Se DATABASE_URL não estiver definido, retornar undefined
   // O Prisma vai usar a URL do datasource definido no schema.prisma
   // IMPORTANTE: Certifique-se de que DATABASE_URL está configurado na Vercel!
   if (!baseUrl) {
-    // Em produção, isso deve sempre estar definido
-    // Mas não vamos quebrar o build se não estiver (pode acontecer em alguns contextos)
-    if (process.env.NODE_ENV === 'production') {
+    // Só logar no servidor, nunca no cliente
+    if (process.env.NODE_ENV === 'production' && isServer()) {
       console.error(
         '⚠️ DATABASE_URL is not defined in production! ' +
         'Please set DATABASE_URL in your Vercel environment variables.'
@@ -80,13 +93,14 @@ function getDatabaseUrl(): string | undefined {
   }
 }
 
-// Para a aplicação, sempre usa DATABASE_URL (com pgbouncer)
-// Para migrations, o Prisma CLI usa DIRECT_DATABASE_URL (definido no schema)
-const databaseUrl = getDatabaseUrl();
+/**
+ * Cria uma instância do Prisma Client apenas no servidor
+ * Nunca deve ser executado no cliente (browser)
+ */
+function createPrismaClient(): PrismaClient {
+  const databaseUrl = getDatabaseUrl();
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+  return new PrismaClient({
     // Sempre passar a URL explicitamente se disponível
     // Se databaseUrl for undefined, o Prisma vai usar a URL do datasource do schema.prisma
     // (que usa DIRECT_DATABASE_URL - não ideal, mas evita quebrar o build)
@@ -99,22 +113,45 @@ export const prisma =
     }),
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   });
+}
 
+// Para a aplicação, sempre usa DATABASE_URL (com pgbouncer)
+// Para migrations, o Prisma CLI usa DIRECT_DATABASE_URL (definido no schema)
 // CRÍTICO: Sempre usar singleton, mesmo em produção!
 // Em ambientes serverless (Vercel), cada função pode criar uma nova instância
 // se não usarmos o singleton global. Isso causa esgotamento de conexões.
-if (!globalForPrisma.prisma) {
-  globalForPrisma.prisma = prisma;
-}
+// 
+// IMPORTANTE: Este módulo só deve ser importado em Server Components ou API routes.
+// Se importado no cliente, vai causar erro em runtime quando tentar usar.
+export const prisma = (() => {
+  // Se não estamos no servidor, retornar um proxy que lança erro quando usado
+  if (!isServer()) {
+    return new Proxy({} as PrismaClient, {
+      get() {
+        throw new Error(
+          'Prisma Client cannot be used in the browser. ' +
+          'It should only be imported in Server Components or API routes.'
+        );
+      },
+    });
+  }
 
-// Garantir desconexão adequada ao encerrar o processo
-if (typeof process !== 'undefined' && process.on) {
-  const gracefulShutdown = async () => {
-    await prisma.$disconnect();
-  };
-  
-  process.on('beforeExit', gracefulShutdown);
-  process.on('SIGINT', gracefulShutdown);
-  process.on('SIGTERM', gracefulShutdown);
-}
+  // No servidor, criar ou reutilizar a instância singleton
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+
+    // Garantir desconexão adequada ao encerrar o processo
+    if (typeof process !== 'undefined' && process.on) {
+      const gracefulShutdown = async () => {
+        await globalForPrisma.prisma?.$disconnect();
+      };
+      
+      process.on('beforeExit', gracefulShutdown);
+      process.on('SIGINT', gracefulShutdown);
+      process.on('SIGTERM', gracefulShutdown);
+    }
+  }
+
+  return globalForPrisma.prisma;
+})();
 
