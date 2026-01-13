@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client';
+import { authMeService } from '@/lib/services/auth-me-service';
 
 export interface AuthUser {
   id: string;
@@ -123,24 +124,14 @@ export function useAuth() {
       console.log(`🔵 [${timestamp}] [React Query] Fetching user data for:`, session.user.id, session.user.email);
       console.log(`🔵 [${timestamp}] [React Query] Query Key:`, ['auth', 'user', session.user.id]);
       
-      // Buscar dados do usuário no banco via API
-      // React Query deduplica automaticamente - se múltiplos componentes chamarem ao mesmo tempo,
-      // apenas 1 request será feito e todos compartilharão o resultado
-      const response = await fetch('/api/auth/me', {
-        // Adicionar cache: 'no-store' para garantir que sempre vai ao servidor
-        // Mas React Query ainda deduplica múltiplas chamadas simultâneas
-        cache: 'no-store',
-      });
-      if (!response.ok) {
-        console.error('Failed to fetch user data:', response.status, response.statusText);
-        return null;
-      }
+      // Usar o service singleton que gerencia cache de 10 segundos no localStorage
+      // Isso evita múltiplas chamadas ao backend em curto espaço de tempo
+      // React Query ainda deduplica múltiplas chamadas simultâneas
+      const user = await authMeService.getCurrentUser();
       
-      const data = await response.json();
       const fetchTimestamp = new Date().toISOString();
-      console.log(`✅ [${fetchTimestamp}] [React Query] User data fetched from SERVER:`, data.user?.email);
-      console.log(`✅ [${fetchTimestamp}] [React Query] This was a REAL network request (not cache)`);
-      return data.user as AuthUser | null;
+      console.log(`✅ [${fetchTimestamp}] [React Query] User data obtained:`, user?.email);
+      return user;
     },
     enabled: !!session?.user,
     staleTime: 10 * 60 * 1000, // 10 minutos - dados ficam "frescos" por 10 minutos
@@ -234,6 +225,7 @@ export function useAuth() {
         // Limpar dados do usuário quando não há sessão
         queryClient.setQueryData(['auth', 'user'], null);
         syncSessionManager.reset(); // Reset quando logout
+        authMeService.clearCache(); // Limpar cache do auth/me quando logout
       }
     });
 
