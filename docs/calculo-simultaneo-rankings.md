@@ -147,3 +147,4 @@ A implementação garante que os rankings mensal e anual sejam sempre calculados
 
 
 
+

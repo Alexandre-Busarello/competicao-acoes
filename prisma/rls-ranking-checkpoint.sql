@@ -90,3 +90,4 @@ USING (false); -- Bloqueado via API pública, apenas service role pode deletar
 
 
 
+
