@@ -8,10 +8,22 @@ const globalForPrisma = globalThis as unknown as {
  * Constrói a URL de conexão com parâmetros de connection pooling otimizados para serverless
  * Esses parâmetros ajudam a evitar esgotamento de conexões em ambientes como Vercel
  */
-function getDatabaseUrl(): string {
+function getDatabaseUrl(): string | undefined {
   const baseUrl = process.env.DATABASE_URL;
+  
+  // Se DATABASE_URL não estiver definido, retornar undefined
+  // O Prisma vai usar a URL do datasource definido no schema.prisma
+  // IMPORTANTE: Certifique-se de que DATABASE_URL está configurado na Vercel!
   if (!baseUrl) {
-    throw new Error('DATABASE_URL is not defined');
+    // Em produção, isso deve sempre estar definido
+    // Mas não vamos quebrar o build se não estiver (pode acontecer em alguns contextos)
+    if (process.env.NODE_ENV === 'production') {
+      console.error(
+        '⚠️ DATABASE_URL is not defined in production! ' +
+        'Please set DATABASE_URL in your Vercel environment variables.'
+      );
+    }
+    return undefined;
   }
 
   try {
@@ -70,14 +82,21 @@ function getDatabaseUrl(): string {
 
 // Para a aplicação, sempre usa DATABASE_URL (com pgbouncer)
 // Para migrations, o Prisma CLI usa DIRECT_DATABASE_URL (definido no schema)
+const databaseUrl = getDatabaseUrl();
+
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    datasources: {
-      db: {
-        url: getDatabaseUrl(),
+    // Sempre passar a URL explicitamente se disponível
+    // Se databaseUrl for undefined, o Prisma vai usar a URL do datasource do schema.prisma
+    // (que usa DIRECT_DATABASE_URL - não ideal, mas evita quebrar o build)
+    ...(databaseUrl && {
+      datasources: {
+        db: {
+          url: databaseUrl,
+        },
       },
-    },
+    }),
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   });
 
