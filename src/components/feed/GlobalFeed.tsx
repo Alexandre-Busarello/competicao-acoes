@@ -46,6 +46,7 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
   const [pullDistance, setPullDistance] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
   const isAtTopRef = useRef<boolean>(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const {
     data,
@@ -142,16 +143,41 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
     };
   }, [data, user]);
 
+  // Sincronizar isLoadingMore com isFetchingNextPage do React Query
+  useEffect(() => {
+    if (isFetchingNextPage) {
+      // Quando React Query começa a buscar, garantir que loading está ativo
+      setIsLoadingMore(true);
+    } else if (!isFetchingNextPage && isLoadingMore) {
+      // Quando React Query termina, limpar o loading local após um pequeno delay
+      // para garantir que o estado foi atualizado completamente
+      const timer = setTimeout(() => {
+        setIsLoadingMore(false);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isFetchingNextPage, isLoadingMore]);
+
+
   // Detectar scroll no final para carregar mais posts (scroll infinito)
   useEffect(() => {
+    const loadMoreElement = loadMoreRef.current;
+    const scrollContainer = containerRef.current;
+    
+    if (!loadMoreElement || !scrollContainer) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !isFetchingNextPage) {
+        const entry = entries[0];
+        if (entry.isIntersecting && !isFetchingNextPage && !isLoadingMore) {
           if (hasNextPage) {
+            // Setar loading imediatamente antes de chamar fetchNextPage
+            setIsLoadingMore(true);
             fetchNextPage();
           } else if (!filterInteractions && !filterMyPosts) {
             // Loop infinito: quando não há mais posts, buscar novamente (apenas feed global)
             // Usar mesmo seed da sessão para manter consistência
+            setIsLoadingMore(true);
             loopPageRef.current += 1;
             const url = new URL('/api/feed/global', window.location.origin);
             url.searchParams.set('limit', '20');
@@ -182,19 +208,26 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
                   };
                 });
               })
-              .catch(err => console.error('Error fetching loop posts:', err));
+              .catch(err => console.error('Error fetching loop posts:', err))
+              .finally(() => {
+                setIsLoadingMore(false);
+              });
           }
         }
       },
-      { threshold: 0.1 }
+      { 
+        threshold: 0.1,
+        root: scrollContainer, // Usar o container de scroll como root (importante para desktop)
+        rootMargin: '200px' // Trigger antes de chegar completamente no final (funciona melhor no desktop)
+      }
     );
 
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
+    observer.observe(loadMoreElement);
 
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, queryClient, filterInteractions, filterMyPosts]);
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasNextPage, isFetchingNextPage, isLoadingMore, fetchNextPage, queryClient, filterInteractions, filterMyPosts, data]);
 
   // Função para atualizar o feed
   const handleRefresh = useCallback(async () => {
@@ -400,7 +433,9 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
     <div className="relative flex-1 min-h-0 overflow-hidden">
       <div 
         ref={containerRef} 
-        className="relative h-full overflow-y-auto overflow-x-hidden scrollbar-hide md:scrollbar-hide"
+        className={`relative h-full overflow-y-auto overflow-x-hidden scrollbar-hide md:scrollbar-hide ${
+          (isFetchingNextPage || isLoadingMore) ? 'pb-40' : ''
+        }`}
         style={{ scrollBehavior: 'smooth' }}
       >
         {/* Pull-to-refresh indicator - só mostra durante o pull, desaparece ao soltar */}
@@ -448,14 +483,22 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
           ))}
         </div>
 
-        {/* Trigger para carregar mais posts quando scrolla para o final */}
-        <div ref={loadMoreRef} className="h-10" />
+        {/* Trigger para carregar mais posts quando scrolla para o final - sempre presente */}
+        <div ref={loadMoreRef} className="h-20 flex-shrink-0" />
         
-        {/* Loading quando carregando mais posts */}
-        {isFetchingNextPage && (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        {/* Loading quando carregando mais posts - sempre visível quando está carregando */}
+        {(isFetchingNextPage || isLoadingMore) && (
+          <div className="flex items-center justify-center py-12 px-4 min-h-[150px] w-full">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-7 w-7 animate-spin text-primary" />
+              <span className="text-sm font-medium text-muted-foreground">Carregando mais posts...</span>
+            </div>
           </div>
+        )}
+        
+        {/* Espaçamento extra quando não está carregando para garantir que o trigger seja visível */}
+        {!isFetchingNextPage && !isLoadingMore && (
+          <div className="h-4 flex-shrink-0" />
         )}
       </div>
     </div>
