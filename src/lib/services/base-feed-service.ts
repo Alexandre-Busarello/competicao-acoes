@@ -6,6 +6,7 @@ import { rankingService } from './ranking-service';
 import { perpetualProfitabilityService } from './perpetual-profitability-service';
 import { medalService } from './medal-service';
 import { getCurrentPeriod } from '@/lib/utils/period-utils';
+import { obfuscateTickerInMessage, obfuscateTickerInTransaction } from '@/lib/utils/obfuscate-ticker';
 
 /**
  * Resultado de uma busca de feed com paginação cursor-based
@@ -159,6 +160,83 @@ export abstract class BaseFeedService {
       profitability: profitabilityMap.get(post.userId),
       medals: medalMap.get(post.userId),
     }));
+  }
+
+  /**
+   * Verifica se o usuário visualizador é PRO/PREMIUM
+   */
+  protected async isUserPremium(userId?: string): Promise<boolean> {
+    if (!userId) {
+      return false;
+    }
+
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          subscription: true,
+        },
+      });
+
+      if (!user) {
+        return false;
+      }
+
+      // Verificar se tem assinatura ativa baseado na data de expiração
+      if (user.subscription) {
+        return (
+          user.subscription.status === 'active' &&
+          user.subscription.currentPeriodEnd !== null &&
+          user.subscription.currentPeriodEnd > new Date()
+        );
+      }
+
+      // Se não existe subscription, usar isPremium como fallback
+      return user.isPremium;
+    } catch (error) {
+      console.error(`Error checking premium status for user ${userId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Aplica ofuscação de ticker nos posts quando o usuário visualizador não é PRO
+   */
+  protected async applyObfuscationIfNeeded(
+    posts: FeedPost[],
+    currentUserId?: string
+  ): Promise<FeedPost[]> {
+    if (posts.length === 0) {
+      return posts;
+    }
+
+    // Se não há usuário logado ou é PRO, não ofuscar
+    const isPremium = await this.isUserPremium(currentUserId);
+    if (isPremium) {
+      return posts;
+    }
+
+    // Aplicar ofuscação em posts com transação
+    return posts.map(post => {
+      if (!post.transaction || !post.transaction.ticker) {
+        return post;
+      }
+
+      const ticker = post.transaction.ticker;
+      const price = post.transaction.price;
+      
+      // Ofuscar no conteúdo da mensagem (ticker e preço)
+      const obfuscatedContent = obfuscateTickerInMessage(post.content, ticker, price);
+      
+      // Ofuscar no objeto transaction
+      const obfuscatedTransaction = obfuscateTickerInTransaction(post.transaction);
+
+      return {
+        ...post,
+        content: obfuscatedContent,
+        transaction: obfuscatedTransaction,
+      };
+    });
   }
 
   /**

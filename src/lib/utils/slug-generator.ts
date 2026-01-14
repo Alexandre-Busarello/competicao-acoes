@@ -34,7 +34,22 @@ export function generateSlug(text: string, date: Date, attempt: number = 0): str
 }
 
 /**
+ * Gera hash simples para garantir unicidade sem expor informações sensíveis
+ */
+function generateHash(input: string): string {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36).substring(0, 8); // 8 caracteres alfanuméricos
+}
+
+/**
  * Gera slug específico para post baseado em transação
+ * ATUALIZADO: Não inclui informações sensíveis (ticker/quantidade) no slug
+ * Usa hash para garantir unicidade sem expor dados da transação
  * @param transaction Transação para gerar slug
  * @param attempt Número da tentativa (para tratar colisões)
  */
@@ -55,13 +70,25 @@ export async function generatePostSlug(
   };
   
   const type = typeMap[transaction.type.toLowerCase()] || transaction.type.toLowerCase();
-  const ticker = transaction.ticker.toLowerCase();
+  const dateStr = transaction.date.toISOString().split('T')[0]; // YYYY-MM-DD
+  
+  // Gerar hash único baseado em ticker + quantity + timestamp + tipo
+  // Isso garante unicidade sem expor informações sensíveis no slug
   const quantity = typeof transaction.quantity === 'string' 
     ? transaction.quantity 
     : transaction.quantity.toString();
+  const hashInput = `${transaction.ticker}-${quantity}-${transaction.date.getTime()}-${type}`;
+  const hashStr = generateHash(hashInput);
   
-  const baseText = `${type}-${quantity}-${ticker}`;
-  const slug = generateSlug(baseText, transaction.date, attempt);
+  // Slug formato: tipo-data-hash (ex: compra-2026-01-14-a3b5c7d9)
+  const baseText = `${type}-${dateStr}-${hashStr}`;
+  const normalizedText = normalizeSlug(baseText);
+  
+  let slug = normalizedText;
+  
+  if (attempt > 0) {
+    slug = `${normalizedText}-${attempt}`;
+  }
   
   return slug;
 }

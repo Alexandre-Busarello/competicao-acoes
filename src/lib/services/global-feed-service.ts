@@ -216,9 +216,12 @@ export class GlobalFeedService extends BaseFeedService {
     // Enriquece com likes do usuário atual
     const enrichedWithLikes = await this.enrichWithLikes(mappedPosts, currentUserId);
     const enrichedPosts = await this.enrichWithRankingsAndProfitability(enrichedWithLikes);
+    
+    // Aplica ofuscação de ticker se usuário visualizador não é PRO
+    const finalPosts = await this.applyObfuscationIfNeeded(enrichedPosts, currentUserId);
 
     return {
-      posts: enrichedPosts,
+      posts: finalPosts,
       nextCursor: nextCursor || null,
     };
   }
@@ -264,9 +267,12 @@ export class GlobalFeedService extends BaseFeedService {
     // Enriquece com likes do usuário atual
     const enrichedWithLikes = await this.enrichWithLikes(mappedPosts, currentUserId);
     const enrichedPosts = await this.enrichWithRankingsAndProfitability(enrichedWithLikes);
+    
+    // Aplica ofuscação de ticker se usuário visualizador não é PRO
+    const finalPosts = await this.applyObfuscationIfNeeded(enrichedPosts, currentUserId);
 
     return {
-      posts: enrichedPosts,
+      posts: finalPosts,
       nextCursor: nextCursor || null,
     };
   }
@@ -455,9 +461,12 @@ export class GlobalFeedService extends BaseFeedService {
       const mappedPosts = resultPosts.map(post => this.mapToFeedPost(post));
       const enrichedWithLikes = await this.enrichWithLikes(mappedPosts, currentUserId);
       const enrichedPosts = await this.enrichWithRankingsAndProfitability(enrichedWithLikes);
+      
+      // Aplica ofuscação de ticker se usuário visualizador não é PRO (não há usuário logado = não é PRO)
+      const finalPosts = await this.applyObfuscationIfNeeded(enrichedPosts, currentUserId);
 
       const result: FeedResult = {
-        posts: enrichedPosts,
+        posts: finalPosts,
         nextCursor: nextCursor || 'loop',
       };
 
@@ -502,9 +511,12 @@ export class GlobalFeedService extends BaseFeedService {
     // Enriquece com likes do usuário atual
     const enrichedWithLikes = await this.enrichWithLikes(mappedPosts, currentUserId);
     const enrichedPosts = await this.enrichWithRankingsAndProfitability(enrichedWithLikes);
+    
+    // Aplica ofuscação de ticker se usuário visualizador não é PRO
+    const finalPosts = await this.applyObfuscationIfNeeded(enrichedPosts, currentUserId);
 
     const result: FeedResult = {
-      posts: enrichedPosts,
+      posts: finalPosts,
       nextCursor: nextCursor || 'loop',
     };
 

@@ -36,6 +36,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { CheckoutCTA } from '@/components/checkout/CheckoutCTA';
+import { Lock } from 'lucide-react';
 
 interface FeedPostProps {
   post: {
@@ -337,6 +339,8 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
   const shareUrl = getShareUrl('post', post.id, post.slug);
   const profileUrl = getProfileUrlSync(post.user.id, post.user.slug);
   const postUrl = `/posts/${post.slug}`;
+  // URL para checkout - redireciona para perfil do usuário atual com parâmetro de compra
+  const checkoutUrl = '/perfil?from=cta';
 
   const handleLikeClick = () => {
     if (!isAuthenticated || !user) {
@@ -376,12 +380,39 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
     ? truncateText(post.content, MAX_CONTENT_LENGTH)
     : post.content;
 
+  // Verificar se o conteúdo contém ticker ou valor ofuscado (XXXX)
+  const hasObfuscatedTicker = !user?.isPremium && (
+    displayContent.includes('**XXXX**') || 
+    displayContent.includes(' XXXX ') ||
+    displayContent.includes('R$ XXXX') ||
+    (post.transaction && (post.transaction.ticker === 'XXXX' || post.transaction.price === 0))
+  );
+
   const initials = post.user.name
     .split(' ')
     .map((n) => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
+
+  // Função helper para verificar se um elemento contém XXXX e aplicar blur
+  const createBlurredStrong = (children: React.ReactNode) => {
+    const text = typeof children === 'string' ? children : 
+                 Array.isArray(children) ? children.join('') : 
+                 String(children);
+    
+    if (text.includes('XXXX') && !user?.isPremium) {
+      return (
+        <strong 
+          className="font-semibold blur-sm select-none relative group"
+          style={{ filter: 'blur(4px)' }}
+        >
+          {children}
+        </strong>
+      );
+    }
+    return <strong className="font-semibold">{children}</strong>;
+  };
 
   return (
     <Card className="mb-4 w-full overflow-hidden">
@@ -475,7 +506,7 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
                 remarkPlugins={[remarkGfm, remarkBreaks]}
                 components={{
                   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                  strong: ({ children }) => createBlurredStrong(children),
                   em: ({ children }) => <em className="italic">{children}</em>,
                   code: ({ children }) => (
                     <code className="px-1.5 py-0.5 bg-muted rounded text-sm font-mono">
@@ -515,19 +546,68 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
           </Link>
         ) : (
           <div className="mb-4 break-words">
-            {renderMarkdownWithPolls(displayContent, post.id, post.pollId || undefined)}
+            {renderMarkdownWithPolls(
+              displayContent, 
+              post.id, 
+              post.pollId || undefined,
+              hasObfuscatedTicker // Passar flag para aplicar blur
+            )}
+            {hasObfuscatedTicker && (
+              <div className="mt-2 pt-2 border-t border-border/50">
+                <a
+                  href={checkoutUrl}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Redirecionar para perfil com parâmetro de compra
+                    window.location.href = checkoutUrl;
+                  }}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <Lock className="h-3 w-3" />
+                  <span>Dado exclusivo para membros Pro</span>
+                </a>
+              </div>
+            )}
           </div>
         )}
 
         {post.transaction && (
-          <div className="mb-4 p-3 bg-muted/50 rounded-md">
+          <div className="mb-4 p-3 bg-muted/50 rounded-md relative">
             <p className="text-sm">
-              <span className="font-semibold">{post.transaction.ticker}</span>
+              <span 
+                className={`font-semibold ${!user?.isPremium ? 'blur-sm select-none' : ''}`}
+                style={!user?.isPremium ? { filter: 'blur(4px)' } : {}}
+              >
+                {post.transaction.ticker}
+              </span>
               {' • '}
               {post.transaction.type === 'compra' ? 'Compra' : 'Venda'} de{' '}
-              {post.transaction.quantity} ações a R${' '}
-              {post.transaction.price.toFixed(2)}
+              {post.transaction.quantity} ações a{' '}
+              <span 
+                className={!user?.isPremium ? 'blur-sm select-none' : ''}
+                style={!user?.isPremium ? { filter: 'blur(4px)' } : {}}
+              >
+                R$ {post.transaction.price === 0 ? 'XXXX' : post.transaction.price.toFixed(2)}
+              </span>
             </p>
+            {hasObfuscatedTicker && (
+              <div className="mt-2 pt-2 border-t border-border/50">
+                <a
+                  href={checkoutUrl}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Redirecionar para perfil com parâmetro de compra
+                    window.location.href = checkoutUrl;
+                  }}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <Lock className="h-3 w-3" />
+                  <span>Dado exclusivo para membros Pro</span>
+                </a>
+              </div>
+            )}
           </div>
         )}
 

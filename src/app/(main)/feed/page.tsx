@@ -18,13 +18,18 @@ export default function FeedPage() {
   const [filterInteractions, setFilterInteractions] = useState(false);
   const [filterMyPosts, setFilterMyPosts] = useState(false);
 
-  // Adicionar overflow-hidden no html apenas na página de feed
+  // Adicionar overflow-hidden no html apenas na página de feed quando autenticado
+  // Quando não autenticado, permitir scroll normal da página
   useEffect(() => {
-    document.documentElement.style.overflow = 'hidden';
+    if (isAuthenticated) {
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.documentElement.style.overflow = '';
+    }
     return () => {
       document.documentElement.style.overflow = '';
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const handleFilterChange = (value: 'global' | 'interactions' | 'myPosts') => {
     const newFilterInteractions = value === 'interactions';

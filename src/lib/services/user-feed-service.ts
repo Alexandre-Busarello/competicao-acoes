@@ -62,9 +62,12 @@ export class UserFeedService extends BaseFeedService {
     // Enriquece com likes do usuário atual
     const enrichedWithLikes = await this.enrichWithLikes(mappedPosts, currentUserId);
     const enrichedPosts = await this.enrichWithRankingsAndProfitability(enrichedWithLikes);
+    
+    // Aplica ofuscação de ticker se usuário visualizador não é PRO
+    const finalPosts = await this.applyObfuscationIfNeeded(enrichedPosts, currentUserId);
 
     const result: FeedResult = {
-      posts: enrichedPosts,
+      posts: finalPosts,
       nextCursor,
     };
 

@@ -5,6 +5,7 @@ import { executeActionHandler } from '@/lib/queue/action-handlers';
 import { cacheService } from '@/lib/cache/cache-service';
 import { cacheConfig } from '@/lib/config/cache';
 import { generateFeedMessage } from '@/lib/utils/feed-messages';
+import { obfuscateTickerInMessage, obfuscateTickerInTransaction } from '@/lib/utils/obfuscate-ticker';
 
 export interface FeedPost {
   id: string;
@@ -230,10 +231,13 @@ export class FeedService {
       likedByCurrentUser = !!like;
     }
 
-    return {
+    const mappedPost = {
       ...this.mapToFeedPost(post),
       likedByCurrentUser,
     };
+
+    // Aplicar ofuscação se usuário visualizador não é PRO
+    return await this.applyObfuscationIfNeeded(mappedPost, currentUserId);
   }
 
   /**
@@ -291,9 +295,83 @@ export class FeedService {
       likedByCurrentUser = !!like;
     }
 
-    return {
+    const mappedPost = {
       ...this.mapToFeedPost(post),
       likedByCurrentUser,
+    };
+
+    // Aplicar ofuscação se usuário visualizador não é PRO
+    return await this.applyObfuscationIfNeeded(mappedPost, currentUserId);
+  }
+
+  /**
+   * Verifica se o usuário visualizador é PRO/PREMIUM
+   */
+  private async isUserPremium(userId?: string): Promise<boolean> {
+    if (!userId) {
+      return false;
+    }
+
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          subscription: true,
+        },
+      });
+
+      if (!user) {
+        return false;
+      }
+
+      // Verificar se tem assinatura ativa baseado na data de expiração
+      if (user.subscription) {
+        return (
+          user.subscription.status === 'active' &&
+          user.subscription.currentPeriodEnd !== null &&
+          user.subscription.currentPeriodEnd > new Date()
+        );
+      }
+
+      // Se não existe subscription, usar isPremium como fallback
+      return user.isPremium;
+    } catch (error) {
+      console.error(`Error checking premium status for user ${userId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Aplica ofuscação de ticker e valores no post quando o usuário visualizador não é PRO
+   */
+  private async applyObfuscationIfNeeded(
+    post: FeedPost,
+    currentUserId?: string
+  ): Promise<FeedPost> {
+    // Se não há usuário logado ou é PRO, não ofuscar
+    const isPremium = await this.isUserPremium(currentUserId);
+    if (isPremium) {
+      return post;
+    }
+
+    // Se não tem transação, não precisa ofuscar
+    if (!post.transaction || !post.transaction.ticker) {
+      return post;
+    }
+
+    const ticker = post.transaction.ticker;
+    const price = post.transaction.price;
+    
+    // Ofuscar no conteúdo da mensagem (ticker e preço)
+    const obfuscatedContent = obfuscateTickerInMessage(post.content, ticker, price);
+    
+    // Ofuscar no objeto transaction
+    const obfuscatedTransaction = obfuscateTickerInTransaction(post.transaction);
+
+    return {
+      ...post,
+      content: obfuscatedContent,
+      transaction: obfuscatedTransaction,
     };
   }
 

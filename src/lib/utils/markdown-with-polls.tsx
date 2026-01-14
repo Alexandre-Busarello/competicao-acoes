@@ -11,8 +11,32 @@ import { PollDisplay } from '@/components/feed/PollDisplay';
 export function renderMarkdownWithPolls(
   content: string,
   postId: string,
-  pollId?: string | null
+  pollId?: string | null,
+  shouldBlurObfuscated?: boolean
 ) {
+  // Função helper para criar strong com blur se contém XXXX ou valores monetários ofuscados
+  const createStrong = (children: React.ReactNode) => {
+    if (!shouldBlurObfuscated) {
+      return <strong className="font-semibold">{children}</strong>;
+    }
+    
+    const text = typeof children === 'string' ? children : 
+                 Array.isArray(children) ? children.join('') : 
+                 String(children);
+    
+    // Aplicar blur se contém XXXX ou R$ XXXX
+    if (text.includes('XXXX') || text.includes('R$ XXXX')) {
+      return (
+        <strong 
+          className="font-semibold blur-sm select-none"
+          style={{ filter: 'blur(4px)' }}
+        >
+          {children}
+        </strong>
+      );
+    }
+    return <strong className="font-semibold">{children}</strong>;
+  };
   const pollComments = findAllPollComments(content);
 
   if (pollComments.length === 0 || !pollId) {
@@ -22,7 +46,7 @@ export function renderMarkdownWithPolls(
         remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{
           p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+          strong: ({ children }) => createStrong(children),
           em: ({ children }) => <em className="italic">{children}</em>,
           code: ({ children }) => (
             <code className="px-1.5 py-0.5 bg-muted rounded text-sm font-mono">

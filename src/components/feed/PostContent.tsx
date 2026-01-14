@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ShareButton } from '@/components/shared/ShareButton';
-import { Heart, MessageCircle, Loader2, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Loader2, MoreVertical, Edit, Trash2, Lock } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -304,6 +304,17 @@ export function PostContent({ slug }: PostContentProps) {
   const shareUrl = getShareUrl('post', post.id, post.slug);
   const profileUrl = getProfileUrlSync(post.user.id, post.user.slug);
   const isOwner = user?.id === post.userId;
+  // URL para checkout - redireciona para perfil do usuário atual com parâmetro de compra
+  const checkoutUrl = '/perfil?from=cta';
+
+  // Verificar se o conteúdo contém ticker ou valor ofuscado (XXXX)
+  // Quando não há usuário logado ou não é premium, verificar se há conteúdo ofuscado
+  const hasObfuscatedTicker = (!user || !user.isPremium) && post && (
+    post.content.includes('**XXXX**') || 
+    post.content.includes(' XXXX ') ||
+    post.content.includes('R$ XXXX') ||
+    (post.transaction && (post.transaction.ticker === 'XXXX' || post.transaction.price === 0))
+  );
 
   const initials = post.user.name
     .split(' ')
@@ -383,18 +394,67 @@ export function PostContent({ slug }: PostContentProps) {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="mb-4 break-words text-lg">
-              {renderMarkdownWithPolls(post.content, post.id, (post as any).pollId || undefined)}
+              {renderMarkdownWithPolls(
+                post.content, 
+                post.id, 
+                (post as any).pollId || undefined,
+                hasObfuscatedTicker // Passar flag para aplicar blur
+              )}
+              {hasObfuscatedTicker && (
+                <div className="mt-2 pt-2 border-t border-border/50">
+                  <a
+                    href={checkoutUrl}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      // Redirecionar para perfil com parâmetro de compra
+                      window.location.href = checkoutUrl;
+                    }}
+                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <Lock className="h-3 w-3" />
+                    <span>Dado exclusivo para membros Pro</span>
+                  </a>
+                </div>
+              )}
             </div>
 
             {post.transaction && (
-              <div className="mb-6 p-4 bg-muted/50 rounded-md">
+              <div className="mb-6 p-4 bg-muted/50 rounded-md relative">
                 <p className="text-sm">
-                  <span className="font-semibold">{post.transaction.ticker}</span>
+                  <span 
+                    className={`font-semibold ${!user?.isPremium ? 'blur-sm select-none' : ''}`}
+                    style={!user?.isPremium ? { filter: 'blur(4px)' } : {}}
+                  >
+                    {post.transaction.ticker}
+                  </span>
                   {' • '}
                   {post.transaction.type === 'compra' ? 'Compra' : 'Venda'} de{' '}
-                  {post.transaction.quantity} ações a R${' '}
-                  {post.transaction.price.toFixed(2)}
+                  {post.transaction.quantity} ações a{' '}
+                  <span 
+                    className={!user?.isPremium ? 'blur-sm select-none' : ''}
+                    style={!user?.isPremium ? { filter: 'blur(4px)' } : {}}
+                  >
+                    R$ {post.transaction.price === 0 ? 'XXXX' : post.transaction.price.toFixed(2)}
+                  </span>
                 </p>
+                {hasObfuscatedTicker && (
+                  <div className="mt-2 pt-2 border-t border-border/50">
+                    <a
+                      href="/checkout/fake"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // Redirecionar para checkout
+                        window.location.href = '/checkout/fake?source=feed_obfuscated_ticker';
+                      }}
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      <Lock className="h-3 w-3" />
+                      <span>Dado exclusivo para membros Pro</span>
+                    </a>
+                  </div>
+                )}
               </div>
             )}
 
