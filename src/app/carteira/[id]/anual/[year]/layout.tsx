@@ -45,7 +45,7 @@ export async function generateMetadata({
   
   const profileUrl = user.slug 
     ? `${baseUrl}/perfil/${user.slug}`
-    : `${baseUrl}/perfil/${user.id}`;
+    : `${baseUrl}/perfil/${userId}`;
   const portfolioUrl = `${baseUrl}/carteira/${userId}/anual/${year}`;
   
   return {
