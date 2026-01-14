@@ -26,7 +26,6 @@ export function ConversionBanner() {
               size="sm"
               variant="default"
               className="flex-1 sm:flex-none min-w-0"
-              useModal={true}
             />
             <Link href="/auth/login?signup=true" className="flex-1 sm:flex-none min-w-0">
               <Button variant="outline" size="sm" className="w-full sm:w-auto">

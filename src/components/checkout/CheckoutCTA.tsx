@@ -15,7 +15,6 @@ interface CheckoutCTAProps {
   variant?: 'default' | 'outline' | 'ghost' | 'link' | 'destructive' | 'secondary';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   className?: string;
-  useModal?: boolean; // Se true, usa modal quando não autenticado. Se false ou undefined, redireciona para signup
 }
 
 export function CheckoutCTA({
@@ -26,7 +25,6 @@ export function CheckoutCTA({
   variant = 'default',
   size = 'default',
   className,
-  useModal = false,
 }: CheckoutCTAProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { user, isAuthenticated } = useAuth();
@@ -62,14 +60,8 @@ export function CheckoutCTA({
           redirectToKiwifyCheckout(user.email, source);
         });
     } else {
-      // Usuário não logado
-      if (useModal) {
-        // Usar modal para capturar email
-        setIsModalOpen(true);
-      } else {
-        // Redirecionar para página de criação de conta
-        window.location.href = '/auth/login?signup=true';
-      }
+      // Usuário não logado - sempre usar modal para capturar email
+      setIsModalOpen(true);
     }
   };
 
@@ -84,15 +76,13 @@ export function CheckoutCTA({
         <Lock className="h-4 w-4 mr-2" />
         {buttonText}
       </Button>
-      {useModal && (
-        <LeadCaptureModal
-          open={isModalOpen}
-          onOpenChange={setIsModalOpen}
-          source={source}
-          title={title}
-          description={description}
-        />
-      )}
+      <LeadCaptureModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        source={source}
+        title={title}
+        description={description}
+      />
     </>
   );
 }

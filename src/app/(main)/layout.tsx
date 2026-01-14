@@ -1,3 +1,5 @@
+import { SessionValidator } from '@/components/auth/SessionValidator';
+
 export default function MainLayout({
   children,
 }: {
@@ -5,6 +7,7 @@ export default function MainLayout({
 }) {
   return (
     <div className="max-w-4xl mx-auto h-full flex flex-col">
+      <SessionValidator />
       {children}
     </div>
   );

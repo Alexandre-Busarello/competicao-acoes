@@ -2,8 +2,9 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Eye, Trophy } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import Link from 'next/link';
+import { CheckoutCTA } from '@/components/checkout/CheckoutCTA';
 
 interface BlurOverlayProps {
   competitorName: string;
@@ -24,13 +25,14 @@ export function BlurOverlay({ competitorName }: BlurOverlayProps) {
             </p>
           </div>
           <div className="space-y-3">
-            <Link href="/perfil?from=cta" className="block">
-              <Button className="w-full" size="lg">
-                <Trophy className="h-5 w-5 mr-2" />
-                Tornar-se Membro Pro
-              </Button>
-            </Link>
-            <Link href="/perfil?from=cta">
+            <CheckoutCTA
+              source="blur_overlay"
+              buttonText="Tornar-se Membro Pro"
+              size="lg"
+              variant="default"
+              className="w-full"
+            />
+            <Link href="/como-funciona">
               <Button variant="outline" className="w-full" size="sm">
                 Entenda como funciona
               </Button>

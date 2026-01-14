@@ -107,7 +107,9 @@ export function useAuth() {
       if (error) throw error;
       return data.session;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 1 * 60 * 1000, // 1 minuto - reduzido para verificar mais frequentemente
+    refetchOnWindowFocus: true, // Refetch quando janela ganha foco
+    refetchOnMount: 'always', // Sempre refetch quando componente monta
   });
 
   // Query para obter usuário atual do banco
@@ -159,6 +161,43 @@ export function useAuth() {
   useEffect(() => {
     // Usar o singleton global para sincronização
     // Isso garante que apenas uma sincronização ocorra por vez em toda a aplicação
+
+    // Função para validar sessão quando necessário
+    const validateSession = async () => {
+      try {
+        const { data: sessionData, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error validating session:', error);
+          queryClient.setQueryData(['auth', 'session'], null);
+          return;
+        }
+
+        const currentSession = sessionData.session;
+        const cachedSession = queryClient.getQueryData(['auth', 'session']);
+
+        // Se não há sessão, limpar cache
+        if (!currentSession) {
+          queryClient.setQueryData(['auth', 'session'], null);
+          queryClient.setQueryData(['auth', 'user'], null);
+          return;
+        }
+
+        // Verificar se a sessão mudou
+        const sessionChanged = 
+          !cachedSession || 
+          cachedSession.access_token !== currentSession.access_token ||
+          cachedSession.user?.id !== currentSession.user?.id;
+
+        if (sessionChanged) {
+          console.log('🔄 [useAuth] Session changed, updating...');
+          queryClient.setQueryData(['auth', 'session'], currentSession);
+          await syncSessionManager.sync(currentSession, 'useAuth-validate');
+          queryClient.invalidateQueries({ queryKey: ['auth', 'user'] });
+        }
+      } catch (error) {
+        console.error('Error in validateSession:', error);
+      }
+    };
 
     // Verificar sessão inicial
     supabase.auth.getSession().then(async ({ data }) => {
@@ -229,8 +268,28 @@ export function useAuth() {
       }
     });
 
+    // Validar sessão quando a aplicação ganha foco (usuário retorna)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('👁️ [useAuth] App became visible, validating session...');
+        validateSession();
+      }
+    };
+
+    // Validar sessão quando a janela ganha foco
+    const handleFocus = () => {
+      console.log('🎯 [useAuth] Window focused, validating session...');
+      validateSession();
+    };
+
+    // Adicionar listeners para validar sessão quando app ganha foco
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
     return () => {
       subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
     };
   }, [queryClient]);
 
