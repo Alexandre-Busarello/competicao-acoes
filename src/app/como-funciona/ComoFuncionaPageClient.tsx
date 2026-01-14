@@ -1,44 +1,11 @@
-import { Metadata } from 'next';
-import { ComoFuncionaPageClient } from './ComoFuncionaPageClient';
+'use client';
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { TrendingUp, DollarSign, Calendar, AlertCircle, Info } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
-export const metadata: Metadata = {
-  title: "Como Funciona - Ranking de Investidores e Regras da Competição",
-  description: "Entenda como funciona o ranking de investidores da Hold Arena. Regras da competição mensal e anual, cálculo de rentabilidade, critérios de desempate, premiação e muito mais.",
-  keywords: [
-    "como funciona ranking de investimentos",
-    "regras da competição",
-    "cálculo de rentabilidade",
-    "ranking mensal",
-    "ranking anual",
-    "premiação de investidores",
-    "medalhas de investidores",
-    "critérios de desempate",
-    "como calcular rentabilidade",
-    "competição de investimentos",
-  ],
-  openGraph: {
-    title: "Como Funciona - Hold Arena",
-    description: "Entenda como funciona o ranking de investidores e as regras da competição",
-    url: `${baseUrl}/como-funciona`,
-    type: "website",
-    siteName: "Hold Arena",
-  },
-  twitter: {
-    card: "summary",
-    title: "Como Funciona - Hold Arena",
-    description: "Entenda como funciona o ranking de investidores e as regras da competição",
-  },
-  alternates: {
-    canonical: `${baseUrl}/como-funciona`,
-  },
-};
-
-export default function ComoFuncionaPage() {
-  return <ComoFuncionaPageClient />;
-}
-
+export function ComoFuncionaPageClient() {
   return (
     <div className="min-h-screen">
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">

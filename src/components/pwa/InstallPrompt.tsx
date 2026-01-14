@@ -70,6 +70,7 @@ export function InstallPrompt() {
     checkStandaloneAsync();
 
     // Verificar se o usuário já dispensou o banner de forma assíncrona
+    // TTL de 1 hora (3600000ms)
     const checkDismissedAsync = () => {
       if (typeof window.requestIdleCallback === 'function') {
         window.requestIdleCallback(() => {
@@ -77,9 +78,10 @@ export function InstallPrompt() {
             const dismissed = localStorage.getItem(DISMISSED_KEY);
             if (dismissed) {
               const dismissedTime = parseInt(dismissed, 10);
-              const daysSinceDismiss = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
-              if (daysSinceDismiss < 7) {
-                console.log('🔵 Banner foi dispensado recentemente');
+              const hoursSinceDismiss = (Date.now() - dismissedTime) / (1000 * 60 * 60);
+              if (hoursSinceDismiss < 1) {
+                console.log('🔵 Banner foi dispensado recentemente (TTL: 1 hora)');
+                setShowPrompt(false);
                 return;
               }
             }
@@ -93,9 +95,10 @@ export function InstallPrompt() {
             const dismissed = localStorage.getItem(DISMISSED_KEY);
             if (dismissed) {
               const dismissedTime = parseInt(dismissed, 10);
-              const daysSinceDismiss = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
-              if (daysSinceDismiss < 7) {
-                console.log('🔵 Banner foi dispensado recentemente');
+              const hoursSinceDismiss = (Date.now() - dismissedTime) / (1000 * 60 * 60);
+              if (hoursSinceDismiss < 1) {
+                console.log('🔵 Banner foi dispensado recentemente (TTL: 1 hora)');
+                setShowPrompt(false);
                 return;
               }
             }

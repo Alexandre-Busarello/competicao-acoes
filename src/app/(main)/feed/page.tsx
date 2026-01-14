@@ -6,6 +6,7 @@ import { GlobalFeed } from '@/components/feed/GlobalFeed';
 import { PublicFeed } from '@/components/feed/PublicFeed';
 import { CreatePostFAB } from '@/components/feed/CreatePostFAB';
 import { FeedFilterDropdown } from '@/components/feed/FeedFilterDropdown';
+import { PageLoading } from '@/components/ui/page-loading';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useAuth } from '@/lib/auth/client';
@@ -36,11 +37,10 @@ export default function FeedPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen">
-        <div className="flex items-center justify-center py-8">
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
+      <PageLoading 
+        title="Carregando feed"
+        description="Preparando seu feed personalizado..."
+      />
     );
   }
 

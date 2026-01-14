@@ -8,9 +8,10 @@ import { AssetList } from '@/components/portfolio/AssetList';
 import { UserTransactionList } from '@/components/portfolio/UserTransactionList';
 import { BlurOverlay } from '@/components/portfolio/BlurOverlay';
 import { PeriodFilters } from '@/components/ranking/PeriodFilters';
+import { PageLoading } from '@/components/ui/page-loading';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Edit, Info, Wallet } from 'lucide-react';
+import { Edit, Info } from 'lucide-react';
 import { isValidPeriod, getCurrentPeriod } from '@/lib/utils/period-utils';
 import { useUserStore } from '@/lib/store/userStore';
 import type { Competitor } from '@/types';
@@ -84,14 +85,10 @@ export default function PortfolioAnualPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 mb-4 shadow-lg animate-pulse">
-            <Wallet className="h-8 w-8 text-white" />
-          </div>
-          <p className="text-muted-foreground">Carregando carteira...</p>
-        </div>
-      </div>
+      <PageLoading 
+        title="Carregando carteira anual"
+        description="Buscando informações do investidor e portfólio do ano..."
+      />
     );
   }
 

@@ -10,10 +10,75 @@ import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistr
 
 const inter = Inter({ subsets: ["latin"] });
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
 export const metadata: Metadata = {
-  title: "Hold Arena",
-  description: "Competição de investimentos e ranking da comunidade",
+  title: {
+    default: "Hold Arena - Rede Social do Investidor | Ranking de Investimentos",
+    template: "%s | Hold Arena",
+  },
+  description: "Hold Arena é a rede social do investidor. Teste sua estratégia de investimentos, compartilhe sua carteira e competa no ranking público com premiação por performance. Onde investidores se testam.",
+  keywords: [
+    "rede social de investimentos",
+    "ranking de investidores",
+    "competição de investimentos",
+    "carteira de investimentos pública",
+    "teste de estratégia de investimento",
+    "premiação por performance",
+    "ranking mensal de investidores",
+    "ranking anual de investidores",
+    "investimentos",
+    "ações",
+    "bolsa de valores",
+    "análise técnica",
+    "análise fundamentalista",
+    "carteira de investimentos",
+    "rentabilidade de investimentos",
+    "estratégias de investimento",
+    "comunidade de investidores",
+    "social trading",
+    "competição de traders",
+  ],
   manifest: "/manifest.json",
+  authors: [{ name: "Hold Arena" }],
+  creator: "Hold Arena",
+  publisher: "Hold Arena",
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: baseUrl,
+    siteName: "Hold Arena",
+    title: "Hold Arena - Rede Social do Investidor | Ranking de Investimentos",
+    description: "Teste sua estratégia de investimentos e seja premiado. A rede social onde investidores mostram suas carteiras e competem no ranking público.",
+    images: [
+      {
+        url: `${baseUrl}/logo-combinada-claro.svg`,
+        width: 1200,
+        height: 630,
+        alt: "Hold Arena - Rede Social do Investidor",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Hold Arena - Rede Social do Investidor",
+    description: "Teste sua estratégia de investimentos e seja premiado. Onde investidores se testam.",
+    images: [`${baseUrl}/logo-combinada-claro.svg`],
+  },
+  alternates: {
+    canonical: baseUrl,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -72,6 +137,44 @@ export default function RootLayout({
         <link rel="apple-touch-startup-image" href="/splash/apple-splash-2048-2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)" />
       </head>
       <body className={inter.className}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Hold Arena",
+              description: "Rede social do investidor onde estratégias são testadas e premiadas",
+              url: baseUrl,
+              logo: `${baseUrl}/logo-combinada-claro.svg`,
+              sameAs: [],
+              contactPoint: {
+                "@type": "ContactPoint",
+                contactType: "Customer Service",
+              },
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: "Hold Arena",
+              url: baseUrl,
+              description: "Rede social do investidor - Teste sua estratégia e seja premiado",
+              potentialAction: {
+                "@type": "SearchAction",
+                target: {
+                  "@type": "EntryPoint",
+                  urlTemplate: `${baseUrl}/feed?q={search_term_string}`,
+                },
+                "query-input": "required name=search_term_string",
+              },
+            }),
+          }}
+        />
         <ThemeProvider>
           <QueryProvider>
             <div className="min-h-screen bg-background">

@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Mail, Loader2, CheckCircle2, AlertCircle, Trophy, Sparkles, Lock, LogIn } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useAuth, syncSessionManager } from '@/lib/auth/client';
 import { CheckoutCTA } from '@/components/checkout/CheckoutCTA';
 import { supabase } from '@/lib/supabase/client';
@@ -283,13 +282,10 @@ function LoginForm() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <Image 
+            <img 
               src={logoPath}
               alt="Hold Arena" 
-              width={200} 
-              height={67}
               className="h-16 w-auto object-contain"
-              priority
             />
           </div>
           <CardTitle className="text-2xl">

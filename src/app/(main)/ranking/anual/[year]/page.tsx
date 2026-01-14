@@ -7,9 +7,10 @@ import { UserRankCard } from '@/components/ranking/UserRankCard';
 import { RankingList } from '@/components/ranking/RankingList';
 import { ConversionBanner } from '@/components/ranking/ConversionBanner';
 import { PeriodFilters } from '@/components/ranking/PeriodFilters';
+import { PageLoading } from '@/components/ui/page-loading';
 import { useUserStore } from '@/lib/store/userStore';
 import { useAuth } from '@/lib/auth/client';
-import { Info, Trophy } from 'lucide-react';
+import { Info } from 'lucide-react';
 import type { Competitor, RankingPeriod } from '@/types';
 import { SHOW_MIC_METHOD } from '@/lib/config/features';
 import { isValidPeriod, getCurrentPeriod } from '@/lib/utils/period-utils';
@@ -112,14 +113,10 @@ export default function RankingAnualPage() {
 
       {/* Mostrar loading ou conteúdo baseado no estado */}
       {isLoading ? (
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 mb-4 shadow-lg animate-pulse">
-              <Trophy className="h-8 w-8 text-white" />
-            </div>
-            <p className="text-muted-foreground">Carregando ranking...</p>
-          </div>
-        </div>
+        <PageLoading 
+          title="Carregando ranking anual"
+          description="Buscando os melhores investidores do ano..."
+        />
       ) : (
         <>
           {/* Banner de conversão para usuários não logados quando há competidores */}

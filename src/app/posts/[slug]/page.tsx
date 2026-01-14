@@ -37,7 +37,20 @@ export async function generateMetadata({
   return {
     title,
     description,
-    keywords: ['investimentos', 'ações', 'bolsa de valores', 'análise técnica', 'carteira de investimentos'],
+    keywords: [
+      'investimentos',
+      'ações',
+      'bolsa de valores',
+      'análise técnica',
+      'análise fundamentalista',
+      'carteira de investimentos',
+      'estratégias de investimento',
+      'análise de investimentos',
+      'comunidade de investidores',
+      'social trading',
+      'hold',
+      'análise de mercado',
+    ],
     authors: [{ name: post.user.name }],
     openGraph: {
       title,

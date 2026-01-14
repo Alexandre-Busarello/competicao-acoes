@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { FeedPost } from './FeedPost';
-import { Loader2 } from 'lucide-react';
+import { PageLoading } from '@/components/ui/page-loading';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,9 +28,10 @@ export function PublicFeed() {
 
   if (isLoading || (isFetching && !data)) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
+      <PageLoading 
+        title="Carregando feed público"
+        description="Buscando os últimos posts da comunidade..."
+      />
     );
   }
 

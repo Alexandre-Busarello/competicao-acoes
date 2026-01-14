@@ -6,7 +6,8 @@ import { PortfolioHeader } from '@/components/portfolio/PortfolioHeader';
 import { AssetAllocationChart } from '@/components/portfolio/AssetAllocationChart';
 import { AssetList } from '@/components/portfolio/AssetList';
 import { BlurOverlay } from '@/components/portfolio/BlurOverlay';
-import { Star, Copy, Loader2 } from 'lucide-react';
+import { PageLoading } from '@/components/ui/page-loading';
+import { Star, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,12 +20,10 @@ export default function BrunoMethodPage() {
 
   if (isLoading || !brunoPortfolio) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-          <h1 className="text-2xl font-bold mb-2">Carregando...</h1>
-        </div>
-      </div>
+      <PageLoading 
+        title="Carregando estratégia oficial"
+        description="Buscando a carteira do Bruno Chimarelli..."
+      />
     );
   }
 

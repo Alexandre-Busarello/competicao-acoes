@@ -23,7 +23,29 @@ const withPWA = require('next-pwa')({
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: [],
+    domains: [
+      'api.dicebear.com',
+      'www.gravatar.com',
+      'secure.gravatar.com',
+      '0.gravatar.com',
+      '1.gravatar.com',
+      '2.gravatar.com',
+    ],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'api.dicebear.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.gravatar.com',
+        pathname: '/**',
+      },
+    ],
+    // Permitir SVGs não otimizados para melhor compatibilidade
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 };
 

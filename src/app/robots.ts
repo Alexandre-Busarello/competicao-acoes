@@ -14,6 +14,7 @@ export default function robots(): MetadataRoute.Robots {
           '/posts/',
           '/perfil/',
           '/como-funciona',
+          '/rede-social-investidor',
         ],
         disallow: [
           '/api/',
@@ -34,6 +35,7 @@ export default function robots(): MetadataRoute.Robots {
           '/posts/',
           '/perfil/',
           '/como-funciona',
+          '/rede-social-investidor',
         ],
         disallow: [
           '/api/',

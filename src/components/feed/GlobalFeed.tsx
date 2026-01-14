@@ -373,17 +373,6 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
     };
   }, [isRefreshing, handleRefresh]);
 
-  const posts = data?.pages.flatMap((page) => page.posts) || [];
-
-  // Mostrar loading enquanto está carregando
-  if (isLoading || (isFetching && !data)) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
   // Verificar se usuário não está logado
   if (!user) {
     return (
@@ -393,8 +382,49 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
     );
   }
 
+  const pullProgress = Math.min(pullDistance / 100, 1);
+  const shouldShowPullIndicator = pullDistance > 10 && !isRefreshing;
+
+  // Loading inicial com logo animado - PRIMEIRO, antes de outras verificações
+  // Verificar tanto isLoading quanto isFetching para cobrir todos os casos
+  if ((isLoading || (isFetching && !data)) && !data) {
+    return (
+      <div className="relative flex-1 min-h-0 overflow-hidden flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500">
+          {/* Logo animado */}
+          <div className="relative">
+            <div className="w-24 h-24 md:w-32 md:h-32 relative">
+              {/* Logo SVG - usando a logo combinada */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <img 
+                  src="/logo-combinada-claro.svg" 
+                  alt="Hold Arena" 
+                  className="w-full h-full object-contain dark:hidden animate-pulse"
+                />
+                <img 
+                  src="/logo-combinada-escuro.svg" 
+                  alt="Hold Arena" 
+                  className="w-full h-full object-contain hidden dark:block animate-pulse"
+                />
+              </div>
+              {/* Anel rotativo */}
+              <div className="absolute inset-0 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+            </div>
+          </div>
+          {/* Texto */}
+          <div className="text-center space-y-2">
+            <p className="text-lg font-semibold text-foreground">Carregando seu feed personalizado</p>
+            <p className="text-sm text-muted-foreground">Buscando os melhores conteúdos para você...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const posts = data?.pages.flatMap((page) => page.posts) || [];
+
   // Só mostrar mensagem vazia se não estiver carregando e realmente não houver posts
-  if (posts.length === 0 && !isFetching) {
+  if (posts.length === 0 && !isFetching && !isLoading) {
     let emptyMessage = 'Nenhum post ainda.';
     if (filterInteractions) {
       emptyMessage = 'Você ainda não interagiu com nenhum post.';
@@ -425,9 +455,6 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
       </div>
     );
   }
-
-  const pullProgress = Math.min(pullDistance / 100, 1);
-  const shouldShowPullIndicator = pullDistance > 10 && !isRefreshing;
 
   return (
     <div className="relative flex-1 min-h-0 overflow-hidden">

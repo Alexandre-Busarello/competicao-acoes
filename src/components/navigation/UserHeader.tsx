@@ -9,7 +9,6 @@ import { formatUserNameWithId, getNameWithoutId } from '@/lib/utils/format-user-
 import { LogOut, Crown, Loader2, LogIn, Rss, Trophy, Wallet, User, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -56,13 +55,10 @@ export function UserHeader() {
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-3 max-w-4xl">
           <Link href="/ranking" className="flex items-center hover:opacity-90 transition-opacity">
-            <Image 
+            <img 
               src={logoPath}
               alt="Hold Arena" 
-              width={160} 
-              height={53}
               className="h-10 sm:h-12 md:h-14 w-auto object-contain"
-              priority
             />
           </Link>
           {/* Navegação Desktop - Loading */}
@@ -92,13 +88,10 @@ export function UserHeader() {
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-3 max-w-4xl">
           <Link href="/ranking" className="flex items-center hover:opacity-90 transition-opacity">
-            <Image 
+            <img 
               src={logoPath}
               alt="Hold Arena" 
-              width={160} 
-              height={53}
               className="h-10 sm:h-12 md:h-14 w-auto object-contain"
-              priority
             />
           </Link>
           {/* Navegação Desktop - Não autenticado */}
@@ -156,13 +149,10 @@ export function UserHeader() {
     <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-3 max-w-4xl">
           <Link href="/ranking" className="flex items-center hover:opacity-90 transition-opacity">
-            <Image 
+            <img 
               src={logoPath}
               alt="Hold Arena" 
-              width={200} 
-              height={67}
               className="h-14 sm:h-16 md:h-16 w-auto object-contain"
-              priority
             />
           </Link>
         

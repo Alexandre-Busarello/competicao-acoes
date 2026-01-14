@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Users, UserCheck, TrendingUp, CreditCard, ShieldAlert } from 'lucide-react';
+import { Users, UserCheck, TrendingUp, CreditCard, ShieldAlert } from 'lucide-react';
+import { PageLoading } from '@/components/ui/page-loading';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
@@ -73,9 +74,10 @@ export default function AdminPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <PageLoading 
+        title="Carregando painel administrativo"
+        description="Buscando estatísticas e dados do sistema..."
+      />
     );
   }
 
