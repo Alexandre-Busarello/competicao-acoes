@@ -4,42 +4,72 @@ import { prisma } from '@/lib/prisma/client';
 export const dynamic = 'force-dynamic';
 export const revalidate = 3600; // Revalidar a cada hora
 
+// Função auxiliar para validar e sanitizar URLs
+function validateUrl(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    // Garantir que a URL é válida e usa HTTPS ou HTTP
+    if (!['http:', 'https:'].includes(urlObj.protocol)) {
+      return null;
+    }
+    // Retornar URL codificada corretamente
+    return urlObj.toString();
+  } catch {
+    return null;
+  }
+}
+
+// Função auxiliar para validar e sanitizar slugs
+function sanitizeSlug(slug: string | null | undefined): string | null {
+  if (!slug || typeof slug !== 'string' || slug.trim() === '') {
+    return null;
+  }
+  // Remover caracteres inválidos e espaços
+  return slug.trim();
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  
+  // Garantir que baseUrl termina sem barra
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '');
 
   // URLs estáticas
   const staticRoutes: MetadataRoute.Sitemap = [
     {
-      url: baseUrl,
+      url: cleanBaseUrl,
       lastModified: new Date(),
-      changeFrequency: 'daily',
+      changeFrequency: 'daily' as const,
       priority: 1,
     },
     {
-      url: `${baseUrl}/feed`,
+      url: `${cleanBaseUrl}/feed`,
       lastModified: new Date(),
-      changeFrequency: 'hourly',
+      changeFrequency: 'hourly' as const,
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/ranking`,
+      url: `${cleanBaseUrl}/ranking`,
       lastModified: new Date(),
-      changeFrequency: 'hourly',
+      changeFrequency: 'hourly' as const,
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/como-funciona`,
+      url: `${cleanBaseUrl}/como-funciona`,
       lastModified: new Date(),
-      changeFrequency: 'monthly',
+      changeFrequency: 'monthly' as const,
       priority: 0.7,
     },
     {
-      url: `${baseUrl}/rede-social-investidor`,
+      url: `${cleanBaseUrl}/rede-social-investidor`,
       lastModified: new Date(),
-      changeFrequency: 'monthly',
+      changeFrequency: 'monthly' as const,
       priority: 0.9,
     },
   ];
+
+  let postRoutes: MetadataRoute.Sitemap = [];
+  let profileRoutes: MetadataRoute.Sitemap = [];
 
   try {
     // Função para calcular score de engajamento (mesma fórmula do GlobalFeedService)
@@ -84,7 +114,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .slice(0, 2000);
 
     // Gerar URLs dos posts com priority baseada no engajamento
-    const postRoutes: MetadataRoute.Sitemap = postsWithEngagement.map((post) => {
+    const postRoutesArray: Array<MetadataRoute.Sitemap[0] | null> = postsWithEngagement.map((post) => {
+      const slug = sanitizeSlug(post.slug);
+      if (!slug) {
+        return null;
+      }
+
       // Priority varia de 0.8 a 1.0 baseado no engajamento
       // Posts com engajamento muito alto (>50) têm priority 1.0
       // Posts com engajamento médio (10-50) têm priority 0.9
@@ -96,14 +131,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority = 0.9;
       }
 
+      const url = `${cleanBaseUrl}/posts/${encodeURIComponent(slug)}`;
+      const validatedUrl = validateUrl(url);
+      
+      if (!validatedUrl) {
+        return null;
+      }
+
+      // Garantir que lastModified é uma data válida
+      const lastModified = post.updatedAt || post.createdAt;
+      if (!lastModified || !(lastModified instanceof Date)) {
+        return null;
+      }
+
       return {
-        url: `${baseUrl}/posts/${post.slug}`,
-        lastModified: post.updatedAt || post.createdAt,
+        url: validatedUrl,
+        lastModified,
         changeFrequency: 'weekly' as const,
-        priority,
+        priority: Math.max(0, Math.min(1, priority)), // Garantir que priority está entre 0 e 1
       };
     });
+    
+    postRoutes = postRoutesArray.filter((route): route is MetadataRoute.Sitemap[0] => route !== null);
 
+  } catch (error) {
+    console.error('Error generating post routes in sitemap:', error);
+    // Continuar mesmo se houver erro nos posts
+  }
+
+  try {
     // Buscar TOP 100 perfis com mais medalhas
     // Agrupar medalhas por usuário e ordenar por total de medalhas
     const topUsers = await prisma.user.findMany({
@@ -141,7 +197,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .slice(0, 100); // TOP 100 apenas
 
     // Gerar URLs dos perfis usando slug (ou ID como fallback)
-    const profileRoutes: MetadataRoute.Sitemap = usersWithMedalCount.map((user) => {
+    const profileRoutesArray: Array<MetadataRoute.Sitemap[0] | null> = usersWithMedalCount.map((user) => {
       // Priority baseada em quantidade de medalhas
       // TOP com muitas medalhas: 0.9, médio: 0.8, resto: 0.7
       let priority = 0.7;
@@ -152,23 +208,46 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }
 
       // Usar slug se disponível, senão usar ID
-      const url = user.slug 
-        ? `${baseUrl}/perfil/${user.slug}`
-        : `${baseUrl}/perfil/${user.id}`;
+      const slug = sanitizeSlug(user.slug);
+      const url = slug 
+        ? `${cleanBaseUrl}/perfil/${encodeURIComponent(slug)}`
+        : `${cleanBaseUrl}/perfil/${encodeURIComponent(user.id)}`;
+
+      const validatedUrl = validateUrl(url);
+      
+      if (!validatedUrl) {
+        return null;
+      }
+
+      // Garantir que lastModified é uma data válida
+      if (!user.updatedAt || !(user.updatedAt instanceof Date)) {
+        return null;
+      }
 
       return {
-        url,
+        url: validatedUrl,
         lastModified: user.updatedAt,
         changeFrequency: 'weekly' as const,
-        priority,
+        priority: Math.max(0, Math.min(1, priority)), // Garantir que priority está entre 0 e 1
       };
     });
+    
+    profileRoutes = profileRoutesArray.filter((route): route is MetadataRoute.Sitemap[0] => route !== null);
 
-    return [...staticRoutes, ...postRoutes, ...profileRoutes];
   } catch (error) {
-    console.error('Error generating sitemap:', error);
-    // Retornar apenas rotas estáticas em caso de erro
-    return staticRoutes;
+    console.error('Error generating profile routes in sitemap:', error);
+    // Continuar mesmo se houver erro nos perfis
   }
+
+  // Combinar todas as rotas e garantir que não ultrapassamos o limite do Google (50.000 URLs)
+  const allRoutes = [...staticRoutes, ...postRoutes, ...profileRoutes];
+  const maxUrls = 50000;
+  
+  if (allRoutes.length > maxUrls) {
+    console.warn(`Sitemap has ${allRoutes.length} URLs, limiting to ${maxUrls}`);
+    return allRoutes.slice(0, maxUrls);
+  }
+
+  return allRoutes;
 }
 
