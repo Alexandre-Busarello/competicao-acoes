@@ -33,7 +33,7 @@ export function SessionValidator() {
         }
 
         const currentSession = sessionData.session;
-        const cachedSession = queryClient.getQueryData(['auth', 'session']);
+        const cachedSession = queryClient.getQueryData(['auth', 'session']) as typeof currentSession | null | undefined;
 
         // Se não há sessão, limpar cache
         if (!currentSession) {
