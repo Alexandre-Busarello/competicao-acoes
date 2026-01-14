@@ -40,3 +40,4 @@ export default function RankingLayout({
   return children;
 }
 
+

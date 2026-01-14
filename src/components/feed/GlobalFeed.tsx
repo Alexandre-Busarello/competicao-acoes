@@ -6,6 +6,7 @@ import { FeedPost } from './FeedPost';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
 import { Button } from '@/components/ui/button';
+import { ScrollToTopButton } from './ScrollToTopButton';
 
 interface GlobalFeedProps {
   filterInteractions?: boolean;
@@ -250,12 +251,19 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
     });
   }, [data]);
 
-  // Detectar scroll para pull-to-refresh
+  // Detectar scroll para pull-to-refresh e atualizar estado
   useEffect(() => {
     const handleScroll = () => {
       if (!containerRef.current) return;
       const container = containerRef.current;
-      isAtTopRef.current = container.scrollTop <= 10;
+      const scrollTop = container.scrollTop;
+      isAtTopRef.current = scrollTop <= 1;
+      
+      // Se não está no topo e está puxando, resetar
+      if (!isAtTopRef.current && isPulling) {
+        setPullDistance(0);
+        setIsPulling(false);
+      }
     };
 
     const container = containerRef.current;
@@ -269,109 +277,166 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
         container.removeEventListener('scroll', handleScroll);
       }
     };
-  }, []);
+  }, [isPulling]);
 
-  // Pull-to-refresh handlers - adaptado para container interno
+  // Pull-to-refresh - implementação simplificada e funcional
   useEffect(() => {
-    let touchStartY = 0;
-    let isDragging = false;
-    let currentPullDistance = 0;
-    let touchTarget: EventTarget | null = null;
     const container = containerRef.current;
+    if (!container) return;
 
-    const handleTouchStart = (e: TouchEvent) => {
-      if (!container || !isAtTopRef.current || isRefreshing) return;
-      const touch = e.touches[0];
-      const rect = container.getBoundingClientRect();
-      touchTarget = e.target;
-      
-      // Verificar se o toque está em um elemento interativo (botão, link, etc)
-      const target = e.target as HTMLElement;
-      const isInteractive = target.closest('button, a, [role="button"], input, textarea, select');
-      
-      // Se tocou em elemento interativo, não iniciar pull-to-refresh
-      if (isInteractive) {
-        return;
+    let startY = 0;
+    let currentY = 0;
+    let isPullingDown = false;
+    let pullDistance = 0;
+
+    const isInteractiveElement = (el: HTMLElement | null): boolean => {
+      if (!el) return false;
+      return !!el.closest('button, a, [role="button"], input, textarea, select, [data-no-pull]');
+    };
+
+    const handleStart = (clientY: number, target: HTMLElement | null) => {
+      // Só iniciar se estiver no topo, não estiver refresando e não for elemento interativo
+      const scrollTop = container.scrollTop;
+      const isInteractive = isInteractiveElement(target);
+      const canStart = scrollTop <= 1 && !isRefreshing && !isInteractive;
+      if (!canStart) {
+        return false;
       }
       
-      // Verificar se o toque está dentro do container
-      if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
-        touchStartY = touch.clientY;
-        isDragging = true;
+      startY = clientY;
+      isPullingDown = true;
+      return true;
+    };
+
+    const handleMove = (clientY: number, target: HTMLElement | null) => {
+      if (!isPullingDown || isRefreshing) return false;
+      
+      // Se moveu para elemento interativo, cancelar
+      const isInteractive = isInteractiveElement(target);
+      if (isInteractive) {
+        isPullingDown = false;
+        setPullDistance(0);
+        setIsPulling(false);
+        return false;
+      }
+
+      // Verificar se ainda está no topo
+      const scrollTop = container.scrollTop;
+      if (scrollTop > 1) {
+        isPullingDown = false;
+        setPullDistance(0);
+        setIsPulling(false);
+        return false;
+      }
+
+      currentY = clientY;
+      const deltaY = currentY - startY;
+      
+      if (deltaY > 0) {
+        // Puxando para baixo
+        const maxPull = 100;
+        pullDistance = Math.min(deltaY * 0.7, maxPull);
+        setPullDistance(pullDistance);
+        setIsPulling(true);
+        return pullDistance > 10; // Prevenir scroll se puxando significativamente
+      } else {
+        // Puxando para cima ou movimento mínimo
+        setPullDistance(0);
+        setIsPulling(false);
+        return false;
       }
     };
 
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isDragging || !isAtTopRef.current || isRefreshing || !container) return;
+    const handleEnd = () => {
+      if (!isPullingDown) return;
       
-      // Verificar se ainda está tocando em elemento interativo
-      const target = e.target as HTMLElement;
-      const isInteractive = target.closest('button, a, [role="button"], input, textarea, select');
+      // Usar o valor atual de pullDistance antes de resetar
+      const currentPull = pullDistance;
+      const scrollTop = container.scrollTop;
+      const shouldRefresh = currentPull > 50 && scrollTop <= 1;
       
-      // Se moveu para um elemento interativo, cancelar pull-to-refresh
-      if (isInteractive) {
-        currentPullDistance = 0;
-        setPullDistance(0);
-        setIsPulling(false);
-        isDragging = false;
-        return;
+      setPullDistance(0);
+      setIsPulling(false);
+      isPullingDown = false;
+      pullDistance = 0;
+      
+      if (shouldRefresh) {
+        handleRefresh();
       }
-      
-      const currentY = e.touches[0].clientY;
-      const distance = currentY - touchStartY;
-      
-      // Só prevenir scroll se realmente estiver puxando para baixo no topo
-      if (distance > 0 && container.scrollTop === 0) {
-        const maxPull = 100;
-        const pull = Math.min(distance, maxPull);
-        currentPullDistance = pull;
-        setPullDistance(pull);
-        setIsPulling(true);
-        
-        // Prevenir scroll padrão apenas quando puxando significativamente
-        if (pull > 10) {
+    };
+
+    // Touch events
+    const onTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      const target = e.target as HTMLElement;
+      handleStart(touch.clientY, target);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      const target = e.target as HTMLElement;
+      const shouldPrevent = handleMove(touch.clientY, target);
+      if (shouldPrevent && pullDistance > 10) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const onTouchEnd = () => {
+      handleEnd();
+    };
+
+    const onTouchCancel = () => {
+      setPullDistance(0);
+      setIsPulling(false);
+      isPullingDown = false;
+    };
+
+    // Mouse events para desktop (opcional, para testar)
+    const onMouseDown = (e: MouseEvent) => {
+      if (handleStart(e.clientY, e.target as HTMLElement)) {
+        // Não fazer nada especial
+      }
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (isPullingDown) {
+        const shouldPrevent = handleMove(e.clientY, e.target as HTMLElement);
+        if (shouldPrevent && pullDistance > 10) {
           e.preventDefault();
         }
-      } else {
-        // Se não está no topo ou está scrollando para cima, não prevenir
-        currentPullDistance = 0;
-        setPullDistance(0);
-        setIsPulling(false);
-        isDragging = false;
       }
     };
 
-    const handleTouchEnd = () => {
-      if (currentPullDistance > 50 && isAtTopRef.current && !isRefreshing) {
-        // Reset pull distance imediatamente ao soltar
-        setPullDistance(0);
-        setIsPulling(false);
-        // Iniciar refresh
-        handleRefresh();
-      } else {
-        // Reset suave se não atingiu o threshold
-        setPullDistance(0);
-        setIsPulling(false);
+    const onMouseUp = () => {
+      if (isPullingDown) {
+        handleEnd();
       }
-      isDragging = false;
-      currentPullDistance = 0;
-      touchTarget = null;
     };
 
-    if (container) {
-      container.addEventListener('touchstart', handleTouchStart, { passive: true });
-      container.addEventListener('touchmove', handleTouchMove, { passive: false });
-      container.addEventListener('touchend', handleTouchEnd, { passive: true });
-    }
+    // Adicionar listeners - touchstart pode ser passivo, touchmove precisa ser não-passivo
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
+    container.addEventListener('touchmove', onTouchMove, { passive: false });
+    container.addEventListener('touchend', onTouchEnd, { passive: true });
+    container.addEventListener('touchcancel', onTouchCancel, { passive: true });
+    
+    // Mouse events (opcional para desktop)
+    container.addEventListener('mousedown', onMouseDown, { passive: true });
+    container.addEventListener('mousemove', onMouseMove, { passive: false });
+    container.addEventListener('mouseup', onMouseUp, { passive: true });
+    container.addEventListener('mouseleave', onMouseUp, { passive: true });
 
     return () => {
-      if (container) {
-        container.removeEventListener('touchstart', handleTouchStart);
-        container.removeEventListener('touchmove', handleTouchMove);
-        container.removeEventListener('touchend', handleTouchEnd);
-      }
+      container.removeEventListener('touchstart', onTouchStart);
+      container.removeEventListener('touchmove', onTouchMove);
+      container.removeEventListener('touchend', onTouchEnd);
+      container.removeEventListener('touchcancel', onTouchCancel);
+      container.removeEventListener('mousedown', onMouseDown);
+      container.removeEventListener('mousemove', onMouseMove);
+      container.removeEventListener('mouseup', onMouseUp);
+      container.removeEventListener('mouseleave', onMouseUp);
     };
-  }, [isRefreshing, handleRefresh]);
+  }, [isRefreshing, handleRefresh, data]); // Adicionar 'data' como dependência para re-executar quando o container for renderizado
 
   // Verificar se usuário não está logado
   if (!user) {
@@ -383,7 +448,7 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
   }
 
   const pullProgress = Math.min(pullDistance / 100, 1);
-  const shouldShowPullIndicator = pullDistance > 10 && !isRefreshing;
+  const shouldShowPullIndicator = (pullDistance > 5 || isRefreshing) && (isAtTopRef.current || isRefreshing);
 
   // Loading inicial com logo animado - PRIMEIRO, antes de outras verificações
   // Verificar tanto isLoading quanto isFetching para cobrir todos os casos
@@ -465,34 +530,47 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
         }`}
         style={{ scrollBehavior: 'smooth' }}
       >
-        {/* Pull-to-refresh indicator - só mostra durante o pull, desaparece ao soltar */}
+        {/* Pull-to-refresh indicator - animação melhorada e mais fluida */}
         {shouldShowPullIndicator && (
           <div
-            className="flex items-center justify-center transition-all duration-200 absolute top-0 left-0 right-0 z-10 pointer-events-none"
+            className="flex items-center justify-center absolute top-0 left-0 right-0 z-50 pointer-events-none"
             style={{
-              opacity: pullProgress,
-              transform: `translateY(${Math.max(-20, pullDistance - 20)}px)`,
-              height: `${Math.max(0, pullDistance)}px`,
+              opacity: isRefreshing ? 1 : Math.min(pullProgress * 1.5, 1),
+              transform: `translateY(${isRefreshing ? 0 : Math.max(-50, pullDistance - 50)}px)`,
+              height: `${isRefreshing ? 60 : Math.max(60, pullDistance)}px`,
+              transition: isRefreshing ? 'all 0.3s ease-out' : 'opacity 0.2s, transform 0.1s',
             }}
           >
-            {pullDistance > 50 ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <span className="ml-2 text-sm text-muted-foreground">
-                  Solte para atualizar
-                </span>
-              </>
-            ) : (
-              <RefreshCw
-                className="h-5 w-5 text-muted-foreground"
-                style={{
-                  transform: `rotate(${pullProgress * 180}deg)`,
-                  transition: 'transform 0.2s',
-                }}
-              />
-            )}
+            <div className="bg-background/95 backdrop-blur-md rounded-full px-4 py-2 shadow-lg border border-border/50">
+              {isRefreshing ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <span className="text-sm font-medium text-foreground">
+                    Atualizando...
+                  </span>
+                </div>
+              ) : pullDistance > 60 ? (
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="h-5 w-5 text-primary" />
+                  <span className="text-sm text-muted-foreground">
+                    Solte para atualizar
+                  </span>
+                </div>
+              ) : (
+                <RefreshCw
+                  className="h-5 w-5 text-muted-foreground"
+                  style={{
+                    transform: `rotate(${pullProgress * 360}deg)`,
+                    transition: 'transform 0.15s ease-out',
+                  }}
+                />
+              )}
+            </div>
           </div>
         )}
+        
+        {/* Botão de voltar ao topo */}
+        <ScrollToTopButton containerRef={containerRef} />
 
         {/* Filtro integrado ao conteúdo */}
         {filterComponent && (
