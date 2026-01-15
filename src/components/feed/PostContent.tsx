@@ -20,7 +20,6 @@ import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import { useRouter } from 'next/navigation';
 import { renderMarkdownWithPolls } from '@/lib/utils/markdown-with-polls';
-import { updateFeedSeed } from '@/lib/utils/feed-seed';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -174,9 +173,6 @@ export function PostContent({ slug }: PostContentProps) {
         likedByCurrentUser: data.liked,
         likeCount: data.likeCount,
       }));
-      
-      // Atualizar seed do feed para reorganizar após interação
-      updateFeedSeed();
     },
     // Sincronizar em background após um delay
     onSettled: () => {

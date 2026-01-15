@@ -24,7 +24,8 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
   const seenPostIdsRef = useRef<Set<string>>(new Set());
   const loopPageRef = useRef<number>(0);
   
-  // Seed consistente por sessão - pode mudar quando usuário cria posts ou interage
+  // Seed consistente por sessão - gerado uma vez e reutilizado
+  // O seed só muda quando o usuário cria um post (não quando interage)
   const sessionSeedRef = useRef<string | null>(null);
   
   // Gerar ou recuperar seed da sessão
@@ -32,16 +33,17 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
     sessionSeedRef.current = getCurrentSeed();
   }, []);
   
-  // Escutar mudanças no seed (quando usuário cria posts ou interage)
+  // Escutar mudanças no seed apenas quando usuário cria posts
+  // Não invalidamos o cache para manter o feed atual carregado
   useEffect(() => {
     const unsubscribe = onFeedSeedUpdate((newSeed) => {
       sessionSeedRef.current = newSeed;
-      // Invalidar cache do feed para que seja recarregado com novo seed
-      queryClient.invalidateQueries({ queryKey: ['global-feed'] });
+      // Apenas atualiza o seed para próximas requisições, sem invalidar cache atual
+      // O feed atual continua mostrando os posts já carregados
     });
     
     return unsubscribe;
-  }, [queryClient]);
+  }, []);
   
   // Estado para pull-to-refresh
   const [isRefreshing, setIsRefreshing] = useState(false);

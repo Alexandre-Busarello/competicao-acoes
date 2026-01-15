@@ -1,7 +1,7 @@
 /**
  * Utilitário para gerenciar seed do feed global
- * O seed muda quando o usuário cria posts ou interage com posts
- * para garantir que o feed seja reorganizado após essas ações
+ * O seed muda apenas quando o usuário cria posts (não quando interage)
+ * Quando o seed muda, apenas atualiza para próximas requisições sem invalidar o feed atual
  */
 
 const STORAGE_KEY = 'feed-session-seed';
@@ -32,7 +32,8 @@ export function getCurrentSeed(): string {
 
 /**
  * Atualiza o seed do feed global
- * Isso força uma reorganização do feed quando o usuário cria posts ou interage
+ * Apenas atualiza o seed para próximas requisições, sem invalidar o feed atual
+ * O feed atual continua mostrando os posts já carregados
  * 
  * @returns O novo seed gerado
  */

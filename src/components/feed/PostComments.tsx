@@ -29,7 +29,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import { useRouter } from 'next/navigation';
-import { updateFeedSeed } from '@/lib/utils/feed-seed';
 
 interface Comment {
   id: string;
@@ -192,9 +191,6 @@ export function PostComments({ postId, postSlug, onCommentAdded }: PostCommentsP
         const filtered = old.filter((c) => !c.id.startsWith('temp-'));
         return [newComment, ...filtered];
       });
-      
-      // Atualizar seed do feed para reorganizar após interação
-      updateFeedSeed();
     },
     // Sincronizar em background após um delay
     onSettled: () => {

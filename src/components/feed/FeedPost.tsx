@@ -38,7 +38,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { CheckoutCTA } from '@/components/checkout/CheckoutCTA';
 import { Lock } from 'lucide-react';
-import { updateFeedSeed } from '@/lib/utils/feed-seed';
 
 interface FeedPostProps {
   post: {
@@ -208,9 +207,6 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
         likedByCurrentUser: data.liked,
         likeCount: data.likeCount,
       }));
-      
-      // Atualizar seed do feed para reorganizar após interação
-      updateFeedSeed();
     },
     // Sincronizar em background após um delay
     onSettled: () => {
