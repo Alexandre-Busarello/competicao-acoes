@@ -134,13 +134,13 @@ export default function PortfolioMensalPage() {
       
       {canAccess ? (
         <>
-          <AssetAllocationChart assets={competitor.portfolio} />
+          <AssetAllocationChart assets={competitor.portfolio} userId={competitor.id} isOwner={isOwner} />
           <AssetList assets={competitor.portfolio} isPremium={canAccess} isOwner={isOwner} />
           <UserTransactionList userId={competitor.id} isPremium={canAccess} isOwner={isOwner} period="mensal" year={year} month={month} />
         </>
       ) : (
         <>
-          <AssetAllocationChart assets={competitor.portfolio} />
+          <AssetAllocationChart assets={competitor.portfolio} userId={competitor.id} isOwner={false} />
           <AssetList assets={competitor.portfolio} isPremium={false} isOwner={false} />
           <UserTransactionList userId={competitor.id} isPremium={false} isOwner={false} period="mensal" year={year} month={month} />
           <BlurOverlay competitorName={competitor.name} />
