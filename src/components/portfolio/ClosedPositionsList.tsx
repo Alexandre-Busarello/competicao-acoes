@@ -214,3 +214,4 @@ export function ClosedPositionsList({ userId, isOwner = false }: ClosedPositions
   );
 }
 
+

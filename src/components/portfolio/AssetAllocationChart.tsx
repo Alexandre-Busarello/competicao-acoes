@@ -119,42 +119,46 @@ export function AssetAllocationChart({ assets, userId, isOwner = false }: AssetA
   }));
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <h2 className="text-lg font-semibold mb-4">Alocação de Ativos</h2>
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={dataWithPercentage}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={({ name, percentage }) => `${name}: ${percentage}%`}
-            outerRadius={100}
-            fill="#8884d8"
-            dataKey="value"
-          >
-            {dataWithPercentage.map((entry, index) => {
-              const colorKey = entry.originalKey as keyof typeof COLORS;
-              return (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[colorKey] || COLORS.outros}
-                />
-              );
-            })}
-          </Pie>
-          <Tooltip
-            formatter={(value: number) =>
-              `R$ ${value.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}`
-            }
-          />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
+    <>
+      <div className="container mx-auto px-4 py-6">
+        <h2 className="text-lg font-semibold mb-4">Alocação de Ativos</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={dataWithPercentage}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={({ name, percentage }) => `${name}: ${percentage}%`}
+              outerRadius={100}
+              fill="#8884d8"
+              dataKey="value"
+            >
+              {dataWithPercentage.map((entry, index) => {
+                const colorKey = entry.originalKey as keyof typeof COLORS;
+                return (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[colorKey] || COLORS.outros}
+                  />
+                );
+              })}
+            </Pie>
+            <Tooltip
+              formatter={(value: number) =>
+                `R$ ${value.toLocaleString('pt-BR', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}`
+              }
+            />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      {/* Mostrar histórico de ativos encerrados se houver userId */}
+      {userId && <ClosedPositionsList userId={userId} isOwner={isOwner} />}
+    </>
   );
 }
 

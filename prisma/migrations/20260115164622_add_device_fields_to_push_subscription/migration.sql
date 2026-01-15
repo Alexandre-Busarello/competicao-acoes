@@ -18,3 +18,4 @@ WHERE "deviceId" IS NULL;
 -- Criar índice composto para busca rápida por userId e deviceId
 CREATE INDEX "PushSubscription_userId_deviceId_idx" ON "PushSubscription"("userId", "deviceId");
 
+
