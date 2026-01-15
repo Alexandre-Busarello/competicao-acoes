@@ -68,6 +68,28 @@ export class PushNotificationService {
   }
 
   /**
+   * Verifica se pode enviar notificação de interação (rate limit: máx 1 a cada 15 minutos)
+   */
+  async checkInteractionRateLimit(userId: string): Promise<boolean> {
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+
+    const recentInteractionNotification = await prisma.pushNotificationLog.findFirst({
+      where: {
+        userId,
+        type: 'interactions',
+        sentAt: {
+          gte: fifteenMinutesAgo,
+        },
+      },
+      orderBy: {
+        sentAt: 'desc',
+      },
+    });
+
+    return !recentInteractionNotification;
+  }
+
+  /**
    * Verifica se usuário tem preferência habilitada para tipo de notificação
    */
   async checkPreferences(userId: string, type: 'ranking' | 'engagement' | 'following' | 'interactions'): Promise<boolean> {
@@ -350,23 +372,35 @@ export class PushNotificationService {
 
   /**
    * Envia notificação de interação (like ou comentário)
+   * Rate limit: máximo 1 notificação a cada 15 minutos para evitar spam
    */
   async sendInteractionNotification(
     userId: string,
     data: InteractionNotificationData
   ): Promise<boolean> {
+    console.log('[sendInteractionNotification] Iniciando para userId:', userId, 'data:', data);
+
     // Verificar preferências
-    if (!(await this.checkPreferences(userId, 'interactions'))) {
+    const hasPreferences = await this.checkPreferences(userId, 'interactions');
+    console.log('[sendInteractionNotification] Preferências verificadas:', hasPreferences);
+    
+    if (!hasPreferences) {
+      console.log('[sendInteractionNotification] Preferências não habilitadas para userId:', userId);
       return false;
     }
 
-    // Verificar rate limit
-    if (!(await this.checkRateLimit(userId))) {
+    // Verificar rate limit específico para interações (15 minutos)
+    const canSend = await this.checkInteractionRateLimit(userId);
+    console.log('[sendInteractionNotification] Rate limit verificado (15min):', canSend);
+    
+    if (!canSend) {
+      console.log('[sendInteractionNotification] Rate limit excedido para userId (última interação há menos de 15min):', userId);
       return false;
     }
 
     // Determinar tipo de notificação para variações
     const notificationType = data.interactionType === 'like' ? 'interaction_like' : 'interaction_comment';
+    console.log('[sendInteractionNotification] Tipo de notificação:', notificationType);
 
     // Obter mensagem com variação (round-robin)
     const message = await notificationMessageService.getMessageForUser(userId, notificationType as any, {
@@ -375,8 +409,9 @@ export class PushNotificationService {
       postTitle: data.postTitle,
       commentPreview: data.commentPreview,
     });
+    console.log('[sendInteractionNotification] Mensagem obtida:', message);
 
-    return this.sendPushNotification(userId, {
+    const result = await this.sendPushNotification(userId, {
       title: message.title,
       body: message.body,
       data: {
@@ -386,6 +421,9 @@ export class PushNotificationService {
         ...data,
       },
     });
+    
+    console.log('[sendInteractionNotification] Resultado final:', result);
+    return result;
   }
 
   /**

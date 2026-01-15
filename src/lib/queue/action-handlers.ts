@@ -43,7 +43,11 @@ export async function handleLikeAction(payload: { postId: string; userId: string
       },
     });
 
+    console.log('[handleLikeAction] Post encontrado:', { postId, postUserId: post?.userId, likeUserId: userId });
+
     if (post && post.userId !== userId) {
+      console.log('[handleLikeAction] Enviando notificação push - post.userId !== userId');
+      
       // Buscar informações do usuário que curtiu
       const actor = await prisma.user.findUnique({
         where: { id: userId },
@@ -53,11 +57,15 @@ export async function handleLikeAction(payload: { postId: string; userId: string
         },
       });
 
+      console.log('[handleLikeAction] Actor encontrado:', { actorId: actor?.id, actorName: actor?.name });
+
       if (actor) {
         // Criar preview do conteúdo do post (primeiros 50 caracteres)
         const postPreview = post.content.length > 50
           ? post.content.substring(0, 50) + '...'
           : post.content;
+
+        console.log('[handleLikeAction] Chamando sendInteractionNotification para userId:', post.userId);
 
         // Enviar notificação push (não bloqueia se falhar)
         pushNotificationService.sendInteractionNotification(post.userId, {
@@ -66,10 +74,16 @@ export async function handleLikeAction(payload: { postId: string; userId: string
           actorName: actor.name || 'Alguém',
           interactionType: 'like',
           postTitle: postPreview,
+        }).then((result) => {
+          console.log('[handleLikeAction] Resultado do sendInteractionNotification:', result);
         }).catch((error) => {
-          console.error('Erro ao enviar notificação de like:', error);
+          console.error('[handleLikeAction] Erro ao enviar notificação de like:', error);
         });
+      } else {
+        console.log('[handleLikeAction] Actor não encontrado para userId:', userId);
       }
+    } else {
+      console.log('[handleLikeAction] Não enviando notificação - post não encontrado ou é o próprio autor');
     }
   }
 
