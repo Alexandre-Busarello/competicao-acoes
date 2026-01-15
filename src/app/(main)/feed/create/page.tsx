@@ -7,6 +7,7 @@ import { MarkdownEditor } from '@/components/feed/MarkdownEditor';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/client';
+import { updateFeedSeed } from '@/lib/utils/feed-seed';
 
 export default function CreatePostPage() {
   const router = useRouter();
@@ -49,6 +50,8 @@ export default function CreatePostPage() {
       return response.json();
     },
     onSuccess: () => {
+      // Atualizar seed do feed para reorganizar após criar post
+      updateFeedSeed();
       router.push('/feed');
     },
   });

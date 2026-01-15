@@ -14,7 +14,7 @@ export interface GlobalFeedQueryParams extends FeedQueryParams {
 
 /**
  * Serviço para gerenciar feed global de posts
- * Posts com menos de 1 hora recebem boost temporário de +50 pontos no score de engajamento
+ * Posts com menos de 24 horas recebem boost temporário de +75 pontos no score de engajamento
  * Posts são organizados em camadas temporais (DIA → SEMANA → ANTIGOS) e ordenados por engajamento
  * Posts visualizados recentemente vão para o final
  */
@@ -22,7 +22,7 @@ export class GlobalFeedService extends BaseFeedService {
   /**
    * Calcula score de engajamento: likeCount * 2 + commentCount * 3 + pollVotes * 1.5
    * Votos em enquetes contam como engajamento (peso 1.5)
-   * Posts com menos de 1 hora recebem boost temporário de +50 pontos
+   * Posts com menos de 24 horas recebem boost temporário de +75 pontos
    */
   private calculateEngagementScore(post: any, now: Date = new Date()): number {
     const likes = (post.likeCount || 0) * 2;
@@ -30,15 +30,15 @@ export class GlobalFeedService extends BaseFeedService {
     const pollVotes = (post.poll?.totalVotes || 0) * 1.5;
     const baseScore = likes + comments + pollVotes;
 
-    // Boost temporário para posts com menos de 1 hora
+    // Boost temporário para posts com menos de 24 horas
     const postDate = new Date(post.createdAt);
     const ageInMs = now.getTime() - postDate.getTime();
-    const oneHourInMs = 60 * 60 * 1000; // 1 hora em milissegundos
+    const oneDayInMs = 24 * 60 * 60 * 1000; // 24 horas em milissegundos
     
-    if (ageInMs < oneHourInMs) {
-      // Boost de +50 pontos para posts com menos de 1 hora
+    if (ageInMs < oneDayInMs) {
+      // Boost de +75 pontos para posts com menos de 24 horas
       // Isso garante que posts novos apareçam no topo mesmo sem engajamento
-      return baseScore + 50;
+      return baseScore + 75;
     }
 
     return baseScore;
@@ -57,11 +57,11 @@ export class GlobalFeedService extends BaseFeedService {
 
   /**
    * Aplica aleatoriedade ao score de engajamento
-   * Q de aleatoriedade: 0.3 (30% de variação aleatória)
+   * Q de aleatoriedade: 0.15 (15% de variação aleatória)
    */
-  private applyRandomness(score: number, seed: string, index: number, randomnessFactor: number = 0.3): number {
+  private applyRandomness(score: number, seed: string, index: number, randomnessFactor: number = 0.15): number {
     const random = this.seededRandom(seed, index);
-    const randomVariation = (random - 0.5) * randomnessFactor; // -0.15 a +0.15
+    const randomVariation = (random - 0.5) * randomnessFactor; // -0.075 a +0.075
     return score * (1 + randomVariation);
   }
 
@@ -418,7 +418,7 @@ export class GlobalFeedService extends BaseFeedService {
       return layer.map((post, index) => {
         // Passa 'now' para calcular boost temporal corretamente
         const baseScore = this.calculateEngagementScore(post, now);
-        const finalScore = this.applyRandomness(baseScore, effectiveSeed, index, 0.3);
+        const finalScore = this.applyRandomness(baseScore, effectiveSeed, index, 0.15);
         return {
           post,
           score: finalScore,

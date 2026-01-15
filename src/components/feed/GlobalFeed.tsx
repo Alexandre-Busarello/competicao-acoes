@@ -7,6 +7,7 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
 import { Button } from '@/components/ui/button';
 import { ScrollToTopButton } from './ScrollToTopButton';
+import { getCurrentSeed, onFeedSeedUpdate } from '@/lib/utils/feed-seed';
 
 interface GlobalFeedProps {
   filterInteractions?: boolean;
@@ -23,24 +24,24 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
   const seenPostIdsRef = useRef<Set<string>>(new Set());
   const loopPageRef = useRef<number>(0);
   
-  // Seed consistente por sessão - gerado uma vez e reutilizado
+  // Seed consistente por sessão - pode mudar quando usuário cria posts ou interage
   const sessionSeedRef = useRef<string | null>(null);
   
   // Gerar ou recuperar seed da sessão
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storageKey = 'feed-session-seed';
-      let seed = sessionStorage.getItem(storageKey);
-      
-      if (!seed) {
-        // Gerar novo seed para esta sessão
-        seed = Date.now().toString() + '-' + Math.random().toString(36).substring(2, 9);
-        sessionStorage.setItem(storageKey, seed);
-      }
-      
-      sessionSeedRef.current = seed;
-    }
+    sessionSeedRef.current = getCurrentSeed();
   }, []);
+  
+  // Escutar mudanças no seed (quando usuário cria posts ou interage)
+  useEffect(() => {
+    const unsubscribe = onFeedSeedUpdate((newSeed) => {
+      sessionSeedRef.current = newSeed;
+      // Invalidar cache do feed para que seja recarregado com novo seed
+      queryClient.invalidateQueries({ queryKey: ['global-feed'] });
+    });
+    
+    return unsubscribe;
+  }, [queryClient]);
   
   // Estado para pull-to-refresh
   const [isRefreshing, setIsRefreshing] = useState(false);

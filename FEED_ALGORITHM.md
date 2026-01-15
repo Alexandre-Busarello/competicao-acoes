@@ -52,33 +52,33 @@ Score Base = (likes × 2) + (comentários × 3) + (votos em enquete × 1.5)
 
 ### Boost Temporário para Posts Novos
 
-Posts criados há **menos de 1 hora** recebem um **boost temporário de +50 pontos**:
+Posts criados há **menos de 24 horas** recebem um **boost temporário de +75 pontos**:
 
 ```
-Se idade do post < 1 hora:
-  Score Final = Score Base + 50
+Se idade do post < 24 horas:
+  Score Final = Score Base + 75
 Senão:
   Score Final = Score Base
 ```
 
-Isso garante que posts novos apareçam no topo do feed mesmo sem engajamento inicial. Após 1 hora, o post volta ao algoritmo normal baseado apenas em engajamento.
+Isso garante que posts novos apareçam no topo do feed mesmo sem engajamento inicial. Após 24 horas, o post volta ao algoritmo normal baseado apenas em engajamento.
 
 ### Exemplo:
-- **Post novo** (criado há 30 minutos) com 0 likes: `(0 × 2) + (0 × 3) + 50 = 50 pontos` ← Boost temporário
+- **Post novo** (criado há 12 horas) com 0 likes: `(0 × 2) + (0 × 3) + 75 = 75 pontos` ← Boost temporário
 - Post com 5 likes, 2 comentários e 10 votos em enquete: `(5 × 2) + (2 × 3) + (10 × 1.5) = 31 pontos`
 - Post com 10 likes e 0 comentários: `(10 × 2) + (0 × 3) = 20 pontos`
 - Post com enquete e 20 votos: `(0 × 2) + (0 × 3) + (20 × 1.5) = 30 pontos`
-- **Post novo** (criado há 30 minutos) com 5 likes: `(5 × 2) + 50 = 60 pontos` ← Boost + engajamento
+- **Post novo** (criado há 12 horas) com 5 likes: `(5 × 2) + 75 = 85 pontos` ← Boost + engajamento
 
 ### Pesos de Engajamento:
 - **Like**: 2 pontos
 - **Comentário**: 3 pontos
 - **Voto em Enquete**: 1.5 pontos
-- **Boost Temporário** (posts < 1 hora): +50 pontos
+- **Boost Temporário** (posts < 24 horas): +75 pontos
 
-## Aleatoriedade (Q = 30%)
+## Aleatoriedade (Q = 15%)
 
-Para evitar que o feed fique sempre igual, aplicamos **30% de aleatoriedade** ao score de engajamento:
+Para evitar que o feed fique sempre igual, aplicamos **15% de aleatoriedade** ao score de engajamento:
 
 ```
 Score Final = Score Base × (1 + variação aleatória)
@@ -186,7 +186,7 @@ Quando acabam os da SEMANA, aparecem os ANTIGOS:
 
 ### Parâmetros Ajustáveis
 
-- **Q de Aleatoriedade**: 30% (configurável em `applyRandomness`)
+- **Q de Aleatoriedade**: 15% (configurável em `applyRandomness`)
 - **TTL do Cache**: 5 minutos (300 segundos)
 - **Limite por Página**: 20 posts (padrão)
 - **Buffer de Busca**: 500 posts por camada na primeira página
