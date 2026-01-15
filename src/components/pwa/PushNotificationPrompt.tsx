@@ -11,6 +11,7 @@ import {
   isPWAInstalled,
 } from '@/lib/utils/push-notification-support';
 import { useAuth } from '@/lib/auth/client';
+import { detectDeviceType, getDeviceName, generateDeviceId, getUserAgent } from '@/lib/utils/device-detection';
 
 const STORAGE_KEY = 'push-notification-prompt-dismissed';
 
@@ -110,6 +111,12 @@ export function PushNotificationPrompt() {
             applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
           });
 
+          // Detectar informações do dispositivo
+          const deviceId = generateDeviceId();
+          const deviceName = getDeviceName();
+          const deviceType = detectDeviceType();
+          const userAgent = getUserAgent();
+
           // Enviar subscription para o servidor
           const subscribeResponse = await fetch('/api/push/subscribe', {
             method: 'POST',
@@ -122,6 +129,10 @@ export function PushNotificationPrompt() {
                 p256dh: arrayBufferToBase64(subscription.getKey('p256dh')!),
                 auth: arrayBufferToBase64(subscription.getKey('auth')!),
               },
+              deviceId,
+              deviceName,
+              deviceType,
+              userAgent,
             }),
           });
 

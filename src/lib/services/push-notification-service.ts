@@ -146,17 +146,20 @@ export class PushNotificationService {
     }
   ): Promise<boolean> {
     try {
-      // Buscar subscriptions do usuário
+      // Buscar apenas subscriptions ativas do usuário
       const subscriptions = await prisma.pushSubscription.findMany({
-        where: { userId },
+        where: { 
+          userId,
+          enabled: true,
+        },
       });
 
       if (subscriptions.length === 0) {
-        console.log(`[PushNotification] Usuário ${userId} não tem subscriptions registradas`);
+        console.log(`[PushNotification] Usuário ${userId} não tem subscriptions ativas registradas`);
         return false;
       }
 
-      console.log(`[PushNotification] Encontradas ${subscriptions.length} subscription(s) para usuário ${userId}`);
+      console.log(`[PushNotification] Encontradas ${subscriptions.length} subscription(s) ativa(s) para usuário ${userId}`);
 
       // Preparar payload da notificação (garantir que URL está incluída)
       const notificationData = {

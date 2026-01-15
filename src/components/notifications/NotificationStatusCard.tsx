@@ -11,14 +11,17 @@ import {
   checkServiceWorkerActive,
   requestNotificationPermission,
 } from '@/lib/utils/push-notification-support';
-import { Bell, CheckCircle2, XCircle, AlertCircle, Loader2, ChevronRight } from 'lucide-react';
+import { Bell, CheckCircle2, XCircle, AlertCircle, Loader2, ChevronRight, Smartphone, Monitor } from 'lucide-react';
 import Link from 'next/link';
+import { useDeviceSubscriptions } from '@/lib/hooks/useDeviceSubscriptions';
+import { detectDeviceType, getDeviceName, generateDeviceId, getUserAgent } from '@/lib/utils/device-detection';
 
 /**
  * Componente compacto de status de notificações para página de perfil
  */
 export function NotificationStatusCard() {
   const { preferences, isLoading } = usePushNotificationPreferences();
+  const { subscriptions, isLoading: isLoadingDevices } = useDeviceSubscriptions();
   const [support, setSupport] = useState<Awaited<ReturnType<typeof checkPushNotificationSupport>> | null>(null);
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isRegistering, setIsRegistering] = useState(false);
@@ -64,6 +67,12 @@ export function NotificationStatusCard() {
   const isPWA = support?.pwaInstalled ?? false;
   const isEnabled = preferences?.allEnabled ?? false;
   const hasPermission = permission === 'granted';
+  
+  // Contar dispositivos ativos
+  const activeDevices = subscriptions?.filter(d => d.enabled) || [];
+  const currentDeviceId = typeof window !== 'undefined' ? generateDeviceId() : null;
+  const currentDevice = subscriptions?.find(d => d.deviceId === currentDeviceId) || 
+                        subscriptions?.find(d => d.enabled) || null;
 
   // Função para ativar notificações do zero
   const handleRegisterSubscription = async () => {
@@ -122,6 +131,12 @@ export function NotificationStatusCard() {
         applicationServerKey: applicationServerKey as BufferSource,
       });
 
+      // Detectar informações do dispositivo
+      const deviceId = generateDeviceId();
+      const deviceName = getDeviceName();
+      const deviceType = detectDeviceType();
+      const userAgent = getUserAgent();
+
       // Enviar subscription para o servidor
       const subscribeResponse = await fetch('/api/push/subscribe', {
         method: 'POST',
@@ -134,6 +149,10 @@ export function NotificationStatusCard() {
             p256dh: arrayBufferToBase64(subscription.getKey('p256dh')!),
             auth: arrayBufferToBase64(subscription.getKey('auth')!),
           },
+          deviceId,
+          deviceName,
+          deviceType,
+          userAgent,
         }),
       });
 
@@ -327,6 +346,36 @@ export function NotificationStatusCard() {
                 <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
                 <span className="text-green-600 dark:text-green-400">Instalado</span>
               </div>
+            </div>
+          )}
+          {currentDevice && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Dispositivo atual:</span>
+              <div className="flex items-center gap-1">
+                {currentDevice.deviceType === 'mobile' ? (
+                  <Smartphone className="h-3 w-3 text-muted-foreground" />
+                ) : currentDevice.deviceType === 'desktop' ? (
+                  <Monitor className="h-3 w-3 text-muted-foreground" />
+                ) : null}
+                <span className="text-muted-foreground text-xs truncate max-w-[120px]">
+                  {currentDevice.deviceName === 'Outro' && currentDevice.deviceType === 'unknown'
+                    ? 'Outro'
+                    : currentDevice.deviceName}
+                </span>
+                {currentDevice.enabled ? (
+                  <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400 ml-1" />
+                ) : (
+                  <XCircle className="h-3 w-3 text-muted-foreground ml-1" />
+                )}
+              </div>
+            </div>
+          )}
+          {activeDevices.length > 1 && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Outros dispositivos:</span>
+              <span className="text-xs text-muted-foreground">
+                {activeDevices.length - 1} ativo{activeDevices.length - 1 > 1 ? 's' : ''}
+              </span>
             </div>
           )}
         </div>

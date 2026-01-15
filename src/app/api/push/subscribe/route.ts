@@ -12,11 +12,15 @@ interface PushSubscriptionKeys {
 interface PushSubscriptionData {
   endpoint: string;
   keys: PushSubscriptionKeys;
+  deviceId?: string;
+  deviceName?: string;
+  deviceType?: 'desktop' | 'mobile' | 'unknown';
+  userAgent?: string;
 }
 
 /**
  * HEAD /api/push/subscribe
- * Verifica se o usuário tem subscription registrada
+ * Verifica se o usuário tem subscription ativa registrada
  */
 export async function HEAD(request: NextRequest) {
   try {
@@ -24,7 +28,10 @@ export async function HEAD(request: NextRequest) {
     const userId = session.user.id;
 
     const subscription = await prisma.pushSubscription.findFirst({
-      where: { userId },
+      where: { 
+        userId,
+        enabled: true,
+      },
     });
 
     if (subscription) {
@@ -57,24 +64,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Preparar dados do dispositivo
+    const deviceId = body.deviceId || crypto.randomUUID();
+    const deviceName = body.deviceName || 'Outro';
+    const deviceType = body.deviceType || 'unknown';
+    const userAgent = body.userAgent || null;
+
     // Verificar se já existe subscription com este endpoint
     const existing = await prisma.pushSubscription.findUnique({
       where: { endpoint: body.endpoint },
     });
 
     if (existing) {
-      // Se já existe mas é de outro usuário, atualizar
-      if (existing.userId !== userId) {
-        await prisma.pushSubscription.update({
-          where: { endpoint: body.endpoint },
-          data: {
-            userId,
-            keys: body.keys as any,
-            updatedAt: new Date(),
-          },
-        });
-      }
-      // Se já é do mesmo usuário, não precisa fazer nada
+      // Se já existe, atualizar com informações do dispositivo e keys
+      await prisma.pushSubscription.update({
+        where: { endpoint: body.endpoint },
+        data: {
+          userId,
+          keys: body.keys as any,
+          deviceId: existing.deviceId || deviceId, // Manter deviceId existente se já tiver
+          deviceName: existing.deviceName === 'Outro' && deviceName !== 'Outro' 
+            ? deviceName 
+            : existing.deviceName, // Atualizar nome apenas se ainda for "Outro"
+          deviceType: existing.deviceType === 'unknown' && deviceType !== 'unknown'
+            ? deviceType
+            : existing.deviceType, // Atualizar tipo apenas se ainda for "unknown"
+          userAgent: userAgent || existing.userAgent,
+          enabled: true, // Garantir que está ativa ao atualizar
+          updatedAt: new Date(),
+        },
+      });
     } else {
       // Criar nova subscription
       await prisma.pushSubscription.create({
@@ -82,6 +101,11 @@ export async function POST(request: NextRequest) {
           userId,
           endpoint: body.endpoint,
           keys: body.keys as any,
+          deviceId,
+          deviceName,
+          deviceType,
+          userAgent,
+          enabled: true,
         },
       });
     }

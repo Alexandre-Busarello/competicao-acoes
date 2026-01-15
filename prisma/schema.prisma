@@ -430,17 +430,23 @@ model FeedPollVote {
 }
 
 model PushSubscription {
-  id        String   @id @default(uuid())
-  userId    String
-  endpoint  String
-  keys      Json // { p256dh: string, auth: string }
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  userId     String
+  endpoint   String
+  keys       Json // { p256dh: string, auth: string }
+  deviceId   String?
+  deviceName String   @default("Outro")
+  deviceType String   @default("unknown") // "desktop" | "mobile" | "unknown"
+  enabled    Boolean  @default(true)
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([endpoint])
   @@index([userId])
   @@index([endpoint])
+  @@index([userId, deviceId])
 }
 
 model PushNotificationLog {

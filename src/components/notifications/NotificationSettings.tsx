@@ -12,20 +12,26 @@ import {
   checkServiceWorkerActive,
   requestNotificationPermission,
 } from '@/lib/utils/push-notification-support';
-import { Bell, CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { Bell, CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, Smartphone, Monitor, Edit2, Trash2 } from 'lucide-react';
 import { pushNotificationService } from '@/lib/services/push-notification-service';
+import { useDeviceSubscriptions } from '@/lib/hooks/useDeviceSubscriptions';
+import { detectDeviceType, getDeviceName, generateDeviceId, getUserAgent } from '@/lib/utils/device-detection';
+import { Input } from '@/components/ui/input';
 
 /**
  * Componente completo de configurações de notificações
  */
 export function NotificationSettings() {
   const { preferences, isLoading, updatePreferences, isUpdating } = usePushNotificationPreferences();
+  const { subscriptions, isLoading: isLoadingDevices, toggleSubscription, renameDevice, refetch: refetchDevices } = useDeviceSubscriptions();
   const [support, setSupport] = useState<Awaited<ReturnType<typeof checkPushNotificationSupport>> | null>(null);
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isTesting, setIsTesting] = useState(false);
   const [isTestingRanking, setIsTestingRanking] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
+  const [editingDeviceId, setEditingDeviceId] = useState<string | null>(null);
+  const [editingDeviceName, setEditingDeviceName] = useState<string>('');
 
   useEffect(() => {
     const checkSupport = async () => {
@@ -111,6 +117,12 @@ export function NotificationSettings() {
         applicationServerKey: applicationServerKey as BufferSource,
       });
 
+      // Detectar informações do dispositivo
+      const deviceId = generateDeviceId();
+      const deviceName = getDeviceName();
+      const deviceType = detectDeviceType();
+      const userAgent = getUserAgent();
+
       // Enviar subscription para o servidor
       const subscribeResponse = await fetch('/api/push/subscribe', {
         method: 'POST',
@@ -123,6 +135,10 @@ export function NotificationSettings() {
             p256dh: arrayBufferToBase64(subscription.getKey('p256dh')!),
             auth: arrayBufferToBase64(subscription.getKey('auth')!),
           },
+          deviceId,
+          deviceName,
+          deviceType,
+          userAgent,
         }),
       });
 
@@ -137,6 +153,9 @@ export function NotificationSettings() {
       // Atualizar permissão também
       const updatedPermission = await checkNotificationPermission();
       setPermission(updatedPermission);
+      
+      // Atualizar lista de dispositivos
+      refetchDevices();
       
       // Não mostrar alert, apenas atualizar a UI silenciosamente
       console.log('✅ Notificações ativadas com sucesso!');
@@ -223,6 +242,36 @@ export function NotificationSettings() {
     } catch {
       setHasSubscription(false);
     }
+    
+    // Atualizar lista de dispositivos
+    refetchDevices();
+  };
+
+  const handleStartEditDevice = (deviceId: string, currentName: string) => {
+    setEditingDeviceId(deviceId);
+    setEditingDeviceName(currentName);
+  };
+
+  const handleSaveDeviceName = async (id: string) => {
+    if (editingDeviceName.trim()) {
+      await renameDevice(id, editingDeviceName.trim());
+      setEditingDeviceId(null);
+      setEditingDeviceName('');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingDeviceId(null);
+    setEditingDeviceName('');
+  };
+
+  const getDeviceIcon = (deviceType: string) => {
+    if (deviceType === 'mobile') {
+      return <Smartphone className="h-4 w-4" />;
+    } else if (deviceType === 'desktop') {
+      return <Monitor className="h-4 w-4" />;
+    }
+    return <AlertCircle className="h-4 w-4" />;
   };
 
   if (isLoading) {
@@ -403,6 +452,116 @@ export function NotificationSettings() {
               Verificar e Atualizar
             </Button>
           </div>
+        </div>
+
+        {/* Seção de Dispositivos Conectados */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold">Dispositivos Conectados</h3>
+          {isLoadingDevices ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : subscriptions.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Nenhum dispositivo conectado. Registre uma subscription para começar a receber notificações.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {subscriptions.map((device) => (
+                <div
+                  key={device.id}
+                  className={`p-3 rounded-lg border ${
+                    device.enabled
+                      ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
+                      : 'bg-muted/50 border-muted'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {getDeviceIcon(device.deviceType)}
+                        {editingDeviceId === device.id ? (
+                          <div className="flex items-center gap-2 flex-1">
+                            <Input
+                              value={editingDeviceName}
+                              onChange={(e) => setEditingDeviceName(e.target.value)}
+                              className="h-7 text-sm"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleSaveDeviceName(device.id);
+                                } else if (e.key === 'Escape') {
+                                  handleCancelEdit();
+                                }
+                              }}
+                              autoFocus
+                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleSaveDeviceName(device.id)}
+                              className="h-7 px-2"
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={handleCancelEdit}
+                              className="h-7 px-2"
+                            >
+                              <XCircle className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="font-medium text-sm">
+                              {device.deviceName === 'Outro' && device.deviceType === 'unknown'
+                                ? 'Outro'
+                                : device.deviceName}
+                            </span>
+                            {device.deviceType !== 'unknown' && (
+                              <span className="text-xs text-muted-foreground">
+                                ({device.deviceType === 'mobile' ? 'Mobile' : 'Desktop'})
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {device.enabled ? (
+                          <span className="text-green-600 dark:text-green-400">Ativo</span>
+                        ) : (
+                          <span className="text-muted-foreground">Desativado</span>
+                        )}
+                        {' • '}
+                        Registrado em {new Date(device.createdAt).toLocaleDateString('pt-BR')}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {editingDeviceId !== device.id && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleStartEditDevice(device.id, device.deviceName)}
+                            className="h-7 px-2"
+                            title="Renomear dispositivo"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                          <Switch
+                            checked={device.enabled}
+                            onCheckedChange={(checked) => toggleSubscription(device.id, checked)}
+                            className="ml-1"
+                          />
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Seção de Preferências */}
