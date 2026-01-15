@@ -50,31 +50,42 @@ Cada post recebe um **score de engajamento** calculado pela fórmula:
 Score Base = (likes × 2) + (comentários × 3) + (votos em enquete × 1.5)
 ```
 
-### Boost Temporário para Posts Novos
+### Boost Temporário Decrescente para Posts Novos
 
-Posts criados há **menos de 24 horas** recebem um **boost temporário de +75 pontos**:
+Posts criados há **menos de 24 horas** recebem um **boost temporário decrescente** baseado na idade:
 
 ```
-Se idade do post < 24 horas:
-  Score Final = Score Base + 75
+Se idade do post <= 15 minutos:
+  Boost = 100 pontos
+Senão se idade do post < 24 horas:
+  Boost = 100 × (1 - (idade - 15) / (1440 - 15))
+  Boost decresce linearmente até 0 pontos em 24 horas
 Senão:
-  Score Final = Score Base
+  Boost = 0 pontos
 ```
 
-Isso garante que posts novos apareçam no topo do feed mesmo sem engajamento inicial. Após 24 horas, o post volta ao algoritmo normal baseado apenas em engajamento.
+**Exemplos de boost por idade:**
+- **0-15 minutos**: 100 pontos (boost máximo)
+- **30 minutos**: ~95 pontos
+- **1 hora**: ~90 pontos
+- **6 horas**: ~60 pontos
+- **12 horas**: ~30 pontos
+- **24 horas**: 0 pontos (sem boost)
+
+Isso garante que posts mais recentes apareçam no topo do feed mesmo sem engajamento inicial, com prioridade maior para os mais novos.
 
 ### Exemplo:
-- **Post novo** (criado há 12 horas) com 0 likes: `(0 × 2) + (0 × 3) + 75 = 75 pontos` ← Boost temporário
+- **Post muito recente** (criado há 15 min) com 0 likes: `(0 × 2) + (0 × 3) + 100 = 100 pontos` ← Boost máximo
+- **Post recente** (criado há 30 min) com 0 likes: `(0 × 2) + (0 × 3) + 95 = 95 pontos` ← Boost decrescente
+- **Post médio** (criado há 6 horas) com 0 likes: `(0 × 2) + (0 × 3) + 60 = 60 pontos` ← Boost menor
 - Post com 5 likes, 2 comentários e 10 votos em enquete: `(5 × 2) + (2 × 3) + (10 × 1.5) = 31 pontos`
-- Post com 10 likes e 0 comentários: `(10 × 2) + (0 × 3) = 20 pontos`
-- Post com enquete e 20 votos: `(0 × 2) + (0 × 3) + (20 × 1.5) = 30 pontos`
-- **Post novo** (criado há 12 horas) com 5 likes: `(5 × 2) + 75 = 85 pontos` ← Boost + engajamento
+- **Post recente** (criado há 1 hora) com 5 likes: `(5 × 2) + 90 = 100 pontos` ← Boost + engajamento
 
 ### Pesos de Engajamento:
 - **Like**: 2 pontos
 - **Comentário**: 3 pontos
 - **Voto em Enquete**: 1.5 pontos
-- **Boost Temporário** (posts < 24 horas): +75 pontos
+- **Boost Temporário Decrescente** (posts < 24 horas): 100 pontos (0-15 min) → 0 pontos (24 horas)
 
 ## Aleatoriedade (Q = 15%)
 

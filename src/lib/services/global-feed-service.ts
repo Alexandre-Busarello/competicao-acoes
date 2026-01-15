@@ -14,7 +14,9 @@ export interface GlobalFeedQueryParams extends FeedQueryParams {
 
 /**
  * Serviço para gerenciar feed global de posts
- * Posts com menos de 24 horas recebem boost temporário de +75 pontos no score de engajamento
+ * Posts com menos de 24 horas recebem boost temporário decrescente baseado na idade
+ * Boost máximo: 100 pontos para posts muito recentes (0-15 min)
+ * Boost decresce linearmente até 0 pontos em 24 horas
  * Posts são organizados em camadas temporais (DIA → SEMANA → ANTIGOS) e ordenados por engajamento
  * 
  * NOTA: A lógica de VIEW está temporariamente desabilitada.
@@ -25,7 +27,12 @@ export class GlobalFeedService extends BaseFeedService {
   /**
    * Calcula score de engajamento: likeCount * 2 + commentCount * 3 + pollVotes * 1.5
    * Votos em enquetes contam como engajamento (peso 1.5)
-   * Posts com menos de 24 horas recebem boost temporário de +75 pontos
+   * Posts com menos de 24 horas recebem boost temporário decrescente baseado na idade
+   * 
+   * Boost decrescente:
+   * - 0-15 min: 100 pontos
+   * - 30 min: ~95 pontos
+   * - Decresce linearmente até 0 pontos em 24 horas
    */
   private calculateEngagementScore(post: any, now: Date = new Date()): number {
     const likes = (post.likeCount || 0) * 2;
@@ -33,15 +40,35 @@ export class GlobalFeedService extends BaseFeedService {
     const pollVotes = (post.poll?.totalVotes || 0) * 1.5;
     const baseScore = likes + comments + pollVotes;
 
-    // Boost temporário para posts com menos de 24 horas
+    // Boost temporário decrescente para posts com menos de 24 horas
     const postDate = new Date(post.createdAt);
     const ageInMs = now.getTime() - postDate.getTime();
     const oneDayInMs = 24 * 60 * 60 * 1000; // 24 horas em milissegundos
+    const oneDayInMinutes = 24 * 60; // 1440 minutos
     
     if (ageInMs < oneDayInMs) {
-      // Boost de +75 pontos para posts com menos de 24 horas
-      // Isso garante que posts novos apareçam no topo mesmo sem engajamento
-      return baseScore + 75;
+      // Calcular idade em minutos
+      const ageInMinutes = ageInMs / (60 * 1000);
+      
+      // Boost decrescente baseado na idade do post
+      // - 0-15 min: boost máximo de 100 pontos
+      // - 30 min: ~95 pontos (exemplo: decaimento de 5 pts a cada 15 min)
+      // - Decresce linearmente até 0 pontos em 24 horas (1440 min)
+      
+      let boost = 0;
+      if (ageInMinutes <= 15) {
+        // Posts muito recentes (0-15 min): boost máximo de 100 pontos
+        boost = 100;
+      } else {
+        // Posts de 15 min até 24 horas: boost decresce linearmente
+        // De 100 pontos em 15 min até 0 pontos em 1440 min
+        // Fórmula: boost = 100 * (1 - (idade - 15) / (1440 - 15))
+        const totalDecayWindow = oneDayInMinutes - 15; // 1425 minutos
+        const decayProgress = (ageInMinutes - 15) / totalDecayWindow; // 0 a 1
+        boost = Math.max(0, 100 * (1 - decayProgress));
+      }
+      
+      return baseScore + boost;
     }
 
     return baseScore;
