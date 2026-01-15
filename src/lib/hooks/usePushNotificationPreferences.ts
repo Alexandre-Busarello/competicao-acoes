@@ -8,6 +8,7 @@ export interface PushNotificationPreferences {
   rankingEnabled: boolean;
   engagementEnabled: boolean;
   followingEnabled: boolean;
+  interactionsEnabled: boolean;
   allEnabled: boolean;
   updatedAt: Date;
 }

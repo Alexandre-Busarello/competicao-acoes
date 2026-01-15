@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma/client';
 import { cacheService } from '@/lib/cache/cache-service';
+import { pushNotificationService } from '@/lib/services/push-notification-service';
 
 /**
  * Handlers específicos para cada tipo de ação na fila
@@ -31,6 +32,41 @@ export async function handleLikeAction(payload: { postId: string; userId: string
         userId,
       },
     });
+
+    // Enviar notificação push para o autor do post (se não for ele mesmo)
+    const post = await prisma.feedPost.findUnique({
+      where: { id: postId },
+      select: {
+        userId: true,
+        title: true,
+        content: true,
+        slug: true,
+      },
+    });
+
+    if (post && post.userId !== userId) {
+      // Buscar informações do usuário que curtiu
+      const actor = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      if (actor) {
+        // Enviar notificação push (não bloqueia se falhar)
+        pushNotificationService.sendInteractionNotification(post.userId, {
+          postId: post.slug || postId, // Usar slug se disponível, senão usar ID
+          actorId: actor.id,
+          actorName: actor.name || 'Alguém',
+          interactionType: 'like',
+          postTitle: post.title || undefined,
+        }).catch((error) => {
+          console.error('Erro ao enviar notificação de like:', error);
+        });
+      }
+    }
   }
 
   // Invalida cache do feed
@@ -52,7 +88,7 @@ export async function handleCommentAction(payload: {
   const { postId, userId, content } = payload;
 
   // Cria comentário (contador é atualizado via trigger)
-  await prisma.feedComment.create({
+  const comment = await prisma.feedComment.create({
     data: {
       postId,
       userId,
@@ -60,12 +96,49 @@ export async function handleCommentAction(payload: {
     },
   });
 
-  // Invalida cache do feed
+  // Buscar informações do post
   const post = await prisma.feedPost.findUnique({
     where: { id: postId },
-    select: { userId: true },
+    select: {
+      userId: true,
+      title: true,
+      content: true,
+      slug: true,
+    },
   });
 
+  // Enviar notificação push para o autor do post (se não for ele mesmo)
+  if (post && post.userId !== userId) {
+    // Buscar informações do usuário que comentou
+    const actor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    if (actor) {
+      // Preparar preview do comentário (primeiros 100 caracteres)
+      const commentPreview = content.length > 100
+        ? content.substring(0, 100) + '...'
+        : content;
+
+      // Enviar notificação push (não bloqueia se falhar)
+      pushNotificationService.sendInteractionNotification(post.userId, {
+        postId: post.slug || postId, // Usar slug se disponível, senão usar ID
+        actorId: actor.id,
+        actorName: actor.name || 'Alguém',
+        interactionType: 'comment',
+        postTitle: post.title || undefined,
+        commentPreview,
+      }).catch((error) => {
+        console.error('Erro ao enviar notificação de comentário:', error);
+      });
+    }
+  }
+
+  // Invalida cache do feed
   if (post) {
     await cacheService.clear(`feed:${post.userId}:*`);
   }

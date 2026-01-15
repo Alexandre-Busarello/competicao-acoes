@@ -200,6 +200,70 @@ async function seedNotificationVariations() {
       title: '🎯 Não perca sua posição no ranking!',
       body: 'Volte e mantenha-se competitivo na plataforma',
     },
+
+    // Interaction Like
+    {
+      type: 'interaction_like',
+      variation: 'A',
+      title: '👍 {actorName} curtiu seu post',
+      body: 'Alguém curtiu seu post. Continue compartilhando suas ideias!',
+    },
+    {
+      type: 'interaction_like',
+      variation: 'B',
+      title: '❤️ Nova curtida!',
+      body: '{actorName} curtiu seu post. Suas ideias estão sendo valorizadas!',
+    },
+    {
+      type: 'interaction_like',
+      variation: 'C',
+      title: '👏 Seu post recebeu uma curtida',
+      body: '{actorName} curtiu seu post. Continue assim!',
+    },
+    {
+      type: 'interaction_like',
+      variation: 'D',
+      title: '⭐ Interesse no seu conteúdo',
+      body: '{actorName} curtiu seu post. Suas análises estão chamando atenção!',
+    },
+    {
+      type: 'interaction_like',
+      variation: 'F',
+      title: '👍 Nova interação',
+      body: '{actorName} curtiu seu post. Mantenha o engajamento!',
+    },
+
+    // Interaction Comment
+    {
+      type: 'interaction_comment',
+      variation: 'A',
+      title: '💬 {actorName} comentou no seu post',
+      body: '{commentPreview}',
+    },
+    {
+      type: 'interaction_comment',
+      variation: 'B',
+      title: '📝 Novo comentário',
+      body: '{actorName} deixou um comentário: {commentPreview}',
+    },
+    {
+      type: 'interaction_comment',
+      variation: 'C',
+      title: '💭 Alguém comentou',
+      body: '{actorName} comentou no seu post: {commentPreview}',
+    },
+    {
+      type: 'interaction_comment',
+      variation: 'D',
+      title: '🗨️ Nova discussão',
+      body: '{actorName} iniciou uma discussão no seu post: {commentPreview}',
+    },
+    {
+      type: 'interaction_comment',
+      variation: 'F',
+      title: '💬 Interação no seu post',
+      body: '{actorName} comentou: {commentPreview}',
+    },
   ];
 
   for (const variation of variations) {

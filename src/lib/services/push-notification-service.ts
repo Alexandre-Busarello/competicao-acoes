@@ -33,6 +33,15 @@ export interface FollowingNotificationData {
   postPreview?: string;
 }
 
+export interface InteractionNotificationData {
+  postId: string;
+  actorId: string;
+  actorName: string;
+  interactionType: 'like' | 'comment';
+  postTitle?: string;
+  commentPreview?: string;
+}
+
 /**
  * Serviço para gerenciar notificações push
  */
@@ -61,7 +70,7 @@ export class PushNotificationService {
   /**
    * Verifica se usuário tem preferência habilitada para tipo de notificação
    */
-  async checkPreferences(userId: string, type: 'ranking' | 'engagement' | 'following'): Promise<boolean> {
+  async checkPreferences(userId: string, type: 'ranking' | 'engagement' | 'following' | 'interactions'): Promise<boolean> {
     const preferences = await prisma.pushNotificationPreferences.findUnique({
       where: { userId },
     });
@@ -74,6 +83,7 @@ export class PushNotificationService {
           rankingEnabled: true,
           engagementEnabled: true,
           followingEnabled: true,
+          interactionsEnabled: true,
           allEnabled: true,
         },
       });
@@ -93,6 +103,8 @@ export class PushNotificationService {
         return preferences.engagementEnabled;
       case 'following':
         return preferences.followingEnabled;
+      case 'interactions':
+        return preferences.interactionsEnabled;
       default:
         return false;
     }
@@ -329,6 +341,46 @@ export class PushNotificationService {
       body: message.body,
       data: {
         type: 'following',
+        url: message.url,
+        variation: message.variation,
+        ...data,
+      },
+    });
+  }
+
+  /**
+   * Envia notificação de interação (like ou comentário)
+   */
+  async sendInteractionNotification(
+    userId: string,
+    data: InteractionNotificationData
+  ): Promise<boolean> {
+    // Verificar preferências
+    if (!(await this.checkPreferences(userId, 'interactions'))) {
+      return false;
+    }
+
+    // Verificar rate limit
+    if (!(await this.checkRateLimit(userId))) {
+      return false;
+    }
+
+    // Determinar tipo de notificação para variações
+    const notificationType = data.interactionType === 'like' ? 'interaction_like' : 'interaction_comment';
+
+    // Obter mensagem com variação (round-robin)
+    const message = await notificationMessageService.getMessageForUser(userId, notificationType as any, {
+      postId: data.postId,
+      actorName: data.actorName,
+      postTitle: data.postTitle,
+      commentPreview: data.commentPreview,
+    });
+
+    return this.sendPushNotification(userId, {
+      title: message.title,
+      body: message.body,
+      data: {
+        type: 'interactions',
         url: message.url,
         variation: message.variation,
         ...data,

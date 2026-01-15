@@ -7,6 +7,8 @@ export type NotificationType =
   | 'engagement'
   | 'following'
   | 'reengagement'
+  | 'interaction_like'
+  | 'interaction_comment'
   | 'manual';
 
 export type Variation = 'A' | 'B' | 'C' | 'D' | 'F';
@@ -23,6 +25,9 @@ export interface NotificationData {
   authorId?: string;
   postPreview?: string;
   engagementScore?: number;
+  // Interactions
+  actorName?: string;
+  commentPreview?: string;
   // Manual
   customUrl?: string;
 }
@@ -116,6 +121,14 @@ export class NotificationMessageService {
       if (data.engagementScore !== undefined) {
         body = body.replace('{score}', data.engagementScore.toString());
       }
+      // Placeholders para interações
+      if (data.actorName) {
+        title = title.replace('{actorName}', data.actorName);
+        body = body.replace('{actorName}', data.actorName);
+      }
+      if (data.commentPreview) {
+        body = body.replace('{commentPreview}', data.commentPreview);
+      }
 
       // Determinar URL baseada no tipo
       const url = this.getUrlForType(type, data);
@@ -186,6 +199,9 @@ export class NotificationMessageService {
       case 'engagement':
       case 'following':
         return data.postId ? `/feed/${data.postId}` : '/feed';
+      case 'interaction_like':
+      case 'interaction_comment':
+        return data.postId ? `/posts/${data.postId}` : '/feed';
       case 'reengagement':
         return '/'; // Home
       case 'manual':
@@ -258,6 +274,28 @@ export class NotificationMessageService {
         return {
           title: '🎁 Tem um prêmio esperando por você!',
           body: 'Volte e descubra o que mudou na plataforma',
+          url,
+        };
+      case 'interaction_like':
+        return {
+          title: data.actorName
+            ? `👍 ${data.actorName} curtiu seu post`
+            : '👍 Alguém curtiu seu post',
+          body: data.postTitle
+            ? `"${data.postTitle}" recebeu uma nova curtida`
+            : 'Seu post recebeu uma nova curtida',
+          url,
+        };
+      case 'interaction_comment':
+        return {
+          title: data.actorName
+            ? `💬 ${data.actorName} comentou no seu post`
+            : '💬 Alguém comentou no seu post',
+          body: data.commentPreview
+            ? data.commentPreview
+            : data.postTitle
+            ? `Novo comentário em "${data.postTitle}"`
+            : 'Seu post recebeu um novo comentário',
           url,
         };
       case 'manual':

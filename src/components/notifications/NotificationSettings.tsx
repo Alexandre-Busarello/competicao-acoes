@@ -45,7 +45,7 @@ export function NotificationSettings() {
     checkSupport();
   }, []);
 
-  const handleToggle = async (field: 'rankingEnabled' | 'engagementEnabled' | 'followingEnabled' | 'allEnabled') => {
+  const handleToggle = async (field: 'rankingEnabled' | 'engagementEnabled' | 'followingEnabled' | 'interactionsEnabled' | 'allEnabled') => {
     if (!preferences) return;
 
     const newValue = !preferences[field];
@@ -474,6 +474,23 @@ export function NotificationSettings() {
               <Switch
                 checked={preferences.followingEnabled && preferences.allEnabled}
                 onCheckedChange={() => handleToggle('followingEnabled')}
+                disabled={isUpdating || !preferences.allEnabled}
+              />
+            </div>
+
+            {/* Toggle Interactions */}
+            <div className="flex items-center justify-between p-3 rounded-lg border">
+              <div className="flex-1">
+                <div className="font-medium">Notificações de Interações</div>
+                <div className="text-sm text-muted-foreground">
+                  {preferences.interactionsEnabled && preferences.allEnabled
+                    ? 'Você receberá notificações quando alguém curtir ou comentar em seus posts. Ajuda você a acompanhar o engajamento do seu conteúdo.'
+                    : 'Você não receberá notificações sobre curtidas e comentários nos seus posts. Útil se você prefere verificar interações manualmente.'}
+                </div>
+              </div>
+              <Switch
+                checked={preferences.interactionsEnabled && preferences.allEnabled}
+                onCheckedChange={() => handleToggle('interactionsEnabled')}
                 disabled={isUpdating || !preferences.allEnabled}
               />
             </div>

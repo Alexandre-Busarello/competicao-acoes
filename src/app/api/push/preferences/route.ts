@@ -8,6 +8,7 @@ interface PushPreferences {
   rankingEnabled?: boolean;
   engagementEnabled?: boolean;
   followingEnabled?: boolean;
+  interactionsEnabled?: boolean;
   allEnabled?: boolean;
 }
 
@@ -32,6 +33,7 @@ export async function GET(request: NextRequest) {
           rankingEnabled: true,
           engagementEnabled: true,
           followingEnabled: true,
+          interactionsEnabled: true,
           allEnabled: true,
         },
       });
@@ -78,6 +80,9 @@ export async function PUT(request: NextRequest) {
     if (typeof body.followingEnabled === 'boolean') {
       updateData.followingEnabled = body.followingEnabled;
     }
+    if (typeof body.interactionsEnabled === 'boolean') {
+      updateData.interactionsEnabled = body.interactionsEnabled;
+    }
     if (typeof body.allEnabled === 'boolean') {
       updateData.allEnabled = body.allEnabled;
     }
@@ -96,6 +101,7 @@ export async function PUT(request: NextRequest) {
         rankingEnabled: updateData.rankingEnabled ?? true,
         engagementEnabled: updateData.engagementEnabled ?? true,
         followingEnabled: updateData.followingEnabled ?? true,
+        interactionsEnabled: updateData.interactionsEnabled ?? true,
         allEnabled: updateData.allEnabled ?? true,
       },
       update: updateData as any,

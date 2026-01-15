@@ -456,14 +456,15 @@ model PushNotificationLog {
 }
 
 model PushNotificationPreferences {
-  id                String   @id @default(uuid())
-  userId            String   @unique
-  rankingEnabled    Boolean  @default(true)
-  engagementEnabled Boolean  @default(true)
-  followingEnabled  Boolean  @default(true)
-  allEnabled        Boolean  @default(true)
-  updatedAt         DateTime @updatedAt
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  rankingEnabled     Boolean  @default(true)
+  engagementEnabled  Boolean  @default(true)
+  followingEnabled   Boolean  @default(true)
+  interactionsEnabled Boolean @default(true)
+  allEnabled         Boolean  @default(true)
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
