@@ -34,42 +34,35 @@ function injectPushHandlers() {
       return;
     }
 
-    // Ler os handlers de push
-    if (!fs.existsSync(handlersPath)) {
-      console.log('⚠️ Arquivo sw-push-handlers.js não encontrado');
-      return;
-    }
-
-    const handlersContent = fs.readFileSync(handlersPath, 'utf-8');
-
-    // Encontrar onde inserir o importScripts (antes do final do arquivo)
-    // O next-pwa gera código que termina com })); ou });
-    // Vamos inserir antes do sourceMappingURL ou antes do último });
-    let insertIndex = swContent.lastIndexOf('//# sourceMappingURL');
+    // Encontrar onde inserir o importScripts
+    // O next-pwa gera código que termina com })); que fecha a função define
+    // Precisamos inserir o importScripts DEPOIS do fechamento da função define
+    // Procurar pelo padrão: ...),"GET")}); ou similar
+    
+    // Procurar pelo último })); que fecha a função define
+    let insertIndex = swContent.lastIndexOf('});');
     
     if (insertIndex === -1) {
-      // Se não tem source map, inserir antes do último });
-      insertIndex = swContent.lastIndexOf('});');
-    }
-    
-    if (insertIndex === -1) {
-      // Tentar antes do último });
+      // Tentar encontrar })); (com parênteses)
       insertIndex = swContent.lastIndexOf('}));');
     }
     
     if (insertIndex === -1) {
-      console.log('⚠️ Não foi possível encontrar o ponto de inserção no service worker');
+      console.log('⚠️ Não foi possível encontrar o fechamento da função define');
       return;
     }
 
-    // Inserir importScripts e handlers antes do ponto encontrado
-    const importScripts = "importScripts('/sw-push-handlers.js');\n";
+    // Inserir importScripts DEPOIS do fechamento da função define
+    // O insertIndex aponta para o início de }); ou }));
+    // Precisamos inserir após o fechamento completo
+    const closingPattern = swContent.substring(insertIndex, insertIndex + 4);
+    const afterClosing = closingPattern === '}));' ? insertIndex + 4 : insertIndex + 3;
+    
+    const importScripts = "\nimportScripts('/sw-push-handlers.js');";
     const newSwContent = 
-      swContent.slice(0, insertIndex) +
+      swContent.slice(0, afterClosing) +
       importScripts +
-      handlersContent +
-      '\n' +
-      swContent.slice(insertIndex);
+      swContent.slice(afterClosing);
 
     // Escrever o service worker atualizado
     fs.writeFileSync(swPath, newSwContent, 'utf-8');
