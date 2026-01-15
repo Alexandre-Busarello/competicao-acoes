@@ -20,9 +20,40 @@ function injectPushHandlers() {
     // Ler o service worker atual
     let swContent = fs.readFileSync(swPath, 'utf-8');
 
+    // Remover entradas problemáticas do precache que podem causar 404
+    // O app-build-manifest.json pode não existir em produção
+    // Procurar por padrões como: {url:"/_next/app-build-manifest.json",revision:"..."}
+    // ou {"url":"/_next/app-build-manifest.json","revision":"..."}
+    const appBuildManifestPatterns = [
+      /\{[^}]*"url":"\/_next\/app-build-manifest\.json"[^}]*\}/g,
+      /\{[^}]*url:"\/_next\/app-build-manifest\.json"[^}]*\}/g,
+      /"url":"\/_next\/app-build-manifest\.json"[^,}]*/g,
+      /url:"\/_next\/app-build-manifest\.json"[^,}]*/g,
+    ];
+    
+    let removed = false;
+    for (const pattern of appBuildManifestPatterns) {
+      if (pattern.test(swContent)) {
+        swContent = swContent.replace(pattern, '');
+        removed = true;
+      }
+    }
+    
+    if (removed) {
+      console.log('⚠️ Removendo app-build-manifest.json do precache (pode causar 404)');
+      // Limpar vírgulas duplas e espaços extras
+      swContent = swContent.replace(/,\s*,/g, ',');
+      swContent = swContent.replace(/\[\s*,/g, '[');
+      swContent = swContent.replace(/,\s*\]/g, ']');
+      swContent = swContent.replace(/,\s*\{/g, '{');
+      swContent = swContent.replace(/\}\s*,/g, '}');
+    }
+
     // Verificar se já tem os handlers (para evitar duplicação)
     if (swContent.includes("importScripts('/sw-push-handlers.js')")) {
       console.log('✅ Handlers de push já estão injetados no service worker');
+      // Mesmo assim, salvar as alterações do precache
+      fs.writeFileSync(swPath, swContent, 'utf-8');
       return;
     }
     

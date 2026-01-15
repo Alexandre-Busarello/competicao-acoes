@@ -16,7 +16,13 @@ const withPWA = require('next-pwa')({
       },
     },
   ],
-  buildExcludes: [/middleware-manifest\.json$/],
+  buildExcludes: [
+    /middleware-manifest\.json$/,
+    /app-build-manifest\.json$/,
+  ],
+  fallbacks: {
+    document: '/offline',
+  },
 });
 
 /** @type {import('next').NextConfig} */
