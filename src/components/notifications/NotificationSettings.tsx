@@ -57,14 +57,39 @@ export function NotificationSettings() {
     try {
       // Verificar se tem permissão
       let currentPermission = await checkNotificationPermission();
+      
+      // Se não tem permissão, solicitar
       if (currentPermission !== 'granted') {
-        currentPermission = await requestNotificationPermission();
+        try {
+          currentPermission = await requestNotificationPermission();
+        } catch (error: any) {
+          // Se foi negada anteriormente, mostrar mensagem específica
+          if (error.message?.includes('negada')) {
+            alert('As notificações foram bloqueadas anteriormente. Por favor, ative manualmente nas configurações do navegador:\n\n1. Clique no ícone de cadeado ao lado da URL\n2. Selecione "Notificações"\n3. Altere para "Permitir"\n4. Recarregue a página');
+            setIsRegistering(false);
+            return;
+          }
+          throw error;
+        }
+        
         if (currentPermission !== 'granted') {
-          alert('É necessário permitir notificações primeiro.');
+          if (currentPermission === 'denied') {
+            alert('As notificações foram bloqueadas. Por favor, ative manualmente nas configurações do navegador.');
+          } else {
+            alert('É necessário permitir notificações para continuar.');
+          }
+          setPermission(currentPermission);
           setIsRegistering(false);
           return;
         }
         setPermission(currentPermission);
+      }
+
+      // Verificar se service worker está ativo
+      if (!serviceWorkerActive) {
+        alert('O Service Worker não está ativo. Por favor, aguarde alguns segundos e clique em "Verificar e Atualizar" novamente.');
+        setIsRegistering(false);
+        return;
       }
 
       // Aguardar service worker estar pronto
@@ -109,10 +134,20 @@ export function NotificationSettings() {
       const supportInfo = await checkPushNotificationSupport();
       setSupport(supportInfo);
       
-      alert('Subscription registrada com sucesso! Agora você pode receber notificações.');
-    } catch (error) {
+      // Atualizar permissão também
+      const updatedPermission = await checkNotificationPermission();
+      setPermission(updatedPermission);
+      
+      // Não mostrar alert, apenas atualizar a UI silenciosamente
+      console.log('✅ Notificações ativadas com sucesso!');
+    } catch (error: any) {
       console.error('Erro ao registrar subscription:', error);
-      alert('Erro ao registrar subscription. Verifique se o service worker está ativo e tente novamente.');
+      const errorMessage = error.message || 'Erro desconhecido';
+      if (errorMessage.includes('service worker')) {
+        alert('O Service Worker não está ativo. Por favor, aguarde alguns segundos e tente novamente.');
+      } else {
+        alert(`Erro ao ativar notificações: ${errorMessage}\n\nVerifique se o service worker está ativo e tente novamente.`);
+      }
     } finally {
       setIsRegistering(false);
     }
@@ -281,7 +316,7 @@ export function NotificationSettings() {
               </div>
             )}
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">PWA Instalado:</span>
+              <span className="text-muted-foreground">Rodando como PWA (APP):</span>
               <div className="flex items-center gap-2">
                 {isPWA ? (
                   <>
@@ -296,6 +331,48 @@ export function NotificationSettings() {
                 )}
               </div>
             </div>
+            {/* Botão para ativar notificações do zero */}
+            {permission !== 'granted' && (
+              <div className="mt-4 p-4 rounded-lg bg-primary/10 border border-primary/20">
+                <p className="text-sm font-medium mb-2 text-center">
+                  {permission === 'denied' 
+                    ? '⚠️ Notificações bloqueadas'
+                    : '🔔 Ative as notificações'}
+                </p>
+                <p className="text-xs text-muted-foreground mb-3 text-center">
+                  {permission === 'denied'
+                    ? 'As notificações foram bloqueadas. Ative manualmente nas configurações do navegador.'
+                    : !serviceWorkerActive
+                    ? 'Aguarde o Service Worker estar ativo para ativar as notificações. Clique em "Verificar e Atualizar" acima.'
+                    : 'Clique no botão abaixo para ativar as notificações e começar a receber alertas importantes.'}
+                </p>
+                <Button
+                  onClick={handleRegisterSubscription}
+                  disabled={isRegistering || permission === 'denied' || !serviceWorkerActive}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isRegistering ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Ativando notificações...
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="h-4 w-4 mr-2" />
+                      {permission === 'denied' ? 'Ativar nas Configurações' : 'Ativar Notificações'}
+                    </>
+                  )}
+                </Button>
+                {permission === 'denied' && (
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    Clique no ícone de cadeado ao lado da URL → Notificações → Permitir
+                  </p>
+                )}
+              </div>
+            )}
+            
+            {/* Botão para registrar subscription quando já tem permissão mas não tem subscription */}
             {needsRegistration && (
               <Button
                 onClick={handleRegisterSubscription}
@@ -315,6 +392,7 @@ export function NotificationSettings() {
                 )}
               </Button>
             )}
+            
             <Button
               variant="outline"
               size="sm"

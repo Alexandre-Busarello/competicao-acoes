@@ -9,6 +9,7 @@ import {
   checkNotificationPermission,
   isPWAInstalled,
   checkServiceWorkerActive,
+  requestNotificationPermission,
 } from '@/lib/utils/push-notification-support';
 import { Bell, CheckCircle2, XCircle, AlertCircle, Loader2, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
@@ -20,6 +21,8 @@ export function NotificationStatusCard() {
   const { preferences, isLoading } = usePushNotificationPreferences();
   const [support, setSupport] = useState<Awaited<ReturnType<typeof checkPushNotificationSupport>> | null>(null);
   const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
 
   useEffect(() => {
     const checkSupport = async () => {
@@ -27,6 +30,14 @@ export function NotificationStatusCard() {
       setSupport(supportInfo);
       const perm = await checkNotificationPermission();
       setPermission(perm);
+      
+      // Verificar se tem subscription registrada no servidor
+      try {
+        const response = await fetch('/api/push/subscribe', { method: 'HEAD' });
+        setHasSubscription(response.status === 200);
+      } catch {
+        setHasSubscription(false);
+      }
     };
     checkSupport();
   }, []);
@@ -49,10 +60,131 @@ export function NotificationStatusCard() {
     );
   }
 
-  const hasSubscription = support?.serviceWorkerActive ?? false;
+  const serviceWorkerActive = support?.serviceWorkerActive ?? false;
   const isPWA = support?.pwaInstalled ?? false;
   const isEnabled = preferences?.allEnabled ?? false;
   const hasPermission = permission === 'granted';
+
+  // Função para ativar notificações do zero
+  const handleRegisterSubscription = async () => {
+    setIsRegistering(true);
+    try {
+      // Verificar se tem permissão
+      let currentPermission = await checkNotificationPermission();
+      
+      // Se não tem permissão, solicitar
+      if (currentPermission !== 'granted') {
+        try {
+          currentPermission = await requestNotificationPermission();
+        } catch (error: any) {
+          if (error.message?.includes('negada')) {
+            alert('As notificações foram bloqueadas anteriormente. Por favor, ative manualmente nas configurações do navegador.');
+            setIsRegistering(false);
+            return;
+          }
+          throw error;
+        }
+        
+        if (currentPermission !== 'granted') {
+          if (currentPermission === 'denied') {
+            alert('As notificações foram bloqueadas. Por favor, ative manualmente nas configurações do navegador.');
+          }
+          setPermission(currentPermission);
+          setIsRegistering(false);
+          return;
+        }
+        setPermission(currentPermission);
+      }
+
+      // Verificar se service worker está ativo
+      if (!serviceWorkerActive) {
+        alert('O Service Worker não está ativo. Por favor, aguarde alguns segundos e tente novamente.');
+        setIsRegistering(false);
+        return;
+      }
+
+      // Aguardar service worker estar pronto
+      const registration = await navigator.serviceWorker.ready;
+      
+      // Buscar chave VAPID pública do servidor
+      const vapidKeyResponse = await fetch('/api/push/vapid-public-key');
+      if (!vapidKeyResponse.ok) {
+        throw new Error('Não foi possível obter chave VAPID');
+      }
+      const { publicKey } = await vapidKeyResponse.json();
+      
+      // Converter chave para formato correto
+      const applicationServerKey = urlBase64ToUint8Array(publicKey);
+      
+      // Criar subscription
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKey as BufferSource,
+      });
+
+      // Enviar subscription para o servidor
+      const subscribeResponse = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: arrayBufferToBase64(subscription.getKey('p256dh')!),
+            auth: arrayBufferToBase64(subscription.getKey('auth')!),
+          },
+        }),
+      });
+
+      if (!subscribeResponse.ok) {
+        throw new Error('Erro ao registrar subscription');
+      }
+
+      setHasSubscription(true);
+      const supportInfo = await checkPushNotificationSupport();
+      setSupport(supportInfo);
+      
+      // Atualizar permissão também
+      const updatedPermission = await checkNotificationPermission();
+      setPermission(updatedPermission);
+      
+      console.log('✅ Notificações ativadas com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao registrar subscription:', error);
+      const errorMessage = error.message || 'Erro desconhecido';
+      if (errorMessage.includes('service worker')) {
+        alert('O Service Worker não está ativo. Por favor, aguarde alguns segundos e tente novamente.');
+      } else {
+        alert(`Erro ao ativar notificações: ${errorMessage}`);
+      }
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  // Utilitários para conversão de chaves VAPID
+  function urlBase64ToUint8Array(base64String: string): Uint8Array {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  function arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+  }
 
   // Determinar status geral
   const getStatus = () => {
@@ -64,10 +196,18 @@ export function NotificationStatusCard() {
         bgColor: 'bg-amber-50 dark:bg-amber-950/20',
       };
     }
-    if (!hasSubscription) {
+    if (!serviceWorkerActive) {
       return {
         icon: AlertCircle,
         text: 'Service Worker inativo',
+        color: 'text-amber-600 dark:text-amber-400',
+        bgColor: 'bg-amber-50 dark:bg-amber-950/20',
+      };
+    }
+    if (hasSubscription === false) {
+      return {
+        icon: AlertCircle,
+        text: 'Subscription não registrada',
         color: 'text-amber-600 dark:text-amber-400',
         bgColor: 'bg-amber-50 dark:bg-amber-950/20',
       };
@@ -128,15 +268,20 @@ export function NotificationStatusCard() {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Permissão:</span>
             <div className="flex items-center gap-1">
-              {hasPermission ? (
+              {permission === 'granted' ? (
                 <>
                   <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
                   <span className="text-green-600 dark:text-green-400">Permitido</span>
                 </>
-              ) : (
+              ) : permission === 'denied' ? (
                 <>
                   <XCircle className="h-3 w-3 text-red-600 dark:text-red-400" />
                   <span className="text-red-600 dark:text-red-400">Bloqueado</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                  <span className="text-amber-600 dark:text-amber-400">Não solicitado</span>
                 </>
               )}
             </div>
@@ -144,7 +289,7 @@ export function NotificationStatusCard() {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Service Worker:</span>
             <div className="flex items-center gap-1">
-              {hasSubscription ? (
+              {serviceWorkerActive ? (
                 <>
                   <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
                   <span className="text-green-600 dark:text-green-400">Ativo</span>
@@ -157,6 +302,24 @@ export function NotificationStatusCard() {
               )}
             </div>
           </div>
+          {hasSubscription !== null && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Subscription:</span>
+              <div className="flex items-center gap-1">
+                {hasSubscription ? (
+                  <>
+                    <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
+                    <span className="text-green-600 dark:text-green-400">Registrada</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-3 w-3 text-red-600 dark:text-red-400" />
+                    <span className="text-red-600 dark:text-red-400">Não registrada</span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
           {isPWA && (
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">PWA:</span>
@@ -183,6 +346,50 @@ export function NotificationStatusCard() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* Botão para ativar notificações do zero */}
+        {permission !== 'granted' && (
+          <Button
+            onClick={handleRegisterSubscription}
+            disabled={isRegistering || permission === 'denied' || !serviceWorkerActive}
+            className="w-full mt-2"
+            size="sm"
+          >
+            {isRegistering ? (
+              <>
+                <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                Ativando...
+              </>
+            ) : (
+              <>
+                <Bell className="h-3 w-3 mr-2" />
+                {permission === 'denied' ? 'Ativar nas Configurações' : 'Ativar Notificações'}
+              </>
+            )}
+          </Button>
+        )}
+        
+        {/* Botão para registrar subscription quando já tem permissão mas não tem subscription */}
+        {permission === 'granted' && serviceWorkerActive && hasSubscription === false && (
+          <Button
+            onClick={handleRegisterSubscription}
+            disabled={isRegistering}
+            className="w-full mt-2"
+            size="sm"
+          >
+            {isRegistering ? (
+              <>
+                <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                Registrando...
+              </>
+            ) : (
+              <>
+                <Bell className="h-3 w-3 mr-2" />
+                Registrar Subscription
+              </>
+            )}
+          </Button>
         )}
 
         {/* Link para configurações */}
