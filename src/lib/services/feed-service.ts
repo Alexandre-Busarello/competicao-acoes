@@ -110,6 +110,11 @@ export class FeedService {
       userId: transaction.userId,
     }, 5); // Prioridade média
 
+    // Enviar notificações para seguidores (não bloquear se falhar)
+    this.notifyFollowers(post.id, transaction.userId).catch(error => {
+      console.error('Erro ao enviar notificações para seguidores:', error);
+    });
+
     // Invalida cache do feed do usuário
     await cacheService.clear(`feed:${transaction.userId}:*`);
   }
@@ -171,10 +176,76 @@ export class FeedService {
       userId,
     }, 5); // Prioridade média
 
+    // Enviar notificações para seguidores (não bloquear se falhar)
+    this.notifyFollowers(post.id, userId).catch(error => {
+      console.error('Erro ao enviar notificações para seguidores:', error);
+    });
+
     // Invalida cache do feed do usuário
     await cacheService.clear(`feed:${userId}:*`);
 
     return this.mapToFeedPost(post);
+  }
+
+  /**
+   * Notifica seguidores sobre novo post (limitado a 30% dos seguidores)
+   */
+  private async notifyFollowers(postId: string, authorId: string): Promise<void> {
+    try {
+      // Buscar autor para obter nome
+      const author = await prisma.user.findUnique({
+        where: { id: authorId },
+        select: { id: true, name: true },
+      });
+
+      if (!author) {
+        return;
+      }
+
+      // Buscar seguidores que têm notificações habilitadas
+      const followers = await prisma.userFollow.findMany({
+        where: {
+          followingId: authorId,
+          notificationsEnabled: true,
+        },
+        select: {
+          followerId: true,
+        },
+      });
+
+      if (followers.length === 0) {
+        return;
+      }
+
+      // Selecionar aleatoriamente 30% dos seguidores
+      const selectedFollowers = followers
+        .sort(() => Math.random() - 0.5)
+        .slice(0, Math.ceil(followers.length * 0.3));
+
+      // Buscar preview do post
+      const post = await prisma.feedPost.findUnique({
+        where: { id: postId },
+        select: { content: true },
+      });
+
+      const postPreview = post?.content.substring(0, 100) || 'Nova publicação';
+
+      // Enviar notificação para cada seguidor selecionado
+      const { pushNotificationService } = await import('./push-notification-service');
+      
+      for (const follower of selectedFollowers) {
+        pushNotificationService.sendFollowingNotification(follower.followerId, {
+          postId,
+          authorId,
+          authorName: author.name,
+          postPreview,
+        }).catch(error => {
+          console.error(`Erro ao enviar notificação de following para usuário ${follower.followerId}:`, error);
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao notificar seguidores:', error);
+    }
   }
 
   /**

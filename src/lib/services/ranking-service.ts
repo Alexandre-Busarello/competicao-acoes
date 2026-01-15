@@ -999,10 +999,139 @@ export class RankingService {
     RankingCache.setRanking('mensal', monthlyResult);
     RankingCache.setRanking('anual', annualResult);
 
+    // Detectar mudanças de ranking e enviar notificações
+    await this.detectRankingChanges(monthlyResult, 'mensal', currentPeriod.year, currentPeriod.month);
+    await this.detectRankingChanges(annualResult, 'anual', currentPeriod.year, undefined);
+
     return {
       monthly: monthlyResult,
       annual: annualResult,
     };
+  }
+
+  /**
+   * Detecta mudanças significativas no ranking e envia notificações
+   */
+  private async detectRankingChanges(
+    ranking: RankingResult,
+    period: 'mensal' | 'anual',
+    year: number,
+    month: number | undefined
+  ): Promise<void> {
+    try {
+      const { pushNotificationService } = await import('./push-notification-service');
+
+      // Buscar histórico anterior de posições
+      const historyRecords = await prisma.userRankingHistory.findMany({
+        where: {
+          period,
+          year,
+          month: period === 'mensal' ? (month ?? null) : null,
+        },
+      });
+
+      const previousPositions = new Map<string, number>();
+      historyRecords.forEach(record => {
+        previousPositions.set(record.userId, record.position);
+      });
+
+      // Comparar posições atuais com anteriores
+      for (const entry of ranking.ranking) {
+        const userId = entry.userId;
+        const currentPosition = entry.rank;
+        const previousPosition = previousPositions.get(userId);
+
+        // Se não tinha posição anterior, é novo no ranking - não notificar
+        if (previousPosition === undefined) {
+          // Salvar posição atual no histórico
+          const monthValue = period === 'mensal' ? (month ?? null) : null;
+          await prisma.userRankingHistory.upsert({
+            where: {
+              userId_period_year_month: {
+                userId,
+                period,
+                year,
+                month: monthValue,
+              } as any,
+            },
+            create: {
+              userId,
+              period,
+              year,
+              month: monthValue,
+              position: currentPosition,
+            },
+            update: {
+              position: currentPosition,
+              updatedAt: new Date(),
+            },
+          });
+          continue;
+        }
+
+        // Verificar se mudou significativamente
+        const positionChange = previousPosition - currentPosition; // positivo = subiu, negativo = desceu
+        const absChange = Math.abs(positionChange);
+
+        let shouldNotify = false;
+        let changeType: 'top3' | 'up' | 'down' = 'up';
+
+        // Entrou no top 3
+        if (currentPosition <= 3 && previousPosition > 3) {
+          shouldNotify = true;
+          changeType = 'top3';
+        }
+        // Subiu mais de 5 posições
+        else if (positionChange > 5) {
+          shouldNotify = true;
+          changeType = 'up';
+        }
+        // Desceu mais de 5 posições
+        else if (positionChange < -5) {
+          shouldNotify = true;
+          changeType = 'down';
+        }
+
+        if (shouldNotify) {
+          // Enviar notificação (não bloquear se falhar)
+          pushNotificationService.sendRankingNotification(userId, {
+            previousPosition,
+            currentPosition,
+            changeType,
+            period,
+          }).catch(error => {
+            console.error(`Erro ao enviar notificação de ranking para usuário ${userId}:`, error);
+          });
+        }
+
+        // Atualizar histórico
+        const monthValue = period === 'mensal' ? (month ?? null) : null;
+        await prisma.userRankingHistory.upsert({
+          where: {
+            userId_period_year_month: {
+              userId,
+              period,
+              year,
+              month: monthValue,
+            } as any,
+          },
+          create: {
+            userId,
+            period,
+            year,
+            month: monthValue,
+            position: currentPosition,
+          },
+          update: {
+            position: currentPosition,
+            updatedAt: new Date(),
+          },
+        });
+      }
+    } catch (error) {
+      // Não quebrar o fluxo se houver erro nas notificações
+      console.error('Erro ao detectar mudanças de ranking:', error);
+    }
   }
 
   /**
@@ -1278,7 +1407,7 @@ export class RankingService {
         data: {
           period,
           year,
-          month: period === 'mensal' ? month : null,
+          month: period === 'mensal' ? (month ?? null) : null,
           rankingData: resultForStorage as any, // Serializa sem name e avatar
           totalParticipants: resultForStorage.totalParticipants,
           calculatedAt: resultForStorage.lastUpdate,

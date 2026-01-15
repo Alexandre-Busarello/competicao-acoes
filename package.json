@@ -3,11 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/watch-sw.js & next dev",
+    "dev:clean": "next dev",
+    "postbuild": "node scripts/inject-push-handlers.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "update-currency": "tsx scripts/update-transactions-currency.ts"
+    "update-currency": "tsx scripts/update-transactions-currency.ts",
+    "generate-vapid-keys": "tsx scripts/generate-vapid-keys.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
@@ -47,11 +50,13 @@
     "tailwindcss": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.4.0",
+    "web-push": "^3.6.7",
     "yahoo-finance2": "^3.11.1",
     "zustand": "^4.5.0"
   },
   "devDependencies": {
     "@types/minimatch": "^6.0.0",
+    "@types/web-push": "^3.6.4",
     "dotenv": "^17.2.3",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.0",

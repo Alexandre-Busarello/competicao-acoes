@@ -5,6 +5,7 @@ import { ProfileInfo } from '@/components/profile/ProfileInfo';
 import { PremiumCard } from '@/components/profile/PremiumCard';
 import { CheckoutSection } from '@/components/profile/CheckoutSection';
 import { PasswordManager } from '@/components/profile/PasswordManager';
+import { NotificationStatusCard } from '@/components/notifications/NotificationStatusCard';
 import { useUserStore } from '@/lib/store/userStore';
 import { useAuth } from '@/lib/auth/client';
 import { useSearchParams } from 'next/navigation';
@@ -47,6 +48,7 @@ function ProfileContent() {
         )}
         <CheckoutSection />
         <ProfileInfo />
+        <NotificationStatusCard />
         <PasswordManager />
       </div>
     );
@@ -65,6 +67,7 @@ function ProfileContent() {
         </div>
       )}
       <ProfileInfo />
+      <NotificationStatusCard />
       <PasswordManager />
       {isPremium ? <PremiumCard /> : <CheckoutSection />}
     </div>

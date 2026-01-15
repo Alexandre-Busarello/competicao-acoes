@@ -190,6 +190,25 @@ export function InstallPrompt() {
         if (outcome === 'accepted') {
           setShowPrompt(false);
           setIsInstalled(true);
+          
+          // Marcar PWA como instalado no servidor
+          try {
+            await fetch('/api/user/pwa-installed', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+            });
+          } catch (error) {
+            console.error('Erro ao marcar PWA como instalado:', error);
+          }
+          
+          // Após instalar o PWA, solicitar permissão de notificações automaticamente
+          setTimeout(async () => {
+            try {
+              await requestNotificationsAfterInstall();
+            } catch (error) {
+              console.warn('Erro ao solicitar notificações após instalação:', error);
+            }
+          }, 1000); // Aguardar 1 segundo para garantir que o PWA foi instalado
         } else {
           deferredPromptRef.current = null;
           setDeferredPrompt(null);
@@ -201,6 +220,117 @@ export function InstallPrompt() {
       }
       return;
     }
+  };
+
+  // Função para solicitar notificações após instalação do PWA
+  const requestNotificationsAfterInstall = async () => {
+    // Verificar se já tem permissão
+    if (!('Notification' in window)) {
+      return; // Não suporta notificações
+    }
+
+    // Verificar se o usuário está autenticado antes de solicitar notificações
+    // Fazemos uma verificação simples verificando se há token de sessão
+    try {
+      const authCheck = await fetch('/api/auth/me');
+      if (!authCheck.ok) {
+        // Usuário não autenticado, não solicitar notificações ainda
+        return;
+      }
+    } catch {
+      // Se não conseguir verificar, não solicitar notificações
+      return;
+    }
+
+    const currentPermission = Notification.permission;
+    if (currentPermission === 'granted') {
+      // Já tem permissão, apenas registrar subscription
+      await registerPushSubscription();
+      return;
+    }
+
+    if (currentPermission === 'denied') {
+      // Permissão negada, não fazer nada
+      return;
+    }
+
+    // Solicitar permissão após um pequeno delay para melhor UX
+    setTimeout(async () => {
+      try {
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+          // Registrar subscription automaticamente
+          await registerPushSubscription();
+        }
+      } catch (error) {
+        console.error('Erro ao solicitar permissão de notificações:', error);
+      }
+    }, 2000); // Aguardar 2 segundos após instalação
+  };
+
+  // Função para registrar push subscription
+  const registerPushSubscription = async () => {
+    try {
+      // Aguardar service worker estar pronto
+      const registration = await navigator.serviceWorker.ready;
+      
+      // Buscar chave VAPID pública do servidor
+      const vapidKeyResponse = await fetch('/api/push/vapid-public-key');
+      if (!vapidKeyResponse.ok) {
+        throw new Error('Não foi possível obter chave VAPID');
+      }
+      const { publicKey } = await vapidKeyResponse.json();
+      
+      // Converter chave para formato correto
+      const applicationServerKey = urlBase64ToUint8Array(publicKey);
+      
+      // Criar subscription
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKey as BufferSource,
+      });
+
+      // Enviar subscription para o servidor
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: arrayBufferToBase64(subscription.getKey('p256dh')!),
+            auth: arrayBufferToBase64(subscription.getKey('auth')!),
+          },
+        }),
+      });
+    } catch (error) {
+      console.error('Erro ao registrar subscription:', error);
+    }
+  };
+
+  // Utilitários para conversão de chaves VAPID
+  const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
   };
 
   const handleDismiss = () => {

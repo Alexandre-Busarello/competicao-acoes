@@ -7,6 +7,9 @@ import { NavigationWrapper } from "@/components/navigation/NavigationWrapper";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { UpdatePrompt } from "@/components/pwa/UpdatePrompt";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
+import { PushNotificationPrompt } from "@/components/pwa/PushNotificationPrompt";
+import { BadgeUpdater } from "@/components/pwa/BadgeUpdater";
+import { TrackAccess } from "@/components/tracking/TrackAccess";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -104,14 +107,19 @@ export default function RootLayout({
     <html lang="pt-BR">
       <head>
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                const savedTheme = localStorage.getItem('theme');
-                const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                const theme = savedTheme || systemTheme;
-                if (theme === 'dark') {
-                  document.documentElement.classList.add('dark');
+                try {
+                  const savedTheme = localStorage.getItem('theme');
+                  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  const theme = savedTheme || systemTheme;
+                  if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                  }
+                } catch (e) {
+                  // Ignore errors in SSR
                 }
               })();
             `,
@@ -180,10 +188,13 @@ export default function RootLayout({
             <div className="min-h-screen bg-background">
               <ServiceWorkerRegistration />
               <InstallPrompt />
+              <BadgeUpdater />
+              <TrackAccess />
               <NavigationWrapper>
                 {children}
               </NavigationWrapper>
               <UpdatePrompt />
+              <PushNotificationPrompt />
             </div>
           </QueryProvider>
         </ThemeProvider>

@@ -109,6 +109,7 @@ export async function GET(request: NextRequest) {
       }),
 
       // Últimos usuários acessados (excluindo emails de teste)
+      // Ordenar por lastAccessAt se disponível, senão por updatedAt
       prisma.user.findMany({
         where: excludeTestEmailsFilter,
         select: {
@@ -118,6 +119,7 @@ export async function GET(request: NextRequest) {
           avatarUrl: true,
           createdAt: true,
           updatedAt: true,
+          lastAccessAt: true,
           isPremium: true,
           subscription: {
             select: {
@@ -127,9 +129,14 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: {
-          updatedAt: 'desc',
-        },
+        orderBy: [
+          {
+            lastAccessAt: 'desc',
+          },
+          {
+            updatedAt: 'desc',
+          },
+        ],
         take: 50,
       }),
 
@@ -202,6 +209,7 @@ export async function GET(request: NextRequest) {
           avatarUrl: user.avatarUrl,
           createdAt: user.createdAt.toISOString(),
           updatedAt: user.updatedAt.toISOString(),
+          lastAccessAt: user.lastAccessAt?.toISOString() || null,
           isPremium: user.isPremium,
           subscription: user.subscription ? {
             status: user.subscription.status,

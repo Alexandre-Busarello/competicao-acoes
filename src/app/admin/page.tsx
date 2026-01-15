@@ -24,20 +24,21 @@ interface AdminStats {
     total: number;
     withPro: number;
     userToProRate: number;
-    recent: Array<{
-      id: string;
-      name: string;
-      email: string | null;
-      avatarUrl: string | null;
-      createdAt: string;
-      updatedAt: string;
-      isPremium: boolean;
-      subscription: {
-        status: string;
-        currentPeriodEnd: string | null;
+      recent: Array<{
+        id: string;
+        name: string;
+        email: string | null;
+        avatarUrl: string | null;
         createdAt: string;
-      } | null;
-    }>;
+        updatedAt: string;
+        lastAccessAt: string | null;
+        isPremium: boolean;
+        subscription: {
+          status: string;
+          currentPeriodEnd: string | null;
+          createdAt: string;
+        } | null;
+      }>;
   };
   subscriptions: {
     total: number;
@@ -279,10 +280,13 @@ export default function AdminPage() {
                             })}
                           </td>
                           <td className="py-3 px-4 text-sm text-muted-foreground">
-                            {formatDistanceToNow(new Date(user.updatedAt), {
-                              addSuffix: true,
-                              locale: ptBR,
-                            })}
+                            {formatDistanceToNow(
+                              new Date(user.lastAccessAt || user.updatedAt),
+                              {
+                                addSuffix: true,
+                                locale: ptBR,
+                              }
+                            )}
                           </td>
                         </tr>
                       );

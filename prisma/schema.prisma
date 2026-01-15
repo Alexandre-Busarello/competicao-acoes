@@ -8,32 +8,39 @@ datasource db {
 }
 
 model User {
-  id                    String                    @id @default(uuid())
-  authUserId            String                    @unique
-  name                  String
-  email                 String?                    @unique
-  avatarUrl             String?
-  slug                  String?                    @unique
-  isPremium             Boolean                   @default(false)
-  createdAt             DateTime                  @default(now())
-  updatedAt             DateTime                  @updatedAt
-  subscription          Subscription?
-  transactions          Transaction[]
-  perpetualProfitability UserPerpetualProfitability?
-  feedPosts             FeedPost[]
-  feedComments          FeedComment[]
-  feedLikes             FeedLike[]
-  followers             UserFollow[]              @relation("Follower")
-  following             UserFollow[]              @relation("Following")
-  blocker               UserBlock[]               @relation("Blocker")
-  blocked               UserBlock[]               @relation("Blocked")
-  notifications         Notification[]
-  notificationsAsActor  Notification[]           @relation("NotificationActor")
-  medals                UserMedal[]
-  stats                 UserStats?
-  timeline              FeedTimeline[]
-  feedViews             FeedView[]
-  pollVotes             FeedPollVote[]
+  id                          String                       @id @default(uuid())
+  authUserId                  String                       @unique
+  name                        String
+  email                       String?                      @unique
+  avatarUrl                   String?
+  slug                        String?                      @unique
+  isPremium                   Boolean                      @default(false)
+  pwaInstalledAt              DateTime?
+  lastAccessAt                DateTime?
+  notificationVariationIndex  Int                          @default(0)
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  subscription                Subscription?
+  transactions                Transaction[]
+  perpetualProfitability      UserPerpetualProfitability?
+  feedPosts                   FeedPost[]
+  feedComments                FeedComment[]
+  feedLikes                   FeedLike[]
+  followers                   UserFollow[]                 @relation("Follower")
+  following                   UserFollow[]                 @relation("Following")
+  blocker                     UserBlock[]                  @relation("Blocker")
+  blocked                     UserBlock[]                  @relation("Blocked")
+  notifications               Notification[]
+  notificationsAsActor        Notification[]               @relation("NotificationActor")
+  medals                      UserMedal[]
+  stats                       UserStats?
+  timeline                    FeedTimeline[]
+  feedViews                   FeedView[]
+  pollVotes                   FeedPollVote[]
+  pushSubscriptions           PushSubscription[]
+  pushNotificationLogs        PushNotificationLog[]
+  pushNotificationPreferences PushNotificationPreferences?
+  rankingHistory              UserRankingHistory[]
 
   @@index([authUserId])
   @@index([email])
@@ -47,7 +54,7 @@ model Transaction {
   type      String
   quantity  Decimal   @db.Decimal(18, 8)
   price     Decimal   @db.Decimal(10, 2)
-  currency  String?   // Moeda do ativo (BRL, USD, EUR, etc.) obtida do Yahoo Finance
+  currency  String? // Moeda do ativo (BRL, USD, EUR, etc.) obtida do Yahoo Finance
   date      DateTime
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -132,16 +139,16 @@ model RankingCalculation {
 }
 
 model PriceUpdateCheckpoint {
-  id                    String   @id @default(uuid())
-  status                String   // 'in_progress' | 'completed' | 'failed'
-  phase                 String   // 'prices' | 'ranking'
-  processedUserIds      String[] // IDs dos usuários já processados
-  monthlyRankings       Json?    // Rankings mensais parciais
-  annualRankings        Json?    // Rankings anuais parciais
-  pricesLastUpdate      DateTime?
-  startedAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  completedAt           DateTime?
+  id               String    @id @default(uuid())
+  status           String // 'in_progress' | 'completed' | 'failed'
+  phase            String // 'prices' | 'ranking'
+  processedUserIds String[] // IDs dos usuários já processados
+  monthlyRankings  Json? // Rankings mensais parciais
+  annualRankings   Json? // Rankings anuais parciais
+  pricesLastUpdate DateTime?
+  startedAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  completedAt      DateTime?
 
   @@index([status])
   @@index([updatedAt])
@@ -153,7 +160,7 @@ model UserPerpetualProfitability {
   profitability Decimal  @db.Decimal(10, 2)
   totalInvested Decimal  @db.Decimal(18, 2)
   currentValue  Decimal  @db.Decimal(18, 2)
-  calculatedAt DateTime @default(now())
+  calculatedAt  DateTime @default(now())
   lastUpdated   DateTime @updatedAt
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -162,29 +169,29 @@ model UserPerpetualProfitability {
 }
 
 model FeedPost {
-  id           String        @id @default(uuid())
-  userId       String
-  transactionId String?      @unique
-  slug         String        @unique
-  content      String
-  type         String        @default("transaction") // 'transaction' | 'custom' | 'share'
-  metadata     Json?
-  isPublic     Boolean       @default(true)
-  likeCount    Int           @default(0)
-  commentCount Int           @default(0)
-  shareCount   Int           @default(0)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  deletedAt    DateTime?
-  reportedAt   DateTime?
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transaction  Transaction?  @relation(fields: [transactionId], references: [id], onDelete: SetNull)
-  comments     FeedComment[]
-  likes        FeedLike[]
+  id            String         @id @default(uuid())
+  userId        String
+  transactionId String?        @unique
+  slug          String         @unique
+  content       String
+  type          String         @default("transaction") // 'transaction' | 'custom' | 'share'
+  metadata      Json?
+  isPublic      Boolean        @default(true)
+  likeCount     Int            @default(0)
+  commentCount  Int            @default(0)
+  shareCount    Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
+  reportedAt    DateTime?
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transaction   Transaction?   @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  comments      FeedComment[]
+  likes         FeedLike[]
   notifications Notification[]
-  timeline     FeedTimeline[]
-  views        FeedView[]
-  poll         FeedPoll?
+  timeline      FeedTimeline[]
+  views         FeedView[]
+  poll          FeedPoll?
 
   @@index([userId])
   @@index([slug])
@@ -195,21 +202,21 @@ model FeedPost {
 }
 
 model FeedComment {
-  id             String        @id @default(uuid())
-  postId         String
-  userId         String
+  id              String         @id @default(uuid())
+  postId          String
+  userId          String
   parentCommentId String?
-  content        String
-  likeCount      Int           @default(0)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  deletedAt      DateTime?
-  reportedAt     DateTime?
-  post           FeedPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parentComment  FeedComment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
-  replies        FeedComment[] @relation("CommentReplies")
-  notifications  Notification[]
+  content         String
+  likeCount       Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+  reportedAt      DateTime?
+  post            FeedPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentComment   FeedComment?   @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies         FeedComment[]  @relation("CommentReplies")
+  notifications   Notification[]
 
   @@index([postId])
   @@index([userId])
@@ -232,13 +239,13 @@ model FeedLike {
 }
 
 model UserFollow {
-  id                String   @id @default(uuid())
-  followerId        String
-  followingId       String
-  createdAt         DateTime @default(now())
-  notificationsEnabled Boolean @default(true)
-  follower          User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
-  following         User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  id                   String   @id @default(uuid())
+  followerId           String
+  followingId          String
+  createdAt            DateTime @default(now())
+  notificationsEnabled Boolean  @default(true)
+  follower             User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following            User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, followingId])
   @@index([followerId])
@@ -247,14 +254,14 @@ model UserFollow {
 }
 
 model UserStats {
-  id                String   @id @default(uuid())
-  userId            String   @unique
-  followerCount     Int      @default(0)
-  followingCount    Int      @default(0)
-  postCount         Int      @default(0)
-  totalLikesReceived Int    @default(0)
-  updatedAt         DateTime @updatedAt
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  followerCount      Int      @default(0)
+  followingCount     Int      @default(0)
+  postCount          Int      @default(0)
+  totalLikesReceived Int      @default(0)
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -273,19 +280,19 @@ model UserBlock {
 }
 
 model Notification {
-  id        String    @id @default(uuid())
+  id        String       @id @default(uuid())
   userId    String
-  type      String    // 'like' | 'comment' | 'follow' | 'mention' | 'reply'
+  type      String // 'like' | 'comment' | 'follow' | 'mention' | 'reply'
   actorId   String
   postId    String?
   commentId String?
   content   String?
-  read      Boolean   @default(false)
+  read      Boolean      @default(false)
   readAt    DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  actor     User      @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
-  post      FeedPost? @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actor     User         @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  post      FeedPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
   comment   FeedComment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -295,15 +302,15 @@ model Notification {
 }
 
 model FeedTimeline {
-  id        String   @id @default(uuid())
-  userId    String
-  postId    String
+  id         String   @id @default(uuid())
+  userId     String
+  postId     String
   postUserId String
-  score     Decimal? @db.Decimal(10, 2)
-  createdAt DateTime // Data do post original
-  addedAt   DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  score      Decimal? @db.Decimal(10, 2)
+  createdAt  DateTime // Data do post original
+  addedAt    DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post       FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, createdAt(sort: Desc)])
@@ -312,12 +319,12 @@ model FeedTimeline {
 }
 
 model FeedView {
-  id        String   @id @default(uuid())
-  userId    String
-  postId    String
-  viewedAt  DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  id       String   @id @default(uuid())
+  userId   String
+  postId   String
+  viewedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post     FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId])
   @@index([userId, viewedAt(sort: Desc)])
@@ -325,15 +332,15 @@ model FeedView {
 }
 
 model UserMedal {
-  id          String   @id @default(uuid())
-  userId      String
-  period      String   // 'mensal' | 'anual'
-  year        Int
-  month       Int?
-  position    Int      // 1=ouro, 2=prata, 3=bronze
-  medalType   String   // 'gold' | 'silver' | 'bronze'
+  id           String   @id @default(uuid())
+  userId       String
+  period       String // 'mensal' | 'anual'
+  year         Int
+  month        Int?
+  position     Int // 1=ouro, 2=prata, 3=bronze
+  medalType    String // 'gold' | 'silver' | 'bronze'
   calculatedAt DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([period, year, month])
@@ -342,25 +349,25 @@ model UserMedal {
 }
 
 model MedalSettlement {
-  id          String   @id @default(uuid())
-  period      String   // 'mensal' | 'anual'
-  year        Int
-  month       Int?     // null para anual
-  settledAt   DateTime @default(now()) // Timestamp UTC do banco
-  
+  id        String   @id @default(uuid())
+  period    String // 'mensal' | 'anual'
+  year      Int
+  month     Int? // null para anual
+  settledAt DateTime @default(now()) // Timestamp UTC do banco
+
   @@unique([period, year, month])
   @@index([period, year, month])
   @@index([settledAt])
 }
 
 model ActionQueue {
-  id           String   @id @default(uuid())
-  actionType   String   // 'like' | 'comment' | 'follow' | 'unfollow' | 'notification' | 'timeline_update'
+  id           String    @id @default(uuid())
+  actionType   String // 'like' | 'comment' | 'follow' | 'unfollow' | 'notification' | 'timeline_update'
   payload      Json
-  status       String   @default("pending") // 'pending' | 'processing' | 'completed' | 'failed'
-  priority     Int      @default(0)
-  retryCount   Int      @default(0)
-  maxRetries   Int      @default(3)
+  status       String    @default("pending") // 'pending' | 'processing' | 'completed' | 'failed'
+  priority     Int       @default(0)
+  retryCount   Int       @default(0)
+  maxRetries   Int       @default(3)
   errorMessage String?
   processedAt  DateTime?
   createdAt    DateTime  @default(now())
@@ -375,16 +382,16 @@ model ActionQueue {
 }
 
 model KiwifyWebhookQueue {
-  id              String   @id @default(uuid())
-  webhookEventType String   // 'order_approved' | 'order_refunded' | 'chargeback' | etc
-  orderId         String?   // order_id do Kiwify para facilitar busca
-  customerEmail   String?   // email do cliente para facilitar busca
-  payload         Json      // Body completo do webhook
-  status          String    @default("pending") // 'pending' | 'processing' | 'completed' | 'error'
-  errorMessage    String?   // Mensagem de erro se status = 'error'
-  processedAt     DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String    @id @default(uuid())
+  webhookEventType String // 'order_approved' | 'order_refunded' | 'chargeback' | etc
+  orderId          String? // order_id do Kiwify para facilitar busca
+  customerEmail    String? // email do cliente para facilitar busca
+  payload          Json // Body completo do webhook
+  status           String    @default("pending") // 'pending' | 'processing' | 'completed' | 'error'
+  errorMessage     String? // Mensagem de erro se status = 'error'
+  processedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([status])
   @@index([status, createdAt(sort: Asc)])
@@ -395,14 +402,14 @@ model KiwifyWebhookQueue {
 }
 
 model FeedPoll {
-  id         String        @id @default(uuid())
-  postId     String        @unique
+  id         String         @id @default(uuid())
+  postId     String         @unique
   question   String
-  options    Json          // Array de strings: ["opção1", "opção2", ...]
-  totalVotes Int           @default(0)
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  post       FeedPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  options    Json // Array de strings: ["opção1", "opção2", ...]
+  totalVotes Int            @default(0)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  post       FeedPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
   votes      FeedPollVote[]
 
   @@index([postId])
@@ -412,7 +419,7 @@ model FeedPollVote {
   id          String   @id @default(uuid())
   pollId      String
   userId      String
-  optionIndex Int      // Índice da opção votada (0-5)
+  optionIndex Int // Índice da opção votada (0-5)
   createdAt   DateTime @default(now())
   poll        FeedPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -420,4 +427,73 @@ model FeedPollVote {
   @@unique([pollId, userId])
   @@index([pollId])
   @@index([userId])
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String
+  keys      Json // { p256dh: string, auth: string }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([endpoint])
+  @@index([userId])
+  @@index([endpoint])
+}
+
+model PushNotificationLog {
+  id     String   @id @default(uuid())
+  userId String
+  type   String // 'ranking' | 'engagement' | 'following' | 'test'
+  sentAt DateTime @default(now())
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, sentAt(sort: Desc)])
+  @@index([type])
+}
+
+model PushNotificationPreferences {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  rankingEnabled    Boolean  @default(true)
+  engagementEnabled Boolean  @default(true)
+  followingEnabled  Boolean  @default(true)
+  allEnabled        Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserRankingHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  period    String // 'mensal' | 'anual'
+  year      Int
+  month     Int?
+  position  Int
+  updatedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, period, year, month])
+  @@index([userId])
+  @@index([userId, period, year, month])
+  @@index([updatedAt])
+}
+
+model NotificationMessageVariation {
+  id        String   @id @default(uuid())
+  type      String // 'ranking_top3', 'ranking_up', 'ranking_down', 'engagement', 'following', 'reengagement'
+  variation String // 'A', 'B', 'C', 'D', 'F'
+  title     String
+  body      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, variation])
+  @@index([type, isActive])
 }
