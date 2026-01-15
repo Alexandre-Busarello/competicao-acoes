@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { PortfolioHeader } from '@/components/portfolio/PortfolioHeader';
 import { AssetAllocationChart } from '@/components/portfolio/AssetAllocationChart';
 import { AssetList } from '@/components/portfolio/AssetList';
+import { ClosedPositionsList } from '@/components/portfolio/ClosedPositionsList';
 import { UserTransactionList } from '@/components/portfolio/UserTransactionList';
 import { BlurOverlay } from '@/components/portfolio/BlurOverlay';
 import { PeriodFilters } from '@/components/ranking/PeriodFilters';
@@ -134,14 +135,16 @@ export default function PortfolioMensalPage() {
       
       {canAccess ? (
         <>
-          <AssetAllocationChart assets={competitor.portfolio} userId={competitor.id} isOwner={isOwner} />
+          <AssetAllocationChart assets={competitor.portfolio} />
           <AssetList assets={competitor.portfolio} isPremium={canAccess} isOwner={isOwner} />
+          <ClosedPositionsList userId={competitor.id} isOwner={isOwner} hasActivePositions={competitor.portfolio.length > 0 && competitor.portfolio.reduce((sum, asset) => sum + (asset.currentPrice * asset.quantity), 0) > 0} />
           <UserTransactionList userId={competitor.id} isPremium={canAccess} isOwner={isOwner} period="mensal" year={year} month={month} />
         </>
       ) : (
         <>
-          <AssetAllocationChart assets={competitor.portfolio} userId={competitor.id} isOwner={false} />
+          <AssetAllocationChart assets={competitor.portfolio} />
           <AssetList assets={competitor.portfolio} isPremium={false} isOwner={false} />
+          <ClosedPositionsList userId={competitor.id} isOwner={false} hasActivePositions={competitor.portfolio.length > 0 && competitor.portfolio.some(asset => asset.quantity > 0)} />
           <UserTransactionList userId={competitor.id} isPremium={false} isOwner={false} period="mensal" year={year} month={month} />
           <BlurOverlay competitorName={competitor.name} />
         </>

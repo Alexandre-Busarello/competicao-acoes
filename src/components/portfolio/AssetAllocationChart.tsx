@@ -4,12 +4,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import { TrendingDown } from 'lucide-react';
 import type { Asset } from '@/types';
 import { getCategoryDisplayName } from '@/lib/data/etfs';
-import { ClosedPositionsList } from '@/components/portfolio/ClosedPositionsList';
 
 interface AssetAllocationChartProps {
   assets: Asset[];
-  userId?: string;
-  isOwner?: boolean;
 }
 
 // Paleta de cores baseada no brandbook HOLDARENA (#00c219 verde primário)
@@ -33,7 +30,7 @@ const COLORS = {
   outros: '#7c3aed', // Roxo
 };
 
-export function AssetAllocationChart({ assets, userId, isOwner = false }: AssetAllocationChartProps) {
+export function AssetAllocationChart({ assets }: AssetAllocationChartProps) {
   // Calcular alocação por tipo e categoria (para ETFs)
   const allocation = assets.reduce(
     (acc, asset) => {
@@ -92,24 +89,20 @@ export function AssetAllocationChart({ assets, userId, isOwner = false }: AssetA
 
   if (hasNoPositions) {
     return (
-      <>
-        <div className="container mx-auto px-4 py-6">
-          <h2 className="text-lg font-semibold mb-4">Alocação de Ativos</h2>
-          <div className="flex flex-col items-center justify-center py-12 px-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-              <TrendingDown className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <p className="text-lg font-medium text-foreground mb-2">
-              Carteira Zerada
-            </p>
-            <p className="text-sm text-muted-foreground text-center max-w-md">
-              Todas as posições foram zeradas. Não há ativos na carteira no momento.
-            </p>
+      <div className="container mx-auto px-4 py-6">
+        <h2 className="text-lg font-semibold mb-4">Alocação de Ativos</h2>
+        <div className="flex flex-col items-center justify-center py-12 px-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+            <TrendingDown className="h-8 w-8 text-muted-foreground" />
           </div>
+          <p className="text-lg font-medium text-foreground mb-2">
+            Carteira Zerada
+          </p>
+          <p className="text-sm text-muted-foreground text-center max-w-md">
+            Todas as posições foram zeradas. Não há ativos na carteira no momento.
+          </p>
         </div>
-        {/* Mostrar histórico de ativos encerrados se houver userId */}
-        {userId && <ClosedPositionsList userId={userId} isOwner={isOwner} />}
-      </>
+      </div>
     );
   }
 
@@ -119,46 +112,42 @@ export function AssetAllocationChart({ assets, userId, isOwner = false }: AssetA
   }));
 
   return (
-    <>
-      <div className="container mx-auto px-4 py-6">
-        <h2 className="text-lg font-semibold mb-4">Alocação de Ativos</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie
-              data={dataWithPercentage}
-              cx="50%"
-              cy="50%"
-              labelLine={false}
-              label={({ name, percentage }) => `${name}: ${percentage}%`}
-              outerRadius={100}
-              fill="#8884d8"
-              dataKey="value"
-            >
-              {dataWithPercentage.map((entry, index) => {
-                const colorKey = entry.originalKey as keyof typeof COLORS;
-                return (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[colorKey] || COLORS.outros}
-                  />
-                );
-              })}
-            </Pie>
-            <Tooltip
-              formatter={(value: number) =>
-                `R$ ${value.toLocaleString('pt-BR', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}`
-              }
-            />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-      {/* Mostrar histórico de ativos encerrados se houver userId */}
-      {userId && <ClosedPositionsList userId={userId} isOwner={isOwner} />}
-    </>
+    <div className="container mx-auto px-4 py-6">
+      <h2 className="text-lg font-semibold mb-4">Alocação de Ativos</h2>
+      <ResponsiveContainer width="100%" height={300}>
+        <PieChart>
+          <Pie
+            data={dataWithPercentage}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            label={({ name, percentage }) => `${name}: ${percentage}%`}
+            outerRadius={100}
+            fill="#8884d8"
+            dataKey="value"
+          >
+            {dataWithPercentage.map((entry, index) => {
+              const colorKey = entry.originalKey as keyof typeof COLORS;
+              return (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={COLORS[colorKey] || COLORS.outros}
+                />
+              );
+            })}
+          </Pie>
+          <Tooltip
+            formatter={(value: number) =>
+              `R$ ${value.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}`
+            }
+          />
+          <Legend />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
 

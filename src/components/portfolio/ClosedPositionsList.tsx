@@ -27,9 +27,10 @@ interface ClosedPosition {
 interface ClosedPositionsListProps {
   userId: string;
   isOwner?: boolean;
+  hasActivePositions?: boolean;
 }
 
-export function ClosedPositionsList({ userId, isOwner = false }: ClosedPositionsListProps) {
+export function ClosedPositionsList({ userId, isOwner = false, hasActivePositions = false }: ClosedPositionsListProps) {
   const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
     queryKey: ['transactions', userId],
     queryFn: async () => {
@@ -188,8 +189,8 @@ export function ClosedPositionsList({ userId, isOwner = false }: ClosedPositions
         })}
       </div>
 
-      {/* CTA para adicionar novas posições */}
-      {isOwner && (
+      {/* CTA para adicionar novas posições - apenas quando não há posições ativas */}
+      {isOwner && !hasActivePositions && (
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="p-6 text-center">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
