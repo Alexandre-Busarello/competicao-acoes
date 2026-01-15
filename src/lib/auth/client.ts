@@ -240,6 +240,17 @@ export function useAuth() {
           invalidatingRef.current = true;
           console.log('🟡 Invalidating user query for event:', event, 'existingUser:', !!existingUser);
           
+          // Para eventos de login (SIGNED_IN), aguardar um pouco para garantir que os cookies
+          // foram propagados pelo navegador antes de chamar /api/auth/me
+          // Isso evita race condition onde /api/auth/me é chamado antes dos cookies estarem disponíveis
+          if (event === 'SIGNED_IN') {
+            const waitStart = Date.now();
+            console.log('⏳ Waiting for cookies to propagate after login...');
+            await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+            const waitDuration = Date.now() - waitStart;
+            console.log(`✅ Cookies propagation wait completed (${waitDuration}ms)`);
+          }
+          
           // Limpar cache primeiro apenas se necessário
           if (!existingUser) {
             queryClient.setQueryData(['auth', 'user'], undefined);

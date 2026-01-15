@@ -13,10 +13,25 @@ export async function GET(request: NextRequest) {
     console.log('=== /api/auth/me called ===');
     
     // Buscar usuário do Supabase Auth primeiro
-    const supabaseUser = await getServerUser();
+    // Tentar até 3 vezes com delay crescente para lidar com race condition
+    // onde cookies podem não estar disponíveis imediatamente após sync-session
+    let supabaseUser = await getServerUser();
+    let retries = 0;
+    const maxRetries = 3;
+    
+    while (!supabaseUser && retries < maxRetries) {
+      const delay = (retries + 1) * 100; // 100ms, 200ms, 300ms
+      console.log(`⏳ [auth/me] No Supabase user found, retrying in ${delay}ms (attempt ${retries + 1}/${maxRetries})...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      supabaseUser = await getServerUser();
+      retries++;
+      if (supabaseUser) {
+        console.log(`✅ [auth/me] User found after retry (attempt ${retries})`);
+      }
+    }
     
     if (!supabaseUser) {
-      console.log('No Supabase user found in /api/auth/me');
+      console.log('No Supabase user found in /api/auth/me after retries');
       return NextResponse.json({ user: null });
     }
     
