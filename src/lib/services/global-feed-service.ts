@@ -16,7 +16,10 @@ export interface GlobalFeedQueryParams extends FeedQueryParams {
  * Serviço para gerenciar feed global de posts
  * Posts com menos de 24 horas recebem boost temporário de +75 pontos no score de engajamento
  * Posts são organizados em camadas temporais (DIA → SEMANA → ANTIGOS) e ordenados por engajamento
- * Posts visualizados recentemente vão para o final
+ * 
+ * NOTA: A lógica de VIEW está temporariamente desabilitada.
+ * Posts visualizados continuam sendo registrados, mas não influenciam na ordenação do feed.
+ * Veja comentários no código para reativar essa funcionalidade.
  */
 export class GlobalFeedService extends BaseFeedService {
   /**
@@ -476,32 +479,47 @@ export class GlobalFeedService extends BaseFeedService {
       return result;
     }
 
-    // Para usuários logados, buscar visualizações e separar posts visualizados
+    // ============================================================================
+    // LÓGICA DE VIEW DESABILITADA TEMPORARIAMENTE
+    // ============================================================================
+    // A visualização de posts continua sendo registrada no banco de dados,
+    // mas não influencia mais na ordenação do feed.
+    //
+    // Para REATIVAR a lógica de VIEW no feed:
+    // 1. Descomente o bloco abaixo (linhas com "// VIEW LOGIC:")
+    // 2. Comente ou remova a linha "const finalSortedPosts = sortedPosts;"
+    // 3. A lógica separará posts visualizados dos não visualizados
+    //    - Não visualizados aparecem primeiro
+    //    - Visualizados aparecem depois
+    // ============================================================================
+
+    // VIEW LOGIC: Buscar visualizações das últimas 24 horas
     // @ts-ignore
-    const recentViews = await prisma.feedView.findMany({
-      where: {
-        userId: currentUserId,
-        viewedAt: { gte: oneDayAgo },
-      },
-      select: { postId: true },
-    });
-    const viewedPostIds = new Set(recentViews.map((v: any) => v.postId));
+    // const recentViews = await prisma.feedView.findMany({
+    //   where: {
+    //     userId: currentUserId,
+    //     viewedAt: { gte: oneDayAgo },
+    //   },
+    //   select: { postId: true },
+    // });
+    // const viewedPostIds = new Set(recentViews.map((v: any) => v.postId));
 
-    // Separar posts visualizados dos não visualizados, mantendo ordem de camadas
-    const notViewed: any[] = [];
-    const viewed: any[] = [];
+    // VIEW LOGIC: Separar posts visualizados dos não visualizados
+    // const notViewed: any[] = [];
+    // const viewed: any[] = [];
+    // sortedPosts.forEach(post => {
+    //   if (viewedPostIds.has(post.id)) {
+    //     viewed.push(post);
+    //   } else {
+    //     notViewed.push(post);
+    //   }
+    // });
 
-    sortedPosts.forEach(post => {
-      if (viewedPostIds.has(post.id)) {
-        viewed.push(post);
-      } else {
-        notViewed.push(post);
-      }
-    });
+    // VIEW LOGIC: Combinar - não visualizados primeiro, depois visualizados
+    // const finalSortedPosts = [...notViewed, ...viewed];
 
-    // Combinar: não visualizados primeiro, depois visualizados
-    // Ordem final: ANTIGOS → SEMANA → DIA (mais recentes embaixo)
-    const finalSortedPosts = [...notViewed, ...viewed];
+    // Feed sem influência de VIEW - usa ordem original por engajamento
+    const finalSortedPosts = sortedPosts;
     
     const { resultPosts, nextCursor } = this.processCursorPagination(finalSortedPosts, limit);
 
