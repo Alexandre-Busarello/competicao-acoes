@@ -77,10 +77,19 @@ export class AuthMeService {
 
       const data = await response.json();
       const fetchTimestamp = new Date().toISOString();
-      console.log(`✅ [${fetchTimestamp}] [AuthMeService] User data fetched from backend:`, data.user?.email);
+      console.log(`✅ [${fetchTimestamp}] [AuthMeService] User data fetched from backend:`, data.user?.email || 'null/undefined');
 
-      // Atualizar cache no localStorage
-      this.setCachedData(data.user);
+      // IMPORTANTE: Não cachear valores null ou undefined quando vierem de uma resposta válida
+      // mas sem usuário (pode ser que os cookies ainda não estejam disponíveis)
+      // Só cachear se realmente temos um usuário válido
+      if (data.user) {
+        // Atualizar cache no localStorage apenas se temos um usuário válido
+        this.setCachedData(data.user);
+      } else {
+        // Se não temos usuário, limpar cache para forçar nova tentativa
+        console.log(`⚠️ [AuthMeService] No user data received, clearing cache to force retry`);
+        this.clearCache();
+      }
 
       return data.user as AuthUser | null;
     } catch (error) {

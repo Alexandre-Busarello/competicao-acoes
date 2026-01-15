@@ -98,6 +98,7 @@ export function useAuth() {
   const queryClient = useQueryClient();
   const [initialLoading, setInitialLoading] = useState(true);
   const invalidatingRef = useRef(false); // Proteção contra múltiplas invalidações simultâneas
+  const syncingRef = useRef(false); // Flag para indicar que sync está em progresso
 
   // Query para obter sessão atual
   const { data: session, isLoading: sessionLoading } = useQuery({
@@ -122,6 +123,12 @@ export function useAuth() {
         return null;
       }
 
+      // Se sync está em progresso, aguardar um pouco antes de fazer a requisição
+      if (syncingRef.current) {
+        console.log('⏳ [React Query] Sync in progress, waiting before fetching user...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
       const timestamp = new Date().toISOString();
       console.log(`🔵 [${timestamp}] [React Query] Fetching user data for:`, session.user.id, session.user.email);
       console.log(`🔵 [${timestamp}] [React Query] Query Key:`, ['auth', 'user', session.user.id]);
@@ -132,7 +139,7 @@ export function useAuth() {
       const user = await authMeService.getCurrentUser();
       
       const fetchTimestamp = new Date().toISOString();
-      console.log(`✅ [${fetchTimestamp}] [React Query] User data obtained:`, user?.email);
+      console.log(`✅ [${fetchTimestamp}] [React Query] User data obtained:`, user?.email || 'null/undefined');
       return user;
     },
     enabled: !!session?.user,
@@ -221,7 +228,13 @@ export function useAuth() {
       if (session?.user) {
         console.log('Session has user, syncing...');
         // Sincronizar sessão com cookies do servidor apenas se o token mudou
-        await syncSessionManager.sync(session, `onAuthStateChange-${event}`);
+        // IMPORTANTE: Aguardar sync completar antes de fazer qualquer coisa relacionada a /api/auth/me
+        syncingRef.current = true;
+        try {
+          await syncSessionManager.sync(session, `onAuthStateChange-${event}`);
+        } finally {
+          syncingRef.current = false;
+        }
         
         // Invalidar query do usuário apenas em eventos específicos que realmente mudam o usuário
         // SIGNED_IN: novo login - SEMPRE invalidar para buscar dados atualizados
@@ -233,31 +246,40 @@ export function useAuth() {
           event === 'SIGNED_IN' || 
           event === 'TOKEN_REFRESHED' || 
           event === 'USER_UPDATED' ||
-          (event === 'INITIAL_SESSION' && !existingUser);
+          (event === 'INITIAL_SESSION' && !existingUser && !invalidatingRef.current);
         
         // Proteção contra múltiplas invalidações simultâneas
         if (shouldFetchUser && !invalidatingRef.current) {
           invalidatingRef.current = true;
           console.log('🟡 Invalidating user query for event:', event, 'existingUser:', !!existingUser);
           
-          // Para eventos de login (SIGNED_IN), aguardar um pouco para garantir que os cookies
-          // foram propagados pelo navegador antes de chamar /api/auth/me
-          // Isso evita race condition onde /api/auth/me é chamado antes dos cookies estarem disponíveis
+          // Para eventos de login (SIGNED_IN), limpar cache e aguardar propagação dos cookies
           if (event === 'SIGNED_IN') {
+            // Limpar cache do AuthMeService para evitar usar dados antigos
+            console.log('🧹 Clearing AuthMeService cache for SIGNED_IN event');
+            authMeService.clearCache();
+            
+            // Limpar dados do usuário no React Query também
+            queryClient.setQueryData(['auth', 'user', session.user.id], undefined);
+            queryClient.removeQueries({ queryKey: ['auth', 'user'] });
+            
+            // Aguardar um pouco para garantir que os cookies foram propagados pelo navegador
+            // antes de chamar /api/auth/me
             const waitStart = Date.now();
             console.log('⏳ Waiting for cookies to propagate after login...');
-            await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+            await new Promise(resolve => setTimeout(resolve, 400)); // 400ms delay (aumentado para garantir)
             const waitDuration = Date.now() - waitStart;
             console.log(`✅ Cookies propagation wait completed (${waitDuration}ms)`);
-          }
-          
-          // Limpar cache primeiro apenas se necessário
-          if (!existingUser) {
-            queryClient.setQueryData(['auth', 'user'], undefined);
+          } else {
+            // Para outros eventos, limpar cache apenas se necessário
+            if (!existingUser) {
+              queryClient.setQueryData(['auth', 'user'], undefined);
+            }
           }
           
           // Invalidar para que React Query busque novamente
           // React Query deduplica automaticamente se já houver uma requisição em andamento
+          console.log('🔄 Invalidating user queries...');
           queryClient.invalidateQueries({ queryKey: ['auth', 'user'] });
           
           // Reset após um delay para permitir nova invalidação se necessário
