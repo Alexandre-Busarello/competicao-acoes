@@ -38,7 +38,6 @@ export async function handleLikeAction(payload: { postId: string; userId: string
       where: { id: postId },
       select: {
         userId: true,
-        title: true,
         content: true,
         slug: true,
       },
@@ -55,13 +54,18 @@ export async function handleLikeAction(payload: { postId: string; userId: string
       });
 
       if (actor) {
+        // Criar preview do conteúdo do post (primeiros 50 caracteres)
+        const postPreview = post.content.length > 50
+          ? post.content.substring(0, 50) + '...'
+          : post.content;
+
         // Enviar notificação push (não bloqueia se falhar)
         pushNotificationService.sendInteractionNotification(post.userId, {
           postId: post.slug || postId, // Usar slug se disponível, senão usar ID
           actorId: actor.id,
           actorName: actor.name || 'Alguém',
           interactionType: 'like',
-          postTitle: post.title || undefined,
+          postTitle: postPreview,
         }).catch((error) => {
           console.error('Erro ao enviar notificação de like:', error);
         });
@@ -101,7 +105,6 @@ export async function handleCommentAction(payload: {
     where: { id: postId },
     select: {
       userId: true,
-      title: true,
       content: true,
       slug: true,
     },
@@ -124,13 +127,18 @@ export async function handleCommentAction(payload: {
         ? content.substring(0, 100) + '...'
         : content;
 
+      // Criar preview do conteúdo do post (primeiros 50 caracteres)
+      const postPreview = post.content.length > 50
+        ? post.content.substring(0, 50) + '...'
+        : post.content;
+
       // Enviar notificação push (não bloqueia se falhar)
       pushNotificationService.sendInteractionNotification(post.userId, {
         postId: post.slug || postId, // Usar slug se disponível, senão usar ID
         actorId: actor.id,
         actorName: actor.name || 'Alguém',
         interactionType: 'comment',
-        postTitle: post.title || undefined,
+        postTitle: postPreview,
         commentPreview,
       }).catch((error) => {
         console.error('Erro ao enviar notificação de comentário:', error);
