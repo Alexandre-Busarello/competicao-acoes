@@ -583,9 +583,9 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
         )}
 
         {/* Container de posts - ordem correta do backend (mais antigos no topo, mais recentes embaixo) */}
-        <div className="space-y-4 pb-4 w-full">
+        <div className="space-y-4 pb-4 w-full min-w-0">
           {posts.map((post: any) => (
-            <div key={post.id} data-post-id={post.id} className="w-full">
+            <div key={post.id} data-post-id={post.id} className="w-full min-w-0">
               <FeedPost post={post} isOwner={user?.id === post.userId} truncateContent={true} />
             </div>
           ))}

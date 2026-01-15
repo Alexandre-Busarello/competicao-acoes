@@ -36,11 +36,11 @@ export function PublicFeed() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full min-w-0">
       {/* Container de posts */}
-      <div className="space-y-4">
+      <div className="space-y-4 w-full min-w-0">
         {posts.map((post: any) => (
-          <div key={post.id} data-post-id={post.id}>
+          <div key={post.id} data-post-id={post.id} className="w-full min-w-0">
             <FeedPost post={post} isOwner={false} truncateContent={true} />
           </div>
         ))}

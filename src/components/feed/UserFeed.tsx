@@ -54,11 +54,13 @@ export function UserFeed({ userId, includePrivate = false }: UserFeedProps) {
   }
 
   return (
-    <div className="relative h-[600px] overflow-y-auto scrollbar-hide md:scrollbar-hide">
+    <div className="relative h-[600px] overflow-y-auto overflow-x-hidden scrollbar-hide md:scrollbar-hide">
       {/* Container de posts - mais recentes primeiro */}
-      <div className="space-y-4 pb-4">
+      <div className="space-y-4 pb-4 w-full min-w-0">
         {posts.map((post: any) => (
-          <FeedPost key={post.id} post={post} isOwner={isOwner} />
+          <div key={post.id} className="w-full min-w-0">
+            <FeedPost post={post} isOwner={isOwner} />
+          </div>
         ))}
       </div>
     </div>

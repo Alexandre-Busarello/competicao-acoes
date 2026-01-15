@@ -415,9 +415,9 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
   };
 
   return (
-    <Card className="mb-4 w-full overflow-hidden">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between min-w-0">
+    <Card className="mb-4 w-full overflow-hidden mx-0 max-w-full">
+      <CardHeader className="pb-3 overflow-hidden">
+        <div className="flex items-start justify-between min-w-0 w-full">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <Link href={profileUrl}>
               <Avatar className="h-10 w-10 flex-shrink-0">
@@ -498,7 +498,7 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
           )}
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 overflow-hidden max-w-full">
         {shouldTruncate ? (
           <Link href={postUrl} className="block">
             <div className="mb-4 break-words">
@@ -573,8 +573,8 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
         )}
 
         {post.transaction && (
-          <div className="mb-4 p-3 bg-muted/50 rounded-md relative">
-            <p className="text-sm">
+          <div className="mb-4 p-3 bg-muted/50 rounded-md relative overflow-hidden max-w-full">
+            <p className="text-sm break-words">
               <span 
                 className={`font-semibold ${!user?.isPremium ? 'blur-sm select-none' : ''}`}
                 style={!user?.isPremium ? { filter: 'blur(4px)' } : {}}
@@ -611,8 +611,8 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-2 border-t">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between pt-2 border-t min-w-0 w-full">
+          <div className="flex items-center gap-4 min-w-0 flex-shrink">
             <Button
               variant="ghost"
               size="sm"

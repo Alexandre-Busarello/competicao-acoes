@@ -53,7 +53,7 @@ export default function FeedPage() {
   if (isAuthenticated) {
     return (
       <div className="flex flex-col h-[calc(100vh-4rem)] md:h-screen overflow-hidden">
-        <div className="flex-1 flex flex-col min-h-0 w-full max-w-4xl mx-auto px-2 py-4 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 w-full max-w-4xl mx-auto px-4 py-4 overflow-hidden">
           <GlobalFeed 
             filterInteractions={filterInteractions}
             filterMyPosts={filterMyPosts}
