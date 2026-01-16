@@ -77,6 +77,7 @@ export class EngagementNotificationService {
         for (const user of eligibleUsers) {
           pushNotificationService.sendEngagementNotification(user.id, {
             postId: post.id,
+            postSlug: post.slug,
             engagementScore: score,
           }).catch(error => {
             console.error(`Erro ao enviar notificação de engajamento para usuário ${user.id}:`, error);

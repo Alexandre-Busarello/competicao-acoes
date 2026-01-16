@@ -48,15 +48,35 @@ self.addEventListener('notificationclick', function(event) {
   event.notification.close();
 
   const data = event.notification.data || {};
-  let urlToOpen = '/';
+  
+  // Usar URL do payload se disponível, senão determinar baseado no tipo
+  let urlToOpen = data.url || '/';
 
-  // Determinar URL baseada no tipo de notificação
-  if (data.type === 'ranking') {
-    urlToOpen = '/ranking';
-  } else if (data.type === 'engagement' || data.type === 'following') {
-    urlToOpen = data.postId ? `/feed/${data.postId}` : '/feed';
-  } else {
-    urlToOpen = '/feed';
+  // Fallback: determinar URL baseada no tipo se não houver URL no payload
+  if (!data.url) {
+    if (data.type === 'ranking') {
+      urlToOpen = '/ranking';
+    } else if (data.type === 'engagement' || data.type === 'following') {
+      // Usar slug quando disponível, caso contrário usar postId como fallback
+      if (data.postSlug) {
+        urlToOpen = `/posts/${data.postSlug}`;
+      } else if (data.postId) {
+        urlToOpen = `/feed/${data.postId}`;
+      } else {
+        urlToOpen = '/feed';
+      }
+    } else if (data.type === 'interactions') {
+      // Usar slug quando disponível para interações também
+      if (data.postSlug) {
+        urlToOpen = `/posts/${data.postSlug}`;
+      } else if (data.postId) {
+        urlToOpen = `/posts/${data.postId}`;
+      } else {
+        urlToOpen = '/feed';
+      }
+    } else {
+      urlToOpen = '/feed';
+    }
   }
 
   const promiseChain = clients

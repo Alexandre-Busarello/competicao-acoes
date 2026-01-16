@@ -63,13 +63,29 @@ self.addEventListener('notificationclick', function(event) {
     if (data.type === 'ranking') {
       urlToOpen = '/ranking';
     } else if (data.type === 'engagement' || data.type === 'following') {
-      urlToOpen = data.postId ? `/feed/${data.postId}` : '/feed';
+      // Usar slug quando disponível, caso contrário usar postId como fallback
+      if (data.postSlug) {
+        urlToOpen = `/posts/${data.postSlug}`;
+      } else if (data.postId) {
+        urlToOpen = `/feed/${data.postId}`;
+      } else {
+        urlToOpen = '/feed';
+      }
     } else if (data.type === 'reengagement') {
       urlToOpen = '/'; // Home
     } else if (data.type === 'manual') {
       urlToOpen = data.url || '/'; // Usar URL do payload ou home
     } else if (data.type === 'test') {
       urlToOpen = '/perfil/notificacoes';
+    } else if (data.type === 'interactions') {
+      // Usar slug quando disponível para interações também
+      if (data.postSlug) {
+        urlToOpen = `/posts/${data.postSlug}`;
+      } else if (data.postId) {
+        urlToOpen = `/posts/${data.postId}`;
+      } else {
+        urlToOpen = '/feed';
+      }
     } else {
       urlToOpen = '/';
     }

@@ -22,12 +22,14 @@ export interface RankingNotificationData {
 
 export interface EngagementNotificationData {
   postId: string;
+  postSlug?: string;
   postTitle?: string;
   engagementScore: number;
 }
 
 export interface FollowingNotificationData {
   postId: string;
+  postSlug?: string;
   authorId: string;
   authorName: string;
   postPreview?: string;
@@ -35,6 +37,7 @@ export interface FollowingNotificationData {
 
 export interface InteractionNotificationData {
   postId: string;
+  postSlug?: string;
   actorId: string;
   actorName: string;
   interactionType: 'like' | 'comment';
@@ -321,6 +324,7 @@ export class PushNotificationService {
     // Obter mensagem com variação (round-robin)
     const message = await notificationMessageService.getMessageForUser(userId, 'engagement', {
       postId: data.postId,
+      postSlug: data.postSlug,
       postTitle: data.postTitle,
       engagementScore: data.engagementScore,
     });
@@ -357,6 +361,7 @@ export class PushNotificationService {
     // Obter mensagem com variação (round-robin)
     const message = await notificationMessageService.getMessageForUser(userId, 'following', {
       postId: data.postId,
+      postSlug: data.postSlug,
       authorName: data.authorName,
       postPreview: data.postPreview,
     });
@@ -408,6 +413,7 @@ export class PushNotificationService {
     // Obter mensagem com variação (round-robin)
     const message = await notificationMessageService.getMessageForUser(userId, notificationType as any, {
       postId: data.postId,
+      postSlug: data.postSlug,
       actorName: data.actorName,
       postTitle: data.postTitle,
       commentPreview: data.commentPreview,

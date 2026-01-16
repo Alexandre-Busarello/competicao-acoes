@@ -20,6 +20,7 @@ export interface NotificationData {
   period?: 'mensal' | 'anual';
   // Engagement/Following
   postId?: string;
+  postSlug?: string;
   postTitle?: string;
   authorName?: string;
   authorId?: string;
@@ -198,9 +199,17 @@ export class NotificationMessageService {
         return '/ranking';
       case 'engagement':
       case 'following':
+        // Usar slug quando disponível, caso contrário usar postId como fallback
+        if (data.postSlug) {
+          return `/posts/${data.postSlug}`;
+        }
         return data.postId ? `/feed/${data.postId}` : '/feed';
       case 'interaction_like':
       case 'interaction_comment':
+        // Usar slug quando disponível, caso contrário usar postId como fallback
+        if (data.postSlug) {
+          return `/posts/${data.postSlug}`;
+        }
         return data.postId ? `/posts/${data.postId}` : '/feed';
       case 'reengagement':
         return '/'; // Home

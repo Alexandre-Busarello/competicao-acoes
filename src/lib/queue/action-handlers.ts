@@ -69,7 +69,8 @@ export async function handleLikeAction(payload: { postId: string; userId: string
 
         // Enviar notificação push (não bloqueia se falhar)
         pushNotificationService.sendInteractionNotification(post.userId, {
-          postId: post.slug || postId, // Usar slug se disponível, senão usar ID
+          postId: postId,
+          postSlug: post.slug,
           actorId: actor.id,
           actorName: actor.name || 'Alguém',
           interactionType: 'like',
@@ -148,7 +149,8 @@ export async function handleCommentAction(payload: {
 
       // Enviar notificação push (não bloqueia se falhar)
       pushNotificationService.sendInteractionNotification(post.userId, {
-        postId: post.slug || postId, // Usar slug se disponível, senão usar ID
+        postId: postId,
+        postSlug: post.slug,
         actorId: actor.id,
         actorName: actor.name || 'Alguém',
         interactionType: 'comment',

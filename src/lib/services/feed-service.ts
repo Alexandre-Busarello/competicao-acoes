@@ -222,13 +222,14 @@ export class FeedService {
         .sort(() => Math.random() - 0.5)
         .slice(0, Math.ceil(followers.length * 0.3));
 
-      // Buscar preview do post
+      // Buscar preview do post e slug
       const post = await prisma.feedPost.findUnique({
         where: { id: postId },
-        select: { content: true },
+        select: { content: true, slug: true },
       });
 
       const postPreview = post?.content.substring(0, 100) || 'Nova publicação';
+      const postSlug = post?.slug;
 
       // Enviar notificação para cada seguidor selecionado
       const { pushNotificationService } = await import('./push-notification-service');
@@ -236,6 +237,7 @@ export class FeedService {
       for (const follower of selectedFollowers) {
         pushNotificationService.sendFollowingNotification(follower.followerId, {
           postId,
+          postSlug,
           authorId,
           authorName: author.name,
           postPreview,
