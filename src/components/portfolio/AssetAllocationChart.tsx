@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { TrendingDown } from 'lucide-react';
 import type { Asset } from '@/types';
@@ -31,6 +32,22 @@ const COLORS = {
 };
 
 export function AssetAllocationChart({ assets }: AssetAllocationChartProps) {
+  // Detectar se é desktop (md breakpoint ou maior)
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsDesktop(window.innerWidth >= 768); // md breakpoint do Tailwind
+    };
+
+    // Verificar no mount
+    checkScreenSize();
+
+    // Adicionar listener para mudanças de tamanho
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
   // Calcular alocação por tipo e categoria (para ETFs)
   const allocation = assets.reduce(
     (acc, asset) => {
@@ -114,39 +131,57 @@ export function AssetAllocationChart({ assets }: AssetAllocationChartProps) {
   return (
     <div className="container mx-auto px-4 py-6">
       <h2 className="text-lg font-semibold mb-4">Alocação de Ativos</h2>
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={dataWithPercentage}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={({ name, percentage }) => `${name}: ${percentage}%`}
-            outerRadius={100}
-            fill="#8884d8"
-            dataKey="value"
-          >
-            {dataWithPercentage.map((entry, index) => {
-              const colorKey = entry.originalKey as keyof typeof COLORS;
-              return (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[colorKey] || COLORS.outros}
-                />
-              );
-            })}
-          </Pie>
-          <Tooltip
-            formatter={(value: number) =>
-              `R$ ${value.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}`
-            }
-          />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
+      {/* Container responsivo: altura menor no mobile */}
+      <div className="w-full h-[280px] sm:h-[300px] md:h-[350px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={dataWithPercentage}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              // Mostrar labels inline apenas no desktop
+              label={isDesktop ? ({ name, percentage }) => `${name}: ${percentage}%` : false}
+              outerRadius="70%"
+              innerRadius={0}
+              fill="#8884d8"
+              dataKey="value"
+            >
+              {dataWithPercentage.map((entry, index) => {
+                const colorKey = entry.originalKey as keyof typeof COLORS;
+                return (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[colorKey] || COLORS.outros}
+                  />
+                );
+              })}
+            </Pie>
+            <Tooltip
+              formatter={(value: number) =>
+                `R$ ${value.toLocaleString('pt-BR', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}`
+              }
+            />
+            <Legend 
+              verticalAlign="bottom"
+              height={36}
+              iconType="circle"
+              wrapperStyle={{
+                paddingTop: '16px',
+                fontSize: '12px',
+              }}
+              formatter={(value, entry: any) => {
+                // Mostrar nome e porcentagem na legend
+                const item = dataWithPercentage.find(d => d.name === value);
+                return item ? `${value}: ${item.percentage}%` : value;
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

@@ -18,6 +18,11 @@ export function AssetList({ assets, isPremium, isOwner = false }: AssetListProps
   // Verificar se um ativo é mockado (começa com MOCK)
   const isMockedAsset = (ticker: string) => ticker.startsWith('MOCK');
   
+  // Se há apenas um ativo e usuário não é premium nem owner, não mostrar nada
+  if (!canView && assets.length === 1) {
+    return null;
+  }
+  
   return (
     <div className="container mx-auto px-4 py-4">
       <h2 className="text-lg font-semibold mb-4">Carteira</h2>

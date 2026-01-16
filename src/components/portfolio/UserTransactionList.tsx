@@ -213,7 +213,8 @@ export function UserTransactionList({
                         {dayTransactions.map((transaction) => {
                           const isCompra = transaction.type === 'compra';
                           const isMocked = transaction.ticker.startsWith('MOCK');
-                          const isVisible = canView || !isMocked;
+                          // Aplicar blur em todas as transações quando não pode visualizar
+                          const isVisible = canView;
                           
                           return (
                             <Card 

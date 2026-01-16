@@ -42,9 +42,9 @@ export function obfuscatePortfolioAssets(
     return [];
   }
 
-  // Se há apenas um ativo, retorna ele sem ofuscação (primeiro ativo sempre visível)
+  // Se há apenas um ativo, oculta para usuários não premium
   if (assets.length === 1) {
-    return assets;
+    return [];
   }
 
   // Pegar o primeiro ativo real

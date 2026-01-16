@@ -26,11 +26,16 @@ interface ClosedPosition {
 
 interface ClosedPositionsListProps {
   userId: string;
+  isPremium?: boolean;
   isOwner?: boolean;
   hasActivePositions?: boolean;
+  portfolioLength?: number; // Quantidade de ativos na carteira
 }
 
-export function ClosedPositionsList({ userId, isOwner = false, hasActivePositions = false }: ClosedPositionsListProps) {
+export function ClosedPositionsList({ userId, isPremium = false, isOwner = false, hasActivePositions = false, portfolioLength = 0 }: ClosedPositionsListProps) {
+  const canView = isPremium || isOwner;
+  // Se há apenas 1 ativo ou carteira zerada e usuário não é premium/owner, mostrar com blur
+  const shouldShowWithBlur = !canView && (portfolioLength <= 1);
   const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
     queryKey: ['transactions', userId],
     queryFn: async () => {
@@ -124,21 +129,63 @@ export function ClosedPositionsList({ userId, isOwner = false, hasActivePosition
     );
   }
 
-  if (closedPositions.length === 0) {
+  // Se não há posições encerradas e não deve mostrar com blur, não exibir
+  if (closedPositions.length === 0 && !shouldShowWithBlur) {
     return null;
   }
+
+  // Se deve mostrar com blur mas não há posições reais, criar posições mockadas
+  // Se há posições reais mas deve mostrar com blur, usar as posições reais mas com blur
+  const positionsToShow = shouldShowWithBlur && closedPositions.length === 0
+    ? [
+        {
+          ticker: 'ATIVO1',
+          name: 'Ativo Encerrado',
+          type: 'acao' as AssetType,
+          totalInvested: 10000,
+          totalReceived: 12000,
+          return: 2000,
+          returnPercentage: 20,
+        },
+        {
+          ticker: 'ATIVO2',
+          name: 'Ativo Encerrado',
+          type: 'acao' as AssetType,
+          totalInvested: 5000,
+          totalReceived: 4500,
+          return: -500,
+          returnPercentage: -10,
+        },
+      ]
+    : closedPositions;
+  
+  // Se há apenas 1 ativo ou carteira zerada e não pode visualizar, sempre aplicar blur
+  const shouldApplyBlur = !canView && (portfolioLength <= 1);
 
   return (
     <div className="container mx-auto px-4 py-4">
       <h2 className="text-lg font-semibold mb-4">Ativos Encerrados</h2>
       <div className="space-y-3 mb-6">
-        {closedPositions.map((position) => {
+        {positionsToShow.map((position, index) => {
           const isPositive = position.returnPercentage >= 0;
           const ReturnIcon = isPositive ? TrendingUp : TrendingDown;
+          const isMocked = shouldShowWithBlur && closedPositions.length === 0;
 
           return (
-            <Card key={position.ticker}>
+            <Card 
+              key={position.ticker + index}
+              className={`relative overflow-hidden ${
+                shouldApplyBlur || !canView ? 'blur-sm' : ''
+              }`}
+            >
               <CardContent className="p-4">
+                {isMocked && !canView && (
+                  <div className="mb-2 p-2 bg-muted/50 rounded-md border border-dashed border-muted-foreground/30">
+                    <p className="text-xs text-muted-foreground text-center">
+                      <strong>Posições encerradas simuladas:</strong> Torne-se Membro Pro para visualizar todas as posições encerradas do portfólio.
+                    </p>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
@@ -163,8 +210,8 @@ export function ClosedPositionsList({ userId, isOwner = false, hasActivePosition
                       {position.name}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Investido: {formatPrice(position.totalInvested, position.ticker)} • 
-                      Recebido: {formatPrice(position.totalReceived, position.ticker)}
+                      Investido: {canView ? formatPrice(position.totalInvested, position.ticker) : '•••'} • 
+                      Recebido: {canView ? formatPrice(position.totalReceived, position.ticker) : '•••'}
                     </div>
                   </div>
                   <div className="text-right">
@@ -173,13 +220,15 @@ export function ClosedPositionsList({ userId, isOwner = false, hasActivePosition
                     }`}>
                       <ReturnIcon className="h-4 w-4" />
                       <span>
-                        {isPositive ? '+' : ''}{position.returnPercentage.toFixed(2)}%
+                        {canView 
+                          ? `${isPositive ? '+' : ''}${position.returnPercentage.toFixed(2)}%`
+                          : '•••%'}
                       </span>
                     </div>
                     <div className={`text-sm ${
                       isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                     }`}>
-                      {formatPrice(position.return, position.ticker)}
+                      {canView ? formatPrice(position.return, position.ticker) : '•••'}
                     </div>
                   </div>
                 </div>

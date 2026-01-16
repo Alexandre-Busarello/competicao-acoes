@@ -14,7 +14,6 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Edit, Info } from 'lucide-react';
 import { isValidPeriod, getCurrentPeriod } from '@/lib/utils/period-utils';
-import { useUserStore } from '@/lib/store/userStore';
 import type { Competitor } from '@/types';
 
 export default function PortfolioAnualPage() {
@@ -25,6 +24,9 @@ export default function PortfolioAnualPage() {
 
   const [competitor, setCompetitor] = useState<Competitor | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOwner, setIsOwner] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+  const [canAccess, setCanAccess] = useState(false);
 
   // Validar parâmetros e redirecionar se inválidos
   useEffect(() => {
@@ -35,35 +37,39 @@ export default function PortfolioAnualPage() {
     }
   }, [year, id, router]);
 
-  // Buscar dados do competidor do período específico
+  // Buscar dados do competidor do período específico usando API segura
   useEffect(() => {
     if (!isValidPeriod(year)) return;
 
     const fetchCompetitor = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/ranking?period=anual&year=${year}`);
+        const response = await fetch(`/api/carteira/${id}?period=anual&year=${year}`);
         if (!response.ok) {
-          throw new Error('Erro ao buscar ranking');
+          if (response.status === 404) {
+            setCompetitor(null);
+            setIsLoading(false);
+            return;
+          }
+          throw new Error('Erro ao buscar carteira');
         }
         const data = await response.json();
         
-        const found = data.ranking.find((entry: any) => entry.userId === id);
+        // Informações de acesso verificadas no backend
+        setIsOwner(data.isOwner ?? false);
+        setIsPremium(data.isPremium ?? false);
+        setCanAccess(data.canAccess ?? false);
         
-        if (found) {
-          setCompetitor({
-            id: found.userId,
-            name: found.name,
-            avatar: found.avatar,
-            rank: found.rank,
-            monthlyReturn: found.annualReturn ?? found.monthlyReturn,
-            annualReturn: found.annualReturn,
-            displayedPeriod: 'anual' as const,
-            portfolio: found.portfolio || [],
-          });
-        } else {
-          setCompetitor(null);
-        }
+        setCompetitor({
+          id: data.id,
+          name: data.name,
+          avatar: data.avatar,
+          rank: data.rank,
+          monthlyReturn: data.annualReturn ?? data.monthlyReturn,
+          annualReturn: data.annualReturn,
+          displayedPeriod: 'anual' as const,
+          portfolio: data.portfolio || [],
+        });
       } catch (error) {
         console.error('Erro ao buscar competidor:', error);
         setCompetitor(null);
@@ -74,11 +80,6 @@ export default function PortfolioAnualPage() {
 
     fetchCompetitor();
   }, [id, year]);
-
-  const { user } = useUserStore();
-  const isPremium = user?.isPremium ?? false;
-  const isOwner = user?.id === id;
-  const canAccess = isOwner || isPremium;
 
   if (!isValidPeriod(year)) {
     return null;
@@ -136,14 +137,14 @@ export default function PortfolioAnualPage() {
         <>
           <AssetAllocationChart assets={competitor.portfolio} />
           <AssetList assets={competitor.portfolio} isPremium={canAccess} isOwner={isOwner} />
-          <ClosedPositionsList userId={competitor.id} isOwner={isOwner} hasActivePositions={competitor.portfolio.length > 0 && competitor.portfolio.reduce((sum, asset) => sum + (asset.currentPrice * asset.quantity), 0) > 0} />
+          <ClosedPositionsList userId={competitor.id} isPremium={canAccess} isOwner={isOwner} hasActivePositions={competitor.portfolio.length > 0 && competitor.portfolio.reduce((sum, asset) => sum + (asset.currentPrice * asset.quantity), 0) > 0} portfolioLength={competitor.portfolio.length} />
           <UserTransactionList userId={competitor.id} isPremium={canAccess} isOwner={isOwner} period="anual" year={year} />
         </>
       ) : (
         <>
           <AssetAllocationChart assets={competitor.portfolio} />
           <AssetList assets={competitor.portfolio} isPremium={false} isOwner={false} />
-          <ClosedPositionsList userId={competitor.id} isOwner={false} hasActivePositions={competitor.portfolio.length > 0 && competitor.portfolio.some(asset => asset.quantity > 0)} />
+          <ClosedPositionsList userId={competitor.id} isPremium={false} isOwner={false} hasActivePositions={competitor.portfolio.length > 0 && competitor.portfolio.some(asset => asset.quantity > 0)} portfolioLength={competitor.portfolio.length} />
           <UserTransactionList userId={competitor.id} isPremium={false} isOwner={false} period="anual" year={year} />
           <BlurOverlay competitorName={competitor.name} />
         </>
