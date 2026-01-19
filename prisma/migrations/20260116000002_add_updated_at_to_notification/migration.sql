@@ -4,3 +4,4 @@ ALTER TABLE "Notification" ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFA
 -- CreateIndex (se necessário para performance)
 -- CREATE INDEX "Notification_updatedAt_idx" ON "Notification"("updatedAt");
 
+
