@@ -5,24 +5,35 @@ import { internalNotificationService } from '@/lib/services/internal-notificatio
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/notifications/badge
- * Retorna contagem de notificações não lidas do usuário autenticado (agregadas)
+ * PUT /api/notifications/[id]/read
+ * Marcar notificação específica como lida
  */
-export async function GET(request: NextRequest) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const session = await requireAuth();
     const userId = session.user.id;
+    const { id } = params;
 
-    const unreadCount = await internalNotificationService.getUnreadCount(userId);
+    await internalNotificationService.markAsRead(id, userId);
 
-    return NextResponse.json({ count: unreadCount });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error getting badge count:', error);
-
+    console.error('Error marking notification as read:', error);
+    
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    if (error instanceof Error && error.message.includes('not found')) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 404 }
       );
     }
 

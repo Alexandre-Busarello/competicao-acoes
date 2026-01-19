@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Send, MoreVertical, Edit, Trash2, Check, X } from 'lucide-react';
+import { Loader2, Send, MoreVertical, Edit, Trash2, Check, X, Reply } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -307,10 +307,13 @@ export function PostComments({ postId, postSlug, onCommentAdded }: PostCommentsP
 }
 
 function CommentItem({ comment, postId }: { comment: Comment; postId: string }) {
-  const { user } = useUserStore();
+  const { user, isAuthenticated } = useUserStore();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [replyContent, setReplyContent] = useState('');
   const [editContent, setEditContent] = useState(comment.content);
   const isOwner = user?.id === comment.userId;
 
@@ -411,6 +414,96 @@ function CommentItem({ comment, postId }: { comment: Comment; postId: string }) 
       return;
     }
     await updateCommentMutation.mutateAsync(editContent.trim());
+  };
+
+  const addReplyMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const response = await fetch(`/api/feed/${postId}/comment/${comment.id}/reply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to add reply');
+      }
+      return response.json();
+    },
+    onMutate: async (content: string) => {
+      if (!user) return;
+
+      await queryClient.cancelQueries({ queryKey: ['comments', postId] });
+
+      const previousComments = queryClient.getQueryData<Comment[]>(['comments', postId]) || [];
+
+      // Criar resposta otimista
+      const optimisticReply: Comment = {
+        id: `temp-reply-${Date.now()}`,
+        userId: user.id,
+        content: content.trim(),
+        createdAt: new Date().toISOString(),
+        user: {
+          id: user.id,
+          name: user.name || 'Você',
+          avatarUrl: user.avatarUrl ?? null,
+        },
+      };
+
+      // Atualizar cache adicionando resposta ao comentário
+      queryClient.setQueryData<Comment[]>(['comments', postId], (old = []) =>
+        old.map((c) =>
+          c.id === comment.id
+            ? { ...c, replies: [...(c.replies || []), optimisticReply] }
+            : c
+        )
+      );
+
+      return { previousComments };
+    },
+    onError: (err, variables, context) => {
+      console.error('Error adding reply:', err);
+      if (context) {
+        queryClient.setQueryData(['comments', postId], context.previousComments);
+      }
+    },
+    onSuccess: (newReply) => {
+      queryClient.setQueryData<Comment[]>(['comments', postId], (old = []) =>
+        old.map((c) => {
+          if (c.id === comment.id) {
+            const filteredReplies = (c.replies || []).filter((r) => !r.id.startsWith('temp-reply-'));
+            return { ...c, replies: [...filteredReplies, newReply] };
+          }
+          return c;
+        })
+      );
+      setReplyContent('');
+      setIsReplying(false);
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+      }, 1000);
+    },
+  });
+
+  const handleReply = () => {
+    if (!isAuthenticated || !user) {
+      router.push(`/auth/login?returnUrl=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+    setIsReplying(true);
+  };
+
+  const handleCancelReply = () => {
+    setReplyContent('');
+    setIsReplying(false);
+  };
+
+  const handleSubmitReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyContent.trim()) return;
+    await addReplyMutation.mutateAsync(replyContent.trim());
   };
 
   return (
@@ -529,6 +622,74 @@ function CommentItem({ comment, postId }: { comment: Comment; postId: string }) 
                 {comment.content}
               </ReactMarkdown>
             </div>
+          )}
+          {/* Botão de responder */}
+          {!isEditing && (
+            <div className="mt-2 flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReply}
+                className="h-7 text-xs"
+                disabled={addReplyMutation.isPending}
+              >
+                <Reply className="h-3 w-3 mr-1" />
+                Responder
+              </Button>
+            </div>
+          )}
+          {/* Formulário de resposta */}
+          {isReplying && (
+            <form onSubmit={handleSubmitReply} className="mt-3 ml-4 border-l-2 border-muted pl-4">
+              <div className="flex gap-2">
+                <Avatar className="h-6 w-6 flex-shrink-0">
+                  {user?.avatarUrl ? (
+                    <AvatarImage src={user.avatarUrl} alt={user.name || ''} />
+                  ) : null}
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                    {getInitials(user?.name || 'U')}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 space-y-2">
+                  <Textarea
+                    placeholder={`Responder ${comment.user.name}...`}
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                    className="min-h-[60px] resize-none text-sm"
+                    disabled={addReplyMutation.isPending}
+                    autoFocus
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelReply}
+                      disabled={addReplyMutation.isPending}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={!replyContent.trim() || addReplyMutation.isPending}
+                    >
+                      {addReplyMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-3 w-3 mr-1" />
+                          Responder
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </form>
           )}
         </div>
         {/* Respostas */}

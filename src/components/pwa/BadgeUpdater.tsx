@@ -10,7 +10,7 @@ import { badgeService } from '@/lib/services/badge-service';
  */
 export function BadgeUpdater() {
   const { data: badgeCount } = useQuery({
-    queryKey: ['notifications', 'badge'],
+    queryKey: ['notifications-badge'],
     queryFn: async () => {
       const response = await fetch('/api/notifications/badge');
       if (!response.ok) {

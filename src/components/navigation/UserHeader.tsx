@@ -10,7 +10,7 @@ import { LogOut, Crown, Loader2, LogIn, Rss, Trophy, Wallet, User, UserPlus } fr
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import Image from 'next/image';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 const navItems = [
   {
@@ -54,13 +54,11 @@ export function UserHeader() {
   if (isLoading) {
     return (
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-3 max-w-4xl">
+        <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-2 md:gap-3 max-w-4xl">
           <Link href="/ranking" className="flex items-center hover:opacity-90 transition-opacity">
-            <Image 
+            <img 
               src={logoPath}
               alt="Hold Arena" 
-              width={200}
-              height={56}
               className="h-10 sm:h-12 md:h-14 w-auto object-contain"
             />
           </Link>
@@ -89,13 +87,11 @@ export function UserHeader() {
     // Mostrar header com botão de entrar quando não autenticado
     return (
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-3 max-w-4xl">
+        <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-2 md:gap-3 max-w-4xl">
           <Link href="/ranking" className="flex items-center hover:opacity-90 transition-opacity">
-            <Image 
+            <img 
               src={logoPath}
               alt="Hold Arena" 
-              width={200}
-              height={56}
               className="h-10 sm:h-12 md:h-14 w-auto object-contain"
             />
           </Link>
@@ -152,14 +148,12 @@ export function UserHeader() {
 
   return (
     <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-3 max-w-4xl">
-          <Link href="/ranking" className="flex items-center hover:opacity-90 transition-opacity">
-            <Image 
+        <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-2 md:gap-3 max-w-4xl">
+          <Link href="/ranking" className="flex items-center hover:opacity-90 transition-opacity flex-shrink-0">
+            <img 
               src={logoPath}
               alt="Hold Arena" 
-              width={200}
-              height={64}
-              className="h-14 sm:h-16 md:h-16 w-auto object-contain"
+              className="h-10 sm:h-12 md:h-14 w-auto object-contain"
             />
           </Link>
         
@@ -187,9 +181,10 @@ export function UserHeader() {
           })}
         </nav>
         
-        <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex items-center gap-2 md:gap-2.5">
           <ThemeToggle />
-          <Link href="/perfil" className="flex items-center gap-1.5 md:gap-2 min-w-0 max-w-[200px] md:max-w-[180px] hover:opacity-80 transition-opacity">
+          <NotificationBell />
+          <Link href="/perfil" className="flex items-center gap-1.5 md:gap-2 min-w-0 max-w-[200px] md:max-w-[160px] hover:opacity-80 transition-opacity">
             <Avatar className="h-8 w-8 md:h-7 md:w-7 flex-shrink-0">
               <AvatarImage src={user.avatarUrl} alt={user.name} />
               <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
@@ -208,7 +203,7 @@ export function UserHeader() {
                   </div>
                 )}
               </div>
-              <p className="text-[10px] md:text-xs text-muted-foreground truncate">
+              <p className="text-[10px] md:text-xs text-muted-foreground truncate hidden lg:block">
                 {user.email || 'Sem email'}
               </p>
             </div>

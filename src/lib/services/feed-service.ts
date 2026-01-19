@@ -480,23 +480,30 @@ export class FeedService {
   /**
    * Adiciona comentário (com processamento otimista)
    */
-  async addComment(postId: string, userId: string, content: string): Promise<{
+  async addComment(
+    postId: string,
+    userId: string,
+    content: string,
+    parentCommentId?: string
+  ): Promise<{
     id: string;
     postId: string;
     userId: string;
     content: string;
     createdAt: Date;
+    parentCommentId?: string | null;
   }> {
     // Enfileira ação
     const actionId = await queueService.enqueue('comment', {
       postId,
       userId,
       content,
+      parentCommentId,
     }, 10); // Prioridade alta
 
     // Tenta processar imediatamente (otimista)
     try {
-      await executeActionHandler('comment', { postId, userId, content });
+      await executeActionHandler('comment', { postId, userId, content, parentCommentId });
       await queueService.markCompleted(actionId);
     } catch (error) {
       // Se falhar, deixa na fila para processamento posterior
@@ -509,6 +516,7 @@ export class FeedService {
         postId,
         userId,
         content,
+        parentCommentId: parentCommentId || null,
       },
       orderBy: {
         createdAt: 'desc',
@@ -525,6 +533,7 @@ export class FeedService {
       userId: comment.userId,
       content: comment.content,
       createdAt: comment.createdAt,
+      parentCommentId: comment.parentCommentId,
     };
   }
 

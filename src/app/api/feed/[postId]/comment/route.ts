@@ -76,7 +76,7 @@ export async function POST(
     const userId = session.user.id;
     const postId = params.postId;
 
-    const { content } = await request.json();
+    const { content, parentCommentId } = await request.json();
 
     if (!content || typeof content !== 'string' || content.trim().length === 0) {
       return NextResponse.json(
@@ -85,7 +85,27 @@ export async function POST(
       );
     }
 
-    const comment = await feedService.addComment(postId, userId, content.trim());
+    // Se parentCommentId fornecido, verificar se existe e pertence ao post
+    if (parentCommentId) {
+      const parentComment = await prisma.feedComment.findUnique({
+        where: { id: parentCommentId },
+        select: { postId: true, deletedAt: true },
+      });
+
+      if (!parentComment || parentComment.postId !== postId || parentComment.deletedAt) {
+        return NextResponse.json(
+          { error: 'Parent comment not found or invalid' },
+          { status: 404 }
+        );
+      }
+    }
+
+    const comment = await feedService.addComment(
+      postId,
+      userId,
+      content.trim(),
+      parentCommentId
+    );
 
     // Buscar comentário completo com user
     const fullComment = await prisma.feedComment.findUnique({

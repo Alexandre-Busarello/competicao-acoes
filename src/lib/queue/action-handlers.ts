@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma/client';
 import { cacheService } from '@/lib/cache/cache-service';
 import { pushNotificationService } from '@/lib/services/push-notification-service';
+import { internalNotificationService } from '@/lib/services/internal-notification-service';
 
 /**
  * Handlers específicos para cada tipo de ação na fila
@@ -80,6 +81,16 @@ export async function handleLikeAction(payload: { postId: string; userId: string
         }).catch((error) => {
           console.error('[handleLikeAction] Erro ao enviar notificação de like:', error);
         });
+
+        // Criar notificação interna agregada (sem rate limit)
+        internalNotificationService.createOrUpdateAggregatedNotification({
+          userId: post.userId,
+          type: 'like',
+          actorId: actor.id,
+          postId: postId,
+        }).catch((error) => {
+          console.error('[handleLikeAction] Erro ao criar notificação interna:', error);
+        });
       } else {
         console.log('[handleLikeAction] Actor não encontrado para userId:', userId);
       }
@@ -103,8 +114,9 @@ export async function handleCommentAction(payload: {
   postId: string;
   userId: string;
   content: string;
+  parentCommentId?: string;
 }): Promise<void> {
-  const { postId, userId, content } = payload;
+  const { postId, userId, content, parentCommentId } = payload;
 
   // Cria comentário (contador é atualizado via trigger)
   const comment = await prisma.feedComment.create({
@@ -112,6 +124,7 @@ export async function handleCommentAction(payload: {
       postId,
       userId,
       content,
+      parentCommentId: parentCommentId || null,
     },
   });
 
@@ -125,41 +138,74 @@ export async function handleCommentAction(payload: {
     },
   });
 
-  // Enviar notificação push para o autor do post (se não for ele mesmo)
-  if (post && post.userId !== userId) {
-    // Buscar informações do usuário que comentou
-    const actor = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-      },
+  // Buscar informações do usuário que comentou
+  const actor = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+
+  if (!actor) {
+    return;
+  }
+
+  // Se é resposta a um comentário
+  if (parentCommentId) {
+    // Buscar comentário pai
+    const parentComment = await prisma.feedComment.findUnique({
+      where: { id: parentCommentId },
+      select: { userId: true },
     });
 
-    if (actor) {
-      // Preparar preview do comentário (primeiros 100 caracteres)
-      const commentPreview = content.length > 100
-        ? content.substring(0, 100) + '...'
-        : content;
-
-      // Criar preview do conteúdo do post (primeiros 50 caracteres)
-      const postPreview = post.content.length > 50
-        ? post.content.substring(0, 50) + '...'
-        : post.content;
-
-      // Enviar notificação push (não bloqueia se falhar)
-      pushNotificationService.sendInteractionNotification(post.userId, {
-        postId: postId,
-        postSlug: post.slug,
+    if (parentComment && parentComment.userId !== userId) {
+      // Criar notificação de resposta para o autor do comentário pai
+      internalNotificationService.createNotification({
+        userId: parentComment.userId,
+        type: 'reply',
         actorId: actor.id,
-        actorName: actor.name || 'Alguém',
-        interactionType: 'comment',
-        postTitle: postPreview,
-        commentPreview,
+        postId: postId,
+        commentId: parentCommentId,
+        content: content.substring(0, 100), // Preview
       }).catch((error) => {
-        console.error('Erro ao enviar notificação de comentário:', error);
+        console.error('Erro ao criar notificação de resposta:', error);
       });
     }
+  } else if (post && post.userId !== userId) {
+    // É comentário no post (não resposta)
+    // Preparar preview do comentário (primeiros 100 caracteres)
+    const commentPreview = content.length > 100
+      ? content.substring(0, 100) + '...'
+      : content;
+
+    // Criar preview do conteúdo do post (primeiros 50 caracteres)
+    const postPreview = post.content.length > 50
+      ? post.content.substring(0, 50) + '...'
+      : post.content;
+
+    // Enviar notificação push (não bloqueia se falhar)
+    pushNotificationService.sendInteractionNotification(post.userId, {
+      postId: postId,
+      postSlug: post.slug,
+      actorId: actor.id,
+      actorName: actor.name || 'Alguém',
+      interactionType: 'comment',
+      postTitle: postPreview,
+      commentPreview,
+    }).catch((error) => {
+      console.error('Erro ao enviar notificação de comentário:', error);
+    });
+
+    // Criar notificação interna agregada (sem rate limit)
+    internalNotificationService.createOrUpdateAggregatedNotification({
+      userId: post.userId,
+      type: 'comment',
+      actorId: actor.id,
+      postId: postId,
+    }).catch((error) => {
+      console.error('Erro ao criar notificação interna de comentário:', error);
+    });
   }
 
   // Invalida cache do feed
