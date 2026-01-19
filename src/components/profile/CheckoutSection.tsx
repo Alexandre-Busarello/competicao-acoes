@@ -1,27 +1,60 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Check, Trophy, Eye, Star, AlertTriangle, Gift } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
 import { useAuth } from '@/lib/auth/client';
-import { useState } from 'react';
 import { SHOW_MIC_METHOD } from '@/lib/config/features';
 import { redirectToKiwifyCheckout } from '@/lib/utils/checkout';
 import { CheckoutCTA } from '@/components/checkout/CheckoutCTA';
+import { useConversionTracking } from '@/lib/hooks/useConversionTracking';
 
 export function CheckoutSection() {
   const { user } = useUserStore();
   const { isAuthenticated } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [hasTrackedView, setHasTrackedView] = useState(false);
+  const { trackView, trackClick } = useConversionTracking();
 
-  const handleSubscribe = () => {
+  // Tracking de visualização via IntersectionObserver
+  useEffect(() => {
+    if (hasTrackedView || !sectionRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            // Registrar visualização quando 50% da seção está visível
+            trackView('profile_checkout');
+            setHasTrackedView(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    observer.observe(sectionRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasTrackedView, trackView]);
+
+  const handleSubscribe = async () => {
     setIsProcessing(true);
+    
+    // Tracking de clique
+    await trackClick('profile_checkout');
+    
     redirectToKiwifyCheckout(user?.email, 'profile');
   };
 
   return (
-    <Card className="mx-4 mt-4 border-primary/20">
+    <Card ref={sectionRef} className="mx-4 mt-4 border-primary/20">
       <CardContent className="p-6">
         <div className="text-center mb-6">
           <Trophy className="h-12 w-12 text-primary mx-auto mb-3" />

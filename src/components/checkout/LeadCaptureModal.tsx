@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Mail, AlertTriangle } from 'lucide-react';
 import { redirectToKiwifyCheckout } from '@/lib/utils/checkout';
 import { useAuth } from '@/lib/auth/client';
+import { useConversionTracking } from '@/lib/hooks/useConversionTracking';
 
 interface LeadCaptureModalProps {
   open: boolean;
@@ -37,6 +38,7 @@ export function LeadCaptureModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const { trackClick } = useConversionTracking();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +106,16 @@ export function LeadCaptureModal({
           );
         }
       } else {
+        // Tracking de clique para eventos de conversão específicos
+        if (source === 'blur_overlay' || source === 'profile_page' || source === 'signup_banner') {
+          const eventType = source === 'blur_overlay' 
+            ? 'blur_overlay' 
+            : source === 'profile_page'
+            ? 'profile_checkout'
+            : 'signup_banner';
+          await trackClick(eventType);
+        }
+        
         // Redirecionar para checkout Kiwify
         redirectToKiwifyCheckout(email.trim(), source);
       }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { CheckoutCTA } from '@/components/checkout/CheckoutCTA';
 import { supabase } from '@/lib/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/lib/providers/ThemeProvider';
+import { useConversionTracking } from '@/lib/hooks/useConversionTracking';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -28,6 +29,9 @@ function LoginForm() {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const { theme } = useTheme();
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const [hasTrackedView, setHasTrackedView] = useState(false);
+  const { trackView } = useConversionTracking();
   
   // Logo combinada baseada no tema
   const logoPath = theme === 'dark' 
@@ -560,13 +564,15 @@ function LoginForm() {
                     <p className="text-xs text-muted-foreground mb-3">
                       Desbloqueie acesso completo às carteiras de outros competidores e funcionalidades exclusivas.
                     </p>
-                    <CheckoutCTA
-                      source="login_page"
-                      buttonText="Tornar-se Membro Pro"
-                      size="sm"
-                      variant="outline"
-                      className="w-full"
-                    />
+                    <div ref={bannerRef}>
+                      <CheckoutCTA
+                        source="signup_banner"
+                        buttonText="Tornar-se Membro Pro"
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

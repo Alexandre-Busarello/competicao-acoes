@@ -518,6 +518,31 @@ export async function POST(request: NextRequest) {
               }
             }
 
+            // Rastrear conversão de eventos de conversão (blur_overlay, profile_checkout)
+            // Buscar eventos de conversão que têm este leadId ou userId
+            const conversionEvents = await prisma.conversionEvent.findMany({
+              where: {
+                OR: [
+                  { leadId: lead.id },
+                  { userId: user.id },
+                ],
+                clickedAt: { not: null },
+                convertedAt: null, // Ainda não foi convertido
+              },
+            });
+
+            // Marcar todos os eventos relacionados como convertidos
+            for (const event of conversionEvents) {
+              await prisma.conversionEvent.update({
+                where: { id: event.id },
+                data: {
+                  convertedAt: new Date(),
+                  leadId: lead.id,
+                  userId: user.id,
+                },
+              });
+            }
+
             // Validar email antes de enviar magic link
             // Emails de teste são rejeitados pelo Supabase
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

@@ -20,6 +20,22 @@ interface BannerStats {
   cvr: number; // Conversion rate
 }
 
+interface ConversionEventStats {
+  type: 'blur_overlay' | 'profile_checkout' | 'signup_banner';
+  views: number;
+  clicks: number;
+  conversions: number;
+  ctr: number;
+  cvr: number;
+}
+
+interface BannerStatsResponse {
+  banners: BannerStats[];
+  totalBanners: number;
+  activeBanners: number;
+  conversionEvents: ConversionEventStats[];
+}
+
 /**
  * GET /api/admin/banners/stats
  * Retorna estatísticas agregadas de todos os banners
@@ -132,10 +148,69 @@ export async function GET(request: NextRequest) {
     // Ordenar por prioridade (maior primeiro)
     bannersWithStats.sort((a, b) => b.priority - a.priority);
 
+    // Buscar estatísticas de eventos de conversão
+    const conversionEventTypes: Array<'blur_overlay' | 'profile_checkout' | 'signup_banner'> = [
+      'blur_overlay',
+      'profile_checkout',
+      'signup_banner',
+    ];
+
+    const conversionEventsStats: ConversionEventStats[] = await Promise.all(
+      conversionEventTypes.map(async (type) => {
+        // Contar visualizações
+        const views = await prisma.conversionEvent.count({
+          where: {
+            type,
+            ...(startDate || endDate ? {
+              viewedAt: dateFilter.viewedAt,
+            } : {
+              viewedAt: { gte: thirtyDaysAgo },
+            }),
+          },
+        });
+
+        // Contar cliques
+        const clicks = await prisma.conversionEvent.count({
+          where: {
+            type,
+            clickedAt: {
+              not: null,
+              ...(startDate || endDate ? dateFilter.clickedAt : { gte: thirtyDaysAgo }),
+            },
+          },
+        });
+
+        // Contar conversões
+        const conversions = await prisma.conversionEvent.count({
+          where: {
+            type,
+            convertedAt: {
+              not: null,
+              ...(startDate || endDate ? dateFilter.convertedAt : { gte: thirtyDaysAgo }),
+            },
+          },
+        });
+
+        // Calcular taxas
+        const ctr = views > 0 ? (clicks / views) * 100 : 0;
+        const cvr = clicks > 0 ? (conversions / clicks) * 100 : 0;
+
+        return {
+          type,
+          views,
+          clicks,
+          conversions,
+          ctr: Math.round(ctr * 100) / 100,
+          cvr: Math.round(cvr * 100) / 100,
+        };
+      })
+    );
+
     return NextResponse.json({
       banners: bannersWithStats,
       totalBanners: bannersWithStats.length,
       activeBanners: bannersWithStats.filter((b) => b.isActive).length,
+      conversionEvents: conversionEventsStats,
     });
   } catch (error) {
     console.error('Error fetching banner stats:', error);

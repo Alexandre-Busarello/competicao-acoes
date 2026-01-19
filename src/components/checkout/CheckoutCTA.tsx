@@ -6,6 +6,7 @@ import { LeadCaptureModal } from './LeadCaptureModal';
 import { Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth/client';
 import { redirectToKiwifyCheckout } from '@/lib/utils/checkout';
+import { useConversionTracking } from '@/lib/hooks/useConversionTracking';
 
 interface CheckoutCTAProps {
   source?: string;
@@ -28,8 +29,20 @@ export function CheckoutCTA({
 }: CheckoutCTAProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { user, isAuthenticated } = useAuth();
+  const { trackClick } = useConversionTracking();
 
-  const handleClick = () => {
+  const handleClick = async () => {
+    // Tracking de clique para eventos de conversão específicos
+    let eventId: string | null = null;
+    if (source === 'blur_overlay' || source === 'profile_page' || source === 'signup_banner') {
+      const eventType = source === 'blur_overlay' 
+        ? 'blur_overlay' 
+        : source === 'profile_page'
+        ? 'profile_checkout'
+        : 'signup_banner';
+      eventId = await trackClick(eventType);
+    }
+
     // Se usuário estiver logado, usar email da conta e pular modal
     if (isAuthenticated && user?.email) {
       // Criar lead se necessário e redirecionar direto para checkout

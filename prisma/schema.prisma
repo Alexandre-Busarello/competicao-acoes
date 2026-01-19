@@ -43,6 +43,7 @@ model User {
   rankingHistory              UserRankingHistory[]
   bannerClicks                FeedBannerClick[]
   bannerConversions           FeedBannerConversion[]
+  conversionEvents            ConversionEvent[]
 
   @@index([authUserId])
   @@index([email])
@@ -98,6 +99,7 @@ model Lead {
   bannerClickId  String?                 @unique
   bannerClick     FeedBannerClick?        @relation("LeadBannerClick")
   bannerConversions FeedBannerConversion[]
+  conversionEvents ConversionEvent[]
 
   @@index([email])
   @@index([converted])
@@ -570,5 +572,24 @@ model FeedBannerConversion {
   @@index([bannerId])
   @@index([userId])
   @@index([leadId])
+  @@index([convertedAt])
+}
+
+model ConversionEvent {
+  id          String   @id @default(uuid())
+  type        String   // 'blur_overlay' | 'profile_checkout' | 'signup_banner'
+  userId      String?
+  leadId      String?
+  viewedAt    DateTime @default(now())
+  clickedAt   DateTime?
+  convertedAt DateTime?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([type])
+  @@index([userId])
+  @@index([leadId])
+  @@index([viewedAt])
+  @@index([clickedAt])
   @@index([convertedAt])
 }

@@ -26,10 +26,20 @@ interface BannerStats {
   cvr: number;
 }
 
+interface ConversionEventStats {
+  type: 'blur_overlay' | 'profile_checkout' | 'signup_banner';
+  views: number;
+  clicks: number;
+  conversions: number;
+  ctr: number;
+  cvr: number;
+}
+
 interface BannerStatsResponse {
   banners: BannerStats[];
   totalBanners: number;
   activeBanners: number;
+  conversionEvents: ConversionEventStats[];
 }
 
 export default function AdminBannersPage() {
@@ -92,7 +102,7 @@ export default function AdminBannersPage() {
     return null;
   }
 
-  const { banners, totalBanners, activeBanners } = stats;
+  const { banners, totalBanners, activeBanners, conversionEvents } = stats;
 
   // Calcular totais gerais
   const totalImpressions = banners.reduce((sum, b) => sum + b.impressions, 0);
@@ -240,6 +250,78 @@ export default function AdminBannersPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Eventos de Conversão (Blur Overlay e Profile Checkout) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Eventos de Conversão</CardTitle>
+          <CardDescription>
+            Métricas de visualização, clique e conversão de outros pontos de entrada
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2 font-semibold">Tipo</th>
+                  <th className="text-right p-2 font-semibold">Visualizações</th>
+                  <th className="text-right p-2 font-semibold">Cliques</th>
+                  <th className="text-right p-2 font-semibold">CTR</th>
+                  <th className="text-right p-2 font-semibold">Conversões</th>
+                  <th className="text-right p-2 font-semibold">CVR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {conversionEvents.map((event) => (
+                  <tr key={event.type} className="border-b hover:bg-muted/50">
+                    <td className="p-2">
+                      <Badge variant="outline">
+                        {event.type === 'blur_overlay' 
+                          ? 'Blur Overlay (Carteira)' 
+                          : event.type === 'profile_checkout'
+                          ? 'Profile Checkout (Perfil)'
+                          : 'Signup Banner (Criação de Conta)'}
+                      </Badge>
+                    </td>
+                    <td className="p-2 text-right">
+                      {event.views.toLocaleString('pt-BR')}
+                    </td>
+                    <td className="p-2 text-right">
+                      {event.clicks.toLocaleString('pt-BR')}
+                    </td>
+                    <td className="p-2 text-right">
+                      {event.ctr.toFixed(2)}%
+                    </td>
+                    <td className="p-2 text-right">
+                      {event.conversions.toLocaleString('pt-BR')}
+                    </td>
+                    <td className="p-2 text-right">
+                      <span className={event.cvr > 0 ? 'text-green-600 font-semibold' : ''}>
+                        {event.cvr.toFixed(2)}%
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 text-sm text-muted-foreground">
+            <p>
+              <strong>Blur Overlay:</strong> Visualização de carteira com blur e clique no CTA
+            </p>
+            <p>
+              <strong>Profile Checkout:</strong> Visualização do tapume de conversão no perfil e clique no CTA
+            </p>
+            <p>
+              <strong>Signup Banner:</strong> Visualização do banner na página de login/criação de conta e clique no CTA
+            </p>
+            <p className="pt-2">
+              <strong>Nota:</strong> Esses eventos não têm prioridade pois não aparecem no feed, são apenas para acompanhamento.
+            </p>
           </div>
         </CardContent>
       </Card>
