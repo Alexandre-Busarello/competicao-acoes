@@ -279,6 +279,13 @@ export async function POST(request: NextRequest) {
                   // Verificar se existe lead com esse email
             let lead = await prisma.lead.findUnique({
               where: { email: emailLower },
+              include: {
+                bannerClick: {
+                  include: {
+                    banner: true,
+                  },
+                },
+              },
             });
 
             // Criar lead se não existir ou marcar como convertido se existir
@@ -290,6 +297,13 @@ export async function POST(request: NextRequest) {
                   converted: true,
                   convertedAt: new Date(),
                 },
+                include: {
+                  bannerClick: {
+                    include: {
+                      banner: true,
+                    },
+                  },
+                },
               });
             } else if (!lead.converted) {
               // Marcar lead existente como convertido
@@ -298,6 +312,13 @@ export async function POST(request: NextRequest) {
                 data: {
                   converted: true,
                   convertedAt: new Date(),
+                },
+                include: {
+                  bannerClick: {
+                    include: {
+                      banner: true,
+                    },
+                  },
                 },
               });
             }
@@ -470,6 +491,32 @@ export async function POST(request: NextRequest) {
                 isPremium: subscription.status === 'active',
               },
             });
+
+            // Rastrear conversão de banner se o lead veio de um clique em banner
+            if (lead.bannerClickId && lead.bannerClick) {
+              const bannerClick = lead.bannerClick;
+              const bannerId = bannerClick.bannerId;
+
+              // Verificar se já existe conversão para evitar duplicatas
+              const existingConversion = await prisma.feedBannerConversion.findFirst({
+                where: {
+                  bannerId,
+                  userId: user.id,
+                  leadId: lead.id,
+                },
+              });
+
+              if (!existingConversion) {
+                // Criar registro de conversão
+                await prisma.feedBannerConversion.create({
+                  data: {
+                    bannerId,
+                    userId: user.id,
+                    leadId: lead.id,
+                  },
+                });
+              }
+            }
 
             // Validar email antes de enviar magic link
             // Emails de teste são rejeitados pelo Supabase

@@ -3,11 +3,14 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { FeedPost } from './FeedPost';
+import { FeedBanner } from './FeedBanner';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
 import { Button } from '@/components/ui/button';
 import { ScrollToTopButton } from './ScrollToTopButton';
 import { getCurrentSeed, onFeedSeedUpdate } from '@/lib/utils/feed-seed';
+import { useFeedBanner } from '@/lib/hooks/useFeedBanner';
+import Image from 'next/image';
 
 interface GlobalFeedProps {
   filterInteractions?: boolean;
@@ -23,6 +26,7 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
   const containerRef = useRef<HTMLDivElement>(null);
   const seenPostIdsRef = useRef<Set<string>>(new Set());
   const loopPageRef = useRef<number>(0);
+  const { getBannerForPosition } = useFeedBanner();
   
   // Seed consistente por sessão - gerado uma vez e reutilizado
   // O seed só muda quando o usuário cria um post (não quando interage)
@@ -32,6 +36,13 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
   useEffect(() => {
     sessionSeedRef.current = getCurrentSeed();
   }, []);
+
+  // Resetar scroll ao montar componente para evitar scroll cortado ao navegar de outra página
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = 0;
+    }
+  }, []); // Apenas ao montar
   
   // Escutar mudanças no seed apenas quando usuário cria posts
   // Não invalidamos o cache para manter o feed atual carregado
@@ -464,14 +475,18 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
             <div className="w-24 h-24 md:w-32 md:h-32 relative">
               {/* Logo SVG - usando a logo combinada */}
               <div className="absolute inset-0 flex items-center justify-center">
-                <img 
+                <Image 
                   src="/logo-combinada-claro.svg" 
                   alt="Hold Arena" 
+                  width={128}
+                  height={128}
                   className="w-full h-full object-contain dark:hidden animate-pulse"
                 />
-                <img 
+                <Image 
                   src="/logo-combinada-escuro.svg" 
                   alt="Hold Arena" 
+                  width={128}
+                  height={128}
                   className="w-full h-full object-contain hidden dark:block animate-pulse"
                 />
               </div>
@@ -584,11 +599,22 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
 
         {/* Container de posts - ordem correta do backend (mais antigos no topo, mais recentes embaixo) */}
         <div className="space-y-4 pb-4 w-full min-w-0">
-          {posts.map((post: any) => (
-            <div key={post.id} data-post-id={post.id} className="w-full min-w-0">
-              <FeedPost post={post} isOwner={user?.id === post.userId} truncateContent={true} />
-            </div>
-          ))}
+          {posts.map((post: any, index: number) => {
+            const position = index + 1;
+            const banner = getBannerForPosition(position);
+            
+            return (
+              <div key={post.id} className="w-full min-w-0 space-y-4">
+                <div data-post-id={post.id} className="w-full min-w-0">
+                  <FeedPost post={post} isOwner={user?.id === post.userId} truncateContent={true} />
+                </div>
+                {/* Inserir banner a cada 5 posts */}
+                {banner && (
+                  <FeedBanner banner={banner} />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Trigger para carregar mais posts quando scrolla para o final - sempre presente */}

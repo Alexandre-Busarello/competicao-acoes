@@ -41,6 +41,8 @@ model User {
   pushNotificationLogs        PushNotificationLog[]
   pushNotificationPreferences PushNotificationPreferences?
   rankingHistory              UserRankingHistory[]
+  bannerClicks                FeedBannerClick[]
+  bannerConversions           FeedBannerConversion[]
 
   @@index([authUserId])
   @@index([email])
@@ -84,15 +86,18 @@ model Subscription {
 }
 
 model Lead {
-  id              String    @id @default(uuid())
-  email           String    @unique
+  id              String                  @id @default(uuid())
+  email           String                  @unique
   name            String?
   source          String?
-  checkoutStarted Boolean   @default(false)
-  converted       Boolean   @default(false)
+  checkoutStarted Boolean                 @default(false)
+  converted       Boolean                 @default(false)
   convertedAt     DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  bannerClickId  String?                 @unique
+  bannerClick     FeedBannerClick?        @relation("LeadBannerClick")
+  bannerConversions FeedBannerConversion[]
 
   @@index([email])
   @@index([converted])
@@ -503,4 +508,67 @@ model NotificationMessageVariation {
 
   @@unique([type, variation])
   @@index([type, isActive])
+}
+
+model FeedBanner {
+  id          String                  @id @default(uuid())
+  variation   String                  @unique // 'A', 'B', 'C', 'D', 'E'
+  title       String
+  description String
+  benefit     String                  // Benefício focado neste banner
+  ctaText     String
+  isActive    Boolean                 @default(true)
+  priority    Int                     @default(0) // Calculado dinamicamente
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  impressions FeedBannerImpression[]
+  clicks      FeedBannerClick[]
+  conversions FeedBannerConversion[]
+
+  @@index([variation])
+  @@index([isActive, priority(sort: Desc)])
+}
+
+model FeedBannerImpression {
+  id        String     @id @default(uuid())
+  bannerId  String
+  userId    String?    // null se não logado
+  viewedAt  DateTime   @default(now())
+  banner    FeedBanner @relation(fields: [bannerId], references: [id], onDelete: Cascade)
+
+  @@index([bannerId])
+  @@index([userId])
+  @@index([viewedAt])
+}
+
+model FeedBannerClick {
+  id        String     @id @default(uuid())
+  bannerId  String
+  userId    String?    // null se não logado
+  leadId    String?    @unique // ID do lead criado
+  clickedAt DateTime   @default(now())
+  banner    FeedBanner @relation(fields: [bannerId], references: [id], onDelete: Cascade)
+  lead      Lead?      @relation("LeadBannerClick", fields: [leadId], references: [id], onDelete: SetNull)
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([bannerId])
+  @@index([userId])
+  @@index([leadId])
+  @@index([clickedAt])
+}
+
+model FeedBannerConversion {
+  id          String            @id @default(uuid())
+  bannerId   String
+  userId     String
+  leadId     String
+  convertedAt DateTime          @default(now())
+  banner     FeedBanner        @relation(fields: [bannerId], references: [id], onDelete: Cascade)
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead       Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([bannerId])
+  @@index([userId])
+  @@index([leadId])
+  @@index([convertedAt])
 }

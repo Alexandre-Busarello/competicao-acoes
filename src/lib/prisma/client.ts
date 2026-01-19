@@ -39,24 +39,37 @@ function getDatabaseUrl(): string | undefined {
     return undefined;
   }
 
+  // Detectar se estamos em ambiente serverless (Vercel, etc)
+  const isServerless = !!(
+    process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.FLY_APP_NAME ||
+    process.env.RAILWAY_ENVIRONMENT
+  );
+  
+  // Configurações diferentes para desenvolvimento local vs serverless
+  const connectionLimit = isServerless ? '2' : '5'; // 5 conexões em dev local, 2 em serverless
+  const poolTimeout = isServerless ? '20' : '30'; // Timeout maior para evitar erros
+
   try {
     // Tentar usar URL constructor para manipular parâmetros
     const url = new URL(baseUrl);
     
-    // Parâmetros de connection pooling para serverless:
-    // - connection_limit: Limita conexões por instância do Prisma Client (1-2 para serverless)
+    // Parâmetros de connection pooling:
+    // - connection_limit: Limita conexões por instância do Prisma Client
+    //   - Serverless: 2 (cada função serverless deve usar poucas conexões)
+    //   - Desenvolvimento: 5 (ambiente local pode usar mais conexões)
     // - pool_timeout: Tempo máximo (segundos) para aguardar conexão disponível
+    //   - Aumentado para evitar timeouts em requisições simultâneas
     // - connect_timeout: Tempo máximo (segundos) para estabelecer conexão
     // - statement_cache_size: Tamanho do cache de statements (0 desabilita para pgbouncer)
     
-    // Para serverless, usar connection_limit baixo (1-2) pois cada função serverless
-    // deve usar poucas conexões, e o pgbouncer gerencia o pool global
     if (!url.searchParams.has('connection_limit')) {
-      url.searchParams.set('connection_limit', '1');
+      url.searchParams.set('connection_limit', connectionLimit);
     }
     
     if (!url.searchParams.has('pool_timeout')) {
-      url.searchParams.set('pool_timeout', '10');
+      url.searchParams.set('pool_timeout', poolTimeout);
     }
     
     if (!url.searchParams.has('connect_timeout')) {
@@ -77,10 +90,10 @@ function getDatabaseUrl(): string | undefined {
     
     // Verificar se os parâmetros já existem na URL
     if (!baseUrl.includes('connection_limit=')) {
-      params.append('connection_limit', '1');
+      params.append('connection_limit', connectionLimit);
     }
     if (!baseUrl.includes('pool_timeout=')) {
-      params.append('pool_timeout', '10');
+      params.append('pool_timeout', poolTimeout);
     }
     if (!baseUrl.includes('connect_timeout=')) {
       params.append('connect_timeout', '5');

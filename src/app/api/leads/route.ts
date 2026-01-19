@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, name, source } = body;
+    const { email, name, source, bannerClickId } = body;
 
     if (!email || !email.trim()) {
       return NextResponse.json(
@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
         name: name?.trim() || null,
         source: source || 'checkout_cta',
         checkoutStarted: true,
+        bannerClickId: bannerClickId || null,
       },
     });
 

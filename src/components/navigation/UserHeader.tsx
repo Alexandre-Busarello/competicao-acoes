@@ -10,6 +10,7 @@ import { LogOut, Crown, Loader2, LogIn, Rss, Trophy, Wallet, User, UserPlus } fr
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 const navItems = [
   {
@@ -55,9 +56,11 @@ export function UserHeader() {
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-3 max-w-4xl">
           <Link href="/ranking" className="flex items-center hover:opacity-90 transition-opacity">
-            <img 
+            <Image 
               src={logoPath}
               alt="Hold Arena" 
+              width={200}
+              height={56}
               className="h-10 sm:h-12 md:h-14 w-auto object-contain"
             />
           </Link>
@@ -88,9 +91,11 @@ export function UserHeader() {
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-3 max-w-4xl">
           <Link href="/ranking" className="flex items-center hover:opacity-90 transition-opacity">
-            <img 
+            <Image 
               src={logoPath}
               alt="Hold Arena" 
+              width={200}
+              height={56}
               className="h-10 sm:h-12 md:h-14 w-auto object-contain"
             />
           </Link>
@@ -149,9 +154,11 @@ export function UserHeader() {
     <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-3 max-w-4xl">
           <Link href="/ranking" className="flex items-center hover:opacity-90 transition-opacity">
-            <img 
+            <Image 
               src={logoPath}
               alt="Hold Arena" 
+              width={200}
+              height={64}
               className="h-14 sm:h-16 md:h-16 w-auto object-contain"
             />
           </Link>

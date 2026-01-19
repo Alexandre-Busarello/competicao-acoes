@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 interface PageLoadingProps {
   title: string;
   description?: string;
@@ -13,14 +15,18 @@ export function PageLoading({ title, description, className = '' }: PageLoadingP
           <div className="w-24 h-24 md:w-32 md:h-32 relative">
             {/* Logo SVG - usando a logo combinada */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <img 
+              <Image 
                 src="/logo-combinada-claro.svg" 
                 alt="Hold Arena" 
+                width={128}
+                height={128}
                 className="w-full h-full object-contain dark:hidden animate-pulse"
               />
-              <img 
+              <Image 
                 src="/logo-combinada-escuro.svg" 
                 alt="Hold Arena" 
+                width={128}
+                height={128}
                 className="w-full h-full object-contain hidden dark:block animate-pulse"
               />
             </div>
@@ -39,6 +45,7 @@ export function PageLoading({ title, description, className = '' }: PageLoadingP
     </div>
   );
 }
+
 
 
 
