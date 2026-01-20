@@ -85,3 +85,4 @@ ALTER TABLE "FeedBannerConversion" ADD CONSTRAINT "FeedBannerConversion_leadId_f
 ALTER TABLE "Lead" ADD CONSTRAINT "Lead_bannerClickId_fkey" FOREIGN KEY ("bannerClickId") REFERENCES "FeedBannerClick"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 
+

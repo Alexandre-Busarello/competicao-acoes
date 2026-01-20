@@ -43,8 +43,8 @@ Sistema completo de notificações push via PWA foi implementado com sucesso.
 
 ### 1. Ranking
 - ✅ Entrar no top 3
-- ✅ Subir mais de 5 posições
-- ✅ Descer mais de 5 posições
+- ✅ Subir mais de 3 posições
+- ✅ Descer mais de 3 posições
 
 ### 2. Engajamento
 - ✅ Posts com score > 20 criados há 2-4 horas

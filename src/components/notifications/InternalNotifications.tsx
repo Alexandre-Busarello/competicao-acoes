@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Heart, MessageCircle, Reply, CheckCheck } from 'lucide-react';
+import { Loader2, Heart, MessageCircle, Reply, CheckCheck, TrendingUp, TrendingDown, Trophy } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
@@ -13,9 +13,10 @@ import { useRouter } from 'next/navigation';
 
 interface AggregatedNotification {
   id: string;
-  type: 'like' | 'comment' | 'reply';
+  type: 'like' | 'comment' | 'reply' | 'ranking';
   postId: string;
   commentId?: string;
+  content?: string; // Para ranking, contém JSON com dados da mudança
   post?: {
     slug: string;
     content: string;
@@ -119,12 +120,38 @@ export function InternalNotifications({
         return <MessageCircle className="h-4 w-4 text-primary" />;
       case 'reply':
         return <Reply className="h-4 w-4 text-primary" />;
+      case 'ranking':
+        return <Trophy className="h-4 w-4 text-yellow-500" />;
       default:
         return null;
     }
   };
 
   const formatNotificationMessage = (notification: AggregatedNotification): string => {
+    if (notification.type === 'ranking') {
+      try {
+        const rankingData = notification.content ? JSON.parse(notification.content) : null;
+        if (rankingData) {
+          const { previousPosition, currentPosition, changeType, period } = rankingData;
+          const periodText = period === 'mensal' ? 'mensal' : 'anual';
+          
+          if (changeType === 'top3') {
+            const medal = currentPosition === 1 ? '🥇' : currentPosition === 2 ? '🥈' : '🥉';
+            return `${medal} Parabéns! Você entrou no top 3 do ranking ${periodText}!`;
+          } else if (changeType === 'up') {
+            const positions = previousPosition - currentPosition;
+            return `📈 Você subiu ${positions} posição${positions > 1 ? 'ões' : ''} no ranking ${periodText} e agora está na ${currentPosition}ª posição`;
+          } else {
+            const positions = currentPosition - previousPosition;
+            return `📉 Você desceu ${positions} posição${positions > 1 ? 'ões' : ''} no ranking ${periodText} e agora está na ${currentPosition}ª posição`;
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao parsear dados de ranking:', error);
+      }
+      return 'Mudança no ranking';
+    }
+
     const postPreview = notification.post?.content.substring(0, 50) || 'seu post';
     const postTitle = postPreview.length > 50 ? postPreview + '...' : postPreview;
 
@@ -152,8 +179,29 @@ export function InternalNotifications({
       markAsReadMutation.mutate(notification.id);
     }
 
-    // Navegar para o post
-    if (notification.post?.slug) {
+    // Navegar baseado no tipo de notificação
+    if (notification.type === 'ranking') {
+      try {
+        const rankingData = notification.content ? JSON.parse(notification.content) : null;
+        if (rankingData) {
+          const { period } = rankingData;
+          const currentDate = new Date();
+          const year = currentDate.getFullYear();
+          const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+          
+          if (period === 'mensal') {
+            router.push(`/ranking/mensal/${year}/${month}`);
+          } else {
+            router.push(`/ranking/anual/${year}`);
+          }
+          return;
+        }
+      } catch (error) {
+        console.error('Erro ao parsear dados de ranking:', error);
+      }
+      // Fallback para ranking geral
+      router.push('/ranking');
+    } else if (notification.post?.slug) {
       router.push(`/posts/${notification.post.slug}`);
     }
   };

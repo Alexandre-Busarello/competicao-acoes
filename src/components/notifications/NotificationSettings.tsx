@@ -592,7 +592,7 @@ export function NotificationSettings() {
                 <div className="font-medium">Notificações de Ranking</div>
                 <div className="text-sm text-muted-foreground">
                   {preferences.rankingEnabled && preferences.allEnabled
-                    ? 'Você receberá notificações quando: entrar no top 3 do ranking, subir mais de 5 posições ou descer mais de 5 posições. Ajuda você a acompanhar sua performance.'
+                    ? 'Você receberá notificações quando: entrar no top 3 do ranking, subir mais de 3 posições ou descer mais de 3 posições. Ajuda você a acompanhar sua performance.'
                     : 'Você não receberá notificações sobre mudanças na sua posição no ranking. Útil se você prefere verificar manualmente sua posição.'}
                 </div>
               </div>

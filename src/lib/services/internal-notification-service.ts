@@ -1,13 +1,14 @@
 import { prisma } from '@/lib/prisma/client';
 import { cacheService } from '@/lib/cache/cache-service';
 
-export type NotificationType = 'like' | 'comment' | 'reply';
+export type NotificationType = 'like' | 'comment' | 'reply' | 'ranking';
 
 export interface AggregatedNotification {
   id: string;
   type: NotificationType;
   postId: string;
   commentId?: string;
+  content?: string | null; // Para ranking, contém JSON com dados da mudança
   post?: {
     slug: string;
     content: string;
@@ -52,6 +53,39 @@ export class InternalNotificationService {
         postId: data.postId,
         commentId: data.commentId,
         content: data.content,
+      },
+    });
+
+    // Invalidar cache
+    await cacheService.delete(`notifications:unread:${data.userId}`);
+    await cacheService.delete(`notifications:list:${data.userId}`);
+  }
+
+  /**
+   * Cria uma notificação de ranking
+   * Para ranking, usamos o próprio userId como actorId já que não há um "ator" externo
+   */
+  async createRankingNotification(data: {
+    userId: string;
+    previousPosition: number;
+    currentPosition: number;
+    changeType: 'top3' | 'up' | 'down';
+    period: 'mensal' | 'anual';
+  }): Promise<void> {
+    // Criar conteúdo JSON com informações da mudança de ranking
+    const content = JSON.stringify({
+      previousPosition: data.previousPosition,
+      currentPosition: data.currentPosition,
+      changeType: data.changeType,
+      period: data.period,
+    });
+
+    await prisma.notification.create({
+      data: {
+        userId: data.userId,
+        type: 'ranking',
+        actorId: data.userId, // Usar o próprio userId como actorId
+        content,
       },
     });
 
@@ -175,9 +209,9 @@ export class InternalNotificationService {
     const grouped = new Map<string, typeof allNotifications>();
 
     for (const notification of allNotifications) {
-      // Respostas não são agregadas
-      if (notification.type === 'reply') {
-        const key = `reply-${notification.id}`;
+      // Respostas e ranking não são agregadas
+      if (notification.type === 'reply' || notification.type === 'ranking') {
+        const key = `${notification.type}-${notification.id}`;
         grouped.set(key, [notification]);
       } else {
         // Likes e comentários são agregados por postId + type
@@ -202,13 +236,14 @@ export class InternalNotificationService {
         return currentTime > latestTime ? current : latest;
       });
 
-      // Para respostas, não agregar
-      if (first.type === 'reply') {
+      // Para respostas e ranking, não agregar
+      if (first.type === 'reply' || first.type === 'ranking') {
         aggregated.push({
           id: first.id,
           type: first.type,
           postId: first.postId || '',
           commentId: first.commentId || undefined,
+          content: first.content || undefined,
           post: first.post ? {
             slug: first.post.slug,
             content: first.post.content,
@@ -295,8 +330,8 @@ export class InternalNotificationService {
     }
 
     // Marcar todas as notificações do mesmo grupo como lidas
-    if (notification.type === 'reply') {
-      // Respostas são individuais
+    if (notification.type === 'reply' || notification.type === 'ranking') {
+      // Respostas e ranking são individuais
       await prisma.notification.update({
         where: { id: notificationId },
         data: {
@@ -364,6 +399,7 @@ export class InternalNotificationService {
         read: false,
       },
       select: {
+        id: true,
         type: true,
         postId: true,
       },
@@ -372,8 +408,8 @@ export class InternalNotificationService {
     // Agrupar para contar grupos únicos
     const groups = new Set<string>();
     for (const notification of notifications) {
-      if (notification.type === 'reply') {
-        groups.add(`reply-${notification.postId}`);
+      if (notification.type === 'reply' || notification.type === 'ranking') {
+        groups.add(`${notification.type}-${notification.id}`);
       } else {
         groups.add(`${notification.type}-${notification.postId || 'no-post'}`);
       }
@@ -389,5 +425,6 @@ export class InternalNotificationService {
 }
 
 export const internalNotificationService = new InternalNotificationService();
+
 
 

@@ -1081,26 +1081,38 @@ export class RankingService {
           shouldNotify = true;
           changeType = 'top3';
         }
-        // Subiu mais de 5 posições
-        else if (positionChange > 5) {
+        // Subiu mais de 3 posições
+        else if (positionChange > 3) {
           shouldNotify = true;
           changeType = 'up';
         }
-        // Desceu mais de 5 posições
-        else if (positionChange < -5) {
+        // Desceu mais de 3 posições
+        else if (positionChange < -3) {
           shouldNotify = true;
           changeType = 'down';
         }
 
         if (shouldNotify) {
-          // Enviar notificação (não bloquear se falhar)
+          // Enviar notificação push (não bloquear se falhar)
           pushNotificationService.sendRankingNotification(userId, {
             previousPosition,
             currentPosition,
             changeType,
             period,
           }).catch(error => {
-            console.error(`Erro ao enviar notificação de ranking para usuário ${userId}:`, error);
+            console.error(`Erro ao enviar notificação push de ranking para usuário ${userId}:`, error);
+          });
+
+          // Criar notificação interna (bell/sininho) - não bloquear se falhar
+          const { internalNotificationService } = await import('./internal-notification-service');
+          internalNotificationService.createRankingNotification({
+            userId,
+            previousPosition,
+            currentPosition,
+            changeType,
+            period,
+          }).catch(error => {
+            console.error(`Erro ao criar notificação interna de ranking para usuário ${userId}:`, error);
           });
         }
 

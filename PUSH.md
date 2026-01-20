@@ -4,7 +4,7 @@
 
 Implementar sistema completo de notificações push para PWA com três tipos de notificações:
 
-1. **Ranking**: Quando usuário entra no top 3 ou sobe mais de 5 posições
+1. **Ranking**: Quando usuário entra no top 3 ou sobe mais de 3 posições
 2. **Engajamento**: Posts da comunidade com bom engajamento nas últimas horas
 3. **Following**: Posts de pessoas que o usuário segue (limitado)
 
@@ -128,7 +128,7 @@ flowchart TD
 - No método `calculateBothRankings()` ou `calculateBothRankingsWithCheckpoint()`:
   - Após calcular ranking, comparar posição anterior com atual
   - Para cada usuário que mudou:
-    - Se entrou no top 3 OU subiu mais de 5 posições → enviar notificação
+    - Se entrou no top 3 OU subiu mais de 3 posições → enviar notificação
   - Usar `PushNotificationService.sendRankingNotification()`
 
 **Arquivo**: `prisma/schema.prisma` (atualizar)
@@ -224,7 +224,7 @@ flowchart TD
     - Botão para ativar/desativar todas as notificações
   - **Seções de Preferências**:
     - Toggle para "Notificações de Ranking"
-      - Descrição: "Receba notificações quando entrar no top 3 ou subir mais de 5 posições"
+      - Descrição: "Receba notificações quando entrar no top 3 ou subir mais de 3 posições"
     - Toggle para "Notificações de Engajamento"
       - Descrição: "Receba notificações sobre posts populares da comunidade"
     - Toggle para "Notificações de Seguidos"
