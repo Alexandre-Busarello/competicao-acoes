@@ -86,4 +86,3 @@ ALTER TABLE "Lead" ADD CONSTRAINT "Lead_bannerClickId_fkey" FOREIGN KEY ("banner
 
 
 
-

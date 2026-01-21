@@ -2,45 +2,8 @@ import YahooFinance from 'yahoo-finance2';
 import type { TickerValidationResult, BatchPriceResult } from '@/types/price';
 import { executeInParallel } from '@/lib/utils/parallel-executor';
 
-// Lista de User-Agents válidos para rotação (evita detecção de padrões)
-const USER_AGENTS = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
-];
-
-// Contador para rotação sequencial de User-Agents
-let userAgentIndex = 0;
-
-/**
- * Obtém um User-Agent rotacionado da lista
- */
-function getRotatedUserAgent(): string {
-  const userAgent = USER_AGENTS[userAgentIndex];
-  userAgentIndex = (userAgentIndex + 1) % USER_AGENTS.length;
-  return userAgent;
-}
-
-/**
- * Cria uma instância do YahooFinance com um User-Agent específico
- */
-function createYahooFinanceInstance(userAgent?: string) {
-  return new YahooFinance({
-    suppressNotices: ['yahooSurvey'],
-    fetchOptions: {
-      headers: {
-        'User-Agent': userAgent || getRotatedUserAgent(),
-      },
-    },
-  });
-}
+// Instanciar YahooFinance (requerido na v3)
+const yahooFinance = new YahooFinance();
 
 /**
  * Normaliza ticker para formato Yahoo Finance
@@ -145,10 +108,8 @@ export class YahooFinanceService {
       const normalizedTicker = normalizeTicker(ticker);
       
       const result: any = await retryWithBackoff(async () => {
-        // Cria nova instância com User-Agent rotacionado para cada requisição
-        const yfInstance = createYahooFinanceInstance();
         // v3 API: quote retorna um objeto com os dados
-        return await yfInstance.quote(normalizedTicker);
+        return await yahooFinance.quote(normalizedTicker);
       });
       
       // v3: verificar se o resultado é válido
@@ -219,9 +180,7 @@ export class YahooFinanceService {
     try {
       const normalizedTicker = normalizeTicker(ticker);
       const result: any = await retryWithBackoff(async () => {
-        // Cria nova instância com User-Agent rotacionado para cada requisição
-        const yfInstance = createYahooFinanceInstance();
-        return await yfInstance.quote(normalizedTicker);
+        return await yahooFinance.quote(normalizedTicker);
       });
       
       if (!result) {
@@ -244,9 +203,7 @@ export class YahooFinanceService {
     try {
       const normalizedTicker = normalizeTicker(ticker);
       const result: any = await retryWithBackoff(async () => {
-        // Cria nova instância com User-Agent rotacionado para cada requisição
-        const yfInstance = createYahooFinanceInstance();
-        return await yfInstance.quote(normalizedTicker);
+        return await yahooFinance.quote(normalizedTicker);
       });
       
       return result || null;
@@ -276,9 +233,7 @@ export class YahooFinanceService {
       const tasks = uniqueTickers.map((ticker) => async () => {
         try {
           const quote: any = await retryWithBackoff(async () => {
-            // Cria nova instância com User-Agent rotacionado para cada requisição
-            const yfInstance = createYahooFinanceInstance();
-            return await yfInstance.quote(ticker);
+            return await yahooFinance.quote(ticker);
           });
           
           return { ticker, quote, error: null };
