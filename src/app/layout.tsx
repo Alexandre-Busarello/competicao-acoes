@@ -10,6 +10,7 @@ import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistr
 import { PushNotificationPrompt } from "@/components/pwa/PushNotificationPrompt";
 import { BadgeUpdater } from "@/components/pwa/BadgeUpdater";
 import { TrackAccess } from "@/components/tracking/TrackAccess";
+import { FooterWrapper } from "@/components/shared/FooterWrapper";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -193,6 +194,7 @@ export default function RootLayout({
               <NavigationWrapper>
                 {children}
               </NavigationWrapper>
+              <FooterWrapper />
               <UpdatePrompt />
               <PushNotificationPrompt />
             </div>

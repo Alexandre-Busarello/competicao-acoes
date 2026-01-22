@@ -1069,30 +1069,26 @@ export class RankingService {
           continue;
         }
 
-        // Verificar se mudou significativamente
+        // Verificar se mudou de posição (qualquer mudança)
         const positionChange = previousPosition - currentPosition; // positivo = subiu, negativo = desceu
-        const absChange = Math.abs(positionChange);
+        
+        // Notificar sempre que houver mudança de posição
+        if (positionChange !== 0) {
+          let changeType: 'top3' | 'up' | 'down' = 'up';
 
-        let shouldNotify = false;
-        let changeType: 'top3' | 'up' | 'down' = 'up';
+          // Entrou no top 3
+          if (currentPosition <= 3 && previousPosition > 3) {
+            changeType = 'top3';
+          }
+          // Subiu posições
+          else if (positionChange > 0) {
+            changeType = 'up';
+          }
+          // Desceu posições
+          else {
+            changeType = 'down';
+          }
 
-        // Entrou no top 3
-        if (currentPosition <= 3 && previousPosition > 3) {
-          shouldNotify = true;
-          changeType = 'top3';
-        }
-        // Subiu mais de 3 posições
-        else if (positionChange > 3) {
-          shouldNotify = true;
-          changeType = 'up';
-        }
-        // Desceu mais de 3 posições
-        else if (positionChange < -3) {
-          shouldNotify = true;
-          changeType = 'down';
-        }
-
-        if (shouldNotify) {
           // Enviar notificação push (não bloquear se falhar)
           pushNotificationService.sendRankingNotification(userId, {
             previousPosition,

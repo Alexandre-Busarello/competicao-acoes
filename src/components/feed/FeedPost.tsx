@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ShareButton } from '@/components/shared/ShareButton';
-import { Heart, MessageCircle, Eye, EyeOff, MoreVertical, Edit, Trash2, Loader2 } from 'lucide-react';
+import { Heart, MessageCircle, Eye, EyeOff, MoreVertical, Edit, Trash2, Loader2, UserPlus, UserMinus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUserStore } from '@/lib/store/userStore';
@@ -92,6 +92,63 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
   const [commentCount, setCommentCount] = useState(post.commentCount);
   const [showComments, setShowComments] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  // Query para verificar se está seguindo o autor do post
+  const { data: followStatus } = useQuery({
+    queryKey: ['follow-status', post.userId],
+    queryFn: async () => {
+      if (!isAuthenticated || !user || isOwner || user.id === post.userId) {
+        return { isFollowing: false };
+      }
+      const response = await fetch(`/api/users/${post.userId}/follow`);
+      if (!response.ok) return { isFollowing: false };
+      return response.json();
+    },
+    enabled: isAuthenticated && !!user && !isOwner && user.id !== post.userId,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+  });
+
+  const isFollowing = followStatus?.isFollowing || false;
+
+  // Mutation para seguir/deixar de seguir
+  const followMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/users/${post.userId}/follow`, {
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error('Failed to follow');
+      return response.json();
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['follow-status', post.userId] });
+      const previousStatus = queryClient.getQueryData(['follow-status', post.userId]);
+      
+      queryClient.setQueryData(['follow-status', post.userId], (old: any) => ({
+        isFollowing: !old?.isFollowing,
+      }));
+
+      return { previousStatus };
+    },
+    onError: (err, variables, context) => {
+      console.error('Error following user:', err);
+      if (context?.previousStatus) {
+        queryClient.setQueryData(['follow-status', post.userId], context.previousStatus);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['follow-status', post.userId],
+        refetchType: 'none',
+      });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ 
+          queryKey: ['follow-status', post.userId],
+        });
+      }, 1000);
+    },
+  });
 
   // Função helper para atualizar post em todas as queries relacionadas
   const updatePostInAllQueries = (updater: (post: any) => any) => {
@@ -437,6 +494,38 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
                   </p>
                 </Link>
                 <UserMedalsBadge medals={post.medals} />
+                {!isOwner && isAuthenticated && user && user.id !== post.userId && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!isAuthenticated || !user) {
+                        router.push(`/auth/login?returnUrl=${encodeURIComponent(postUrl)}`);
+                        return;
+                      }
+                      followMutation.mutate();
+                    }}
+                    disabled={followMutation.isPending}
+                    className="h-6 px-2 text-xs flex-shrink-0 touch-manipulation"
+                    aria-label={isFollowing ? 'Deixar de seguir' : 'Seguir'}
+                  >
+                    {followMutation.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : isFollowing ? (
+                      <>
+                        <UserMinus className="h-3 w-3 mr-1" />
+                        <span className="hidden sm:inline">Seguindo</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="h-3 w-3 mr-1" />
+                        <span className="hidden sm:inline">Seguir</span>
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
               <div className="flex items-center gap-2 flex-wrap mt-0.5">
                 <p className="text-xs text-muted-foreground">

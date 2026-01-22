@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { ComoFuncionaPageClient } from './ComoFuncionaPageClient';
+import { ComoFuncionaContent } from './ComoFuncionaContent';
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
@@ -36,6 +36,28 @@ export const metadata: Metadata = {
 };
 
 export default function ComoFuncionaPage() {
-  return <ComoFuncionaPageClient />;
+  return (
+    <>
+      {/* Structured data para SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            name: "Como Funciona - Hold Arena",
+            description: "Entenda como funciona o ranking de investidores e as regras da competição",
+            url: `${baseUrl}/como-funciona`,
+            mainEntity: {
+              "@type": "Article",
+              headline: "Como Funciona o Ranking de Investidores",
+              description: "Regras da competição mensal e anual, cálculo de rentabilidade, critérios de desempate, premiação",
+            },
+          }),
+        }}
+      />
+      <ComoFuncionaContent />
+    </>
+  );
 }
 

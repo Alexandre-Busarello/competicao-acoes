@@ -1,11 +1,9 @@
-'use client';
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, DollarSign, Calendar, AlertCircle, Info } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
-export function ComoFuncionaPageClient() {
+export function ComoFuncionaContent() {
   return (
     <div className="min-h-screen">
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
