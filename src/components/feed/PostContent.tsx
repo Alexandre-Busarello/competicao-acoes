@@ -41,9 +41,10 @@ import { useFeedBanner } from '@/lib/hooks/useFeedBanner';
 
 interface PostContentProps {
   slug: string;
+  initialPost?: any;
 }
 
-export function PostContent({ slug }: PostContentProps) {
+export function PostContent({ slug, initialPost }: PostContentProps) {
   const { user, isAuthenticated } = useUserStore();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -61,7 +62,18 @@ export function PostContent({ slug }: PostContentProps) {
       }
       return response.json();
     },
+    initialData: initialPost, // Usar dados iniciais do SSR se disponível
   });
+
+  // Esconder conteúdo SSR após hydration
+  useEffect(() => {
+    if (post) {
+      const ssrContent = document.getElementById('post-ssr-content');
+      if (ssrContent) {
+        ssrContent.style.display = 'none';
+      }
+    }
+  }, [post]);
 
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);

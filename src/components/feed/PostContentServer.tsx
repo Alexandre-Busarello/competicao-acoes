@@ -28,7 +28,7 @@ export function PostContentServer({ post }: PostContentServerProps) {
     .slice(0, 2);
 
   return (
-    <div className="min-h-screen">
+    <div>
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         <Card>
           <CardHeader className="pb-3">

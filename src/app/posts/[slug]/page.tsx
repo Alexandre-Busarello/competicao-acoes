@@ -165,12 +165,31 @@ export default async function PostPage({ params }: { params: { slug: string } })
       />
       
       {/* Conteúdo SSR visível para crawlers - renderizado no servidor */}
-      <PostContentServer post={post} />
+      {/* Será escondido após hydration do PostContent client-side via JavaScript */}
+      <div id="post-ssr-content" suppressHydrationWarning>
+        <PostContentServer post={post} />
+      </div>
+      
+      {/* Script para esconder SSR após hydration */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            if (typeof window !== 'undefined') {
+              setTimeout(() => {
+                const ssrContent = document.getElementById('post-ssr-content');
+                if (ssrContent) {
+                  ssrContent.style.display = 'none';
+                }
+              }, 0);
+            }
+          `,
+        }}
+      />
       
       {/* Componente client-side para interatividade (likes, comentários, edição) */}
-      {/* Este componente faz fetch e renderiza, mas o conteúdo SSR já está no HTML para crawlers */}
+      {/* Este componente substitui o conteúdo SSR após hydration */}
       <div suppressHydrationWarning>
-        <PostContent slug={params.slug} />
+        <PostContent slug={params.slug} initialPost={post} />
       </div>
     </>
   );
