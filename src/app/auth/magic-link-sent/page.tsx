@@ -1,12 +1,13 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle2, Mail, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
-export default function MagicLinkSentPage() {
+function MagicLinkSentContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get('email') || '';
 
@@ -78,6 +79,22 @@ export default function MagicLinkSentPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function MagicLinkSentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center">
+            <p className="text-muted-foreground">Carregando...</p>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <MagicLinkSentContent />
+    </Suspense>
   );
 }
 

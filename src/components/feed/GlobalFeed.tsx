@@ -595,6 +595,16 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
 
         {/* Container de posts - ordem correta do backend (mais antigos no topo, mais recentes embaixo) */}
         <div className="space-y-4 pb-4 w-full min-w-0">
+          {/* Banner antes do primeiro post (posição 0) */}
+          {posts.length > 0 && (() => {
+            const firstBanner = getBannerForPosition(0);
+            return firstBanner ? (
+              <div className="w-full min-w-0">
+                <FeedBanner banner={firstBanner} />
+              </div>
+            ) : null;
+          })()}
+          
           {posts.map((post: any, index: number) => {
             const position = index + 1;
             const banner = getBannerForPosition(position);
@@ -604,7 +614,7 @@ export function GlobalFeed({ filterInteractions = false, filterMyPosts = false, 
                 <div data-post-id={post.id} className="w-full min-w-0">
                   <FeedPost post={post} isOwner={user?.id === post.userId} truncateContent={true} />
                 </div>
-                {/* Inserir banner a cada 5 posts */}
+                {/* Inserir banner a cada 4 posts (posições 4, 8, 12, etc.) */}
                 {banner && (
                   <FeedBanner banner={banner} />
                 )}

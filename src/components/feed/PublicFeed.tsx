@@ -2,13 +2,17 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { FeedPost } from './FeedPost';
+import { FeedBanner } from './FeedBanner';
 import { PageLoading } from '@/components/ui/page-loading';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, ArrowRight } from 'lucide-react';
+import { useFeedBanner } from '@/lib/hooks/useFeedBanner';
 
 export function PublicFeed() {
+  const { getBannerByIndex, getBannerForPosition } = useFeedBanner();
+  
   const {
     data,
     isLoading,
@@ -25,6 +29,9 @@ export function PublicFeed() {
   });
 
   const posts = data?.posts || [];
+  
+  // Banner antes do primeiro post: sempre o banner de maior prioridade
+  const topBanner = getBannerByIndex(0, true);
 
   if (isLoading || (isFetching && !data)) {
     return (
@@ -37,13 +44,32 @@ export function PublicFeed() {
 
   return (
     <div className="space-y-6 w-full min-w-0">
+      {/* Banner antes do primeiro post */}
+      {topBanner && (
+        <div className="w-full min-w-0">
+          <FeedBanner banner={topBanner} />
+        </div>
+      )}
+      
       {/* Container de posts */}
       <div className="space-y-4 w-full min-w-0">
-        {posts.map((post: any) => (
-          <div key={post.id} data-post-id={post.id} className="w-full min-w-0">
-            <FeedPost post={post} isOwner={false} truncateContent={true} />
-          </div>
-        ))}
+        {posts.map((post: any, index: number) => {
+          const position = index + 1;
+          // Mostrar banner a cada 4 posts também no feed público
+          // Usar getBannerForPosition para respeitar priorização
+          const banner = getBannerForPosition(position);
+          
+          return (
+            <div key={post.id} className="w-full min-w-0 space-y-4">
+              <div data-post-id={post.id} className="w-full min-w-0">
+                <FeedPost post={post} isOwner={false} truncateContent={true} />
+              </div>
+              {banner && (
+                <FeedBanner banner={banner} />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* CTA para criação de conta */}

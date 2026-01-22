@@ -36,6 +36,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { FeedBanner } from './FeedBanner';
+import { useFeedBanner } from '@/lib/hooks/useFeedBanner';
 
 interface PostContentProps {
   slug: string;
@@ -45,6 +47,7 @@ export function PostContent({ slug }: PostContentProps) {
   const { user, isAuthenticated } = useUserStore();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { banners, getBannerByIndex } = useFeedBanner();
 
   const { data: post, isLoading } = useQuery({
     queryKey: ['post', slug],
@@ -64,6 +67,30 @@ export function PostContent({ slug }: PostContentProps) {
   const [likeCount, setLikeCount] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [bannerRotationIndex, setBannerRotationIndex] = useState(0);
+  
+  const isPremium = user?.isPremium || false;
+  
+  // Rotação de banners para usuários gratuitos
+  // Topo: sempre mostra o banner de maior prioridade (banners[0])
+  // Meio: rotaciona entre os outros banners baseado no hash do post
+  useEffect(() => {
+    if (post && banners.length > 1) {
+      // Usar hash do post ID para determinar índice de rotação de forma consistente
+      // Começa do índice 1 porque índice 0 é sempre usado no topo
+      const hash = post.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+      const rotationIndex = (hash % Math.max(banners.length - 1, 1)) + 1; // +1 para começar do segundo banner
+      setBannerRotationIndex(rotationIndex);
+    } else if (banners.length > 1) {
+      // Se não há post ainda mas há banners, inicializar com índice 1
+      setBannerRotationIndex(1);
+    }
+  }, [post, banners.length]);
+  
+  // Topo: sempre o banner de maior prioridade
+  const topBanner = getBannerByIndex(0, true);
+  // Meio: rotaciona entre os outros banners (começando do segundo)
+  const middleBanner = banners.length > 1 ? getBannerByIndex(bannerRotationIndex) : null;
 
   // Função helper para atualizar post em todas as queries relacionadas
   const updatePostInAllQueries = (updater: (post: any) => any) => {
@@ -326,6 +353,13 @@ export function PostContent({ slug }: PostContentProps) {
   return (
     <div className="min-h-screen">
       <div className="container mx-auto px-4 py-6 max-w-4xl">
+        {/* Banner no topo para usuários gratuitos */}
+        {!isPremium && topBanner && (
+          <div className="mb-4">
+            <FeedBanner banner={topBanner} />
+          </div>
+        )}
+        
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
@@ -480,6 +514,13 @@ export function PostContent({ slug }: PostContentProps) {
                 <span>{commentCount}</span>
               </div>
             </div>
+            
+            {/* Banner no meio para usuários gratuitos (antes dos comentários) */}
+            {!isPremium && middleBanner && (
+              <div className="pt-4">
+                <FeedBanner banner={middleBanner} />
+              </div>
+            )}
             
             {/* Seção de comentários */}
             <PostComments 

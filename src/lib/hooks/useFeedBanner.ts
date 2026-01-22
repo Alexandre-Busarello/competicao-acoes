@@ -17,11 +17,13 @@ interface UseFeedBannerResult {
   banners: Banner[];
   isLoading: boolean;
   getBannerForPosition: (position: number) => Banner | null;
+  getBannerByIndex: (index: number, prioritizeFirst?: boolean) => Banner | null;
 }
 
 /**
  * Hook para buscar banners e selecionar banner baseado na posição no feed
- * A cada 4 posts, retorna um banner (priorizado por conversões/cliques)
+ * Mostra banner antes do primeiro post (posição 0) e depois a cada 4 posts
+ * Rotaciona banners usando round-robin
  */
 export function useFeedBanner(): UseFeedBannerResult {
   const { data, isLoading } = useQuery<{ banners: Banner[] }>({
@@ -40,12 +42,22 @@ export function useFeedBanner(): UseFeedBannerResult {
 
   /**
    * Retorna o banner apropriado para uma posição no feed
-   * A cada 4 posts (posições 4, 8, 12, etc.), retorna um banner
-   * Usa round-robin entre os banners disponíveis, priorizando por prioridade
+   * Posição 0: antes do primeiro post (sempre o banner de maior prioridade)
+   * Posições 4, 8, 12, etc.: a cada 4 posts
+   * Rotação respeita a priorização: sempre começa do banner de maior prioridade
    */
   const getBannerForPosition = (position: number): Banner | null => {
-    // A cada 4 posts, mostrar um banner
-    if (position % 4 !== 0 || banners.length === 0) {
+    if (banners.length === 0) {
+      return null;
+    }
+
+    // Posição 0: sempre o banner de maior prioridade (banners[0])
+    if (position === 0) {
+      return banners[0] || null;
+    }
+
+    // A cada 4 posts (posições 4, 8, 12, etc.), mostrar um banner
+    if (position % 4 !== 0) {
       return null;
     }
 
@@ -54,16 +66,42 @@ export function useFeedBanner(): UseFeedBannerResult {
       return banners[0];
     }
 
-    // Calcular índice usando round-robin baseado na posição
-    // Mas sempre priorizar o banner com maior prioridade primeiro
-    const bannerIndex = Math.floor((position / 4 - 1) % banners.length);
+    // Rotação que respeita prioridade:
+    // - Posição 4: banners[0] (maior prioridade)
+    // - Posição 8: banners[1] (segunda maior prioridade)
+    // - Posição 12: banners[2] (terceira maior prioridade)
+    // - Quando acabar, volta para o primeiro
+    // -1 porque posição 0 já foi tratada acima
+    const rotationIndex = Math.floor(position / 4) - 1;
+    const bannerIndex = rotationIndex % banners.length;
     return banners[bannerIndex] || banners[0];
+  };
+
+  /**
+   * Retorna banner por índice (para rotação simples)
+   * Útil para páginas de post onde queremos rotacionar banners
+   * @param index - Índice da rotação
+   * @param prioritizeFirst - Se true, sempre retorna banners[0] quando index === 0
+   */
+  const getBannerByIndex = (index: number, prioritizeFirst: boolean = false): Banner | null => {
+    if (banners.length === 0) {
+      return null;
+    }
+
+    // Se prioritizeFirst e index === 0, sempre retornar o banner de maior prioridade
+    if (prioritizeFirst && index === 0) {
+      return banners[0];
+    }
+
+    const bannerIndex = index % banners.length;
+    return banners[bannerIndex] || null;
   };
 
   return {
     banners,
     isLoading,
     getBannerForPosition,
+    getBannerByIndex,
   };
 }
 
