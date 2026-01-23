@@ -1,6 +1,6 @@
 'use client';
 
-import { Trophy, Clock, Info } from 'lucide-react';
+import { Trophy, Clock, Info, TrendingUp } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -66,9 +66,13 @@ export function RankingHeader({ period, onPeriodChange, lastUpdate, isLoading }:
                   : ''
               }`}
             >
-              <span className="flex items-center gap-1.5 min-w-0">
-                <span className="truncate">Ranking GGB</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-tight flex-shrink-0 ${
+              <span className="flex items-center gap-1 sm:gap-1.5 min-w-0">
+                <span className="truncate hidden sm:inline">Ranking GGB</span>
+                <span className="flex items-center gap-1 sm:hidden">
+                  <TrendingUp className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                  <span className="truncate">GGB</span>
+                </span>
+                <span className={`hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-tight flex-shrink-0 ${
                   period === 'ggb'
                     ? 'bg-gradient-to-r from-green-500 to-blue-500 text-white'
                     : 'bg-gradient-to-r from-green-500/70 to-blue-500/70 text-white/90'

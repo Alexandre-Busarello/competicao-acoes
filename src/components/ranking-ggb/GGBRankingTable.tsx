@@ -166,28 +166,30 @@ export function GGBRankingTable({ data, isLoading, isPro = false }: GGBRankingTa
         {!isPro && (
           <div
             ref={paywallRef}
-            className="mb-4 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/20 rounded-lg p-3 shadow-sm"
+            className="mb-4 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/20 rounded-lg p-3 sm:p-4 shadow-sm"
           >
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 flex-shrink-0">
+            {/* Layout mobile: vertical */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-2 flex-1 min-w-0">
+                <div className="flex items-center justify-center w-8 h-8 sm:w-8 sm:h-8 rounded-full bg-primary/20 flex-shrink-0">
                   <TrendingUp className="h-4 w-4 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-sm leading-tight">
+                  <h4 className="font-semibold text-xs sm:text-sm leading-tight">
                     Ranking GGB Exclusivo para Membros Pro
                   </h4>
-                  <p className="text-xs text-muted-foreground leading-tight mt-0.5">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight mt-0.5">
                     Desbloqueie acesso completo aos dados detalhados
                   </p>
                 </div>
               </div>
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 w-full sm:w-auto">
                 <CheckoutCTA
                   source="ggb_ranking"
                   buttonText="Desbloquear"
                   size="sm"
                   variant="default"
+                  className="w-full sm:w-auto"
                 />
               </div>
             </div>
