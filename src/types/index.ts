@@ -59,7 +59,7 @@ export interface Transaction {
   createdAt: Date;
 }
 
-export type RankingPeriod = 'mensal' | 'anual' | 'bruno-method';
+export type RankingPeriod = 'mensal' | 'anual' | 'bruno-method' | 'ggb';
 
 export interface BrunoPortfolio {
   name: string;

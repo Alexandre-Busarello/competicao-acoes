@@ -15,6 +15,10 @@ DATABASE_URL=postgresql://postgres.gkciedlgmbrrxlpxhlae:Ght%24%24%401234%26%26T@
 
 # URL direta - Para migrations do Prisma (sem pgbouncer)
 DIRECT_DATABASE_URL=postgresql://postgres.gkciedlgmbrrxlpxhlae:Ght%24%24%401234%26%26T@db.gkciedlgmbrrxlpxhlae.supabase.co:5432/postgres
+
+# API Financeira - Para Ranking GGB
+FINANCIAL_DATA_API_URL=https://seu-dominio.com/api/v1/financial-data
+FINANCIAL_DATA_API_KEY=sua-api-key-aqui
 ```
 
 ## Como funciona:

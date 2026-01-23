@@ -31,7 +31,7 @@ export function RankingHeader({ period, onPeriodChange, lastUpdate, isLoading }:
 
   return (
     <div className="sticky top-0 z-10 bg-background border-b border-border safe-area-top">
-      <div className="container mx-auto px-4 py-4">
+      <div className="container mx-auto px-4 py-4 max-w-4xl">
         <div className="flex items-center justify-center mb-4 gap-2">
           <Trophy className="h-8 w-8 text-primary mr-2" />
           <h1 className="text-2xl font-bold">Ranking</h1>
@@ -54,14 +54,31 @@ export function RankingHeader({ period, onPeriodChange, lastUpdate, isLoading }:
             )}
           </div>
         )}
-        <Tabs value={period} onValueChange={(value) => onPeriodChange(value as RankingPeriod)}>
-          <TabsList className={`grid w-full ${SHOW_MIC_METHOD ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            <TabsTrigger value="mensal">Mensal</TabsTrigger>
-            <TabsTrigger value="anual">Anual</TabsTrigger>
+        <Tabs value={period} onValueChange={(value) => onPeriodChange(value as RankingPeriod)} className="w-full">
+          <TabsList className={`grid w-full ${SHOW_MIC_METHOD ? 'grid-cols-4' : 'grid-cols-3'} min-w-0`}>
+            <TabsTrigger value="mensal" className="min-w-0 truncate">Mensal</TabsTrigger>
+            <TabsTrigger value="anual" className="min-w-0 truncate">Anual</TabsTrigger>
+            <TabsTrigger 
+              value="ggb" 
+              className={`relative font-semibold min-w-0 overflow-hidden ${
+                period === 'ggb' 
+                  ? 'bg-gradient-to-r from-green-500/20 to-blue-500/20 dark:from-green-500/30 dark:to-blue-500/30 border-2 border-green-500/40' 
+                  : ''
+              }`}
+            >
+              <span className="flex items-center gap-1.5 min-w-0">
+                <span className="truncate">Ranking GGB</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-tight flex-shrink-0 ${
+                  period === 'ggb'
+                    ? 'bg-gradient-to-r from-green-500 to-blue-500 text-white'
+                    : 'bg-gradient-to-r from-green-500/70 to-blue-500/70 text-white/90'
+                }`}>NEW</span>
+              </span>
+            </TabsTrigger>
             {SHOW_MIC_METHOD && (
-              <TabsTrigger value="bruno-method" className="relative">
-                MIC Method
-                <span className="ml-1 text-xs">⭐</span>
+              <TabsTrigger value="bruno-method" className="relative min-w-0 truncate">
+                <span className="truncate">MIC Method</span>
+                <span className="ml-1 text-xs flex-shrink-0">⭐</span>
               </TabsTrigger>
             )}
           </TabsList>

@@ -595,3 +595,28 @@ model ConversionEvent {
   @@index([clickedAt])
   @@index([convertedAt])
 }
+
+model GGBRanking {
+  ticker           String   @id // Chave primária
+  companyName      String?
+  sector           String?
+  industry         String?
+  
+  // Dados financeiros brutos (JSON)
+  financialData    Json
+  
+  // Scores calculados
+  greenblattScore  Decimal? @db.Decimal(5, 2)
+  grahamScore      Decimal? @db.Decimal(5, 2)
+  bazinScore       Decimal? @db.Decimal(5, 2)
+  finalScore       Decimal? @db.Decimal(5, 2)
+  rank             Int?
+  
+  // Metadados
+  lastUpdated      DateTime @default(now()) @updatedAt
+  dataSource       String?  // "api" ou "cache"
+  
+  @@index([finalScore(sort: Desc)])
+  @@index([rank])
+  @@index([lastUpdated])
+}

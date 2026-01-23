@@ -78,6 +78,8 @@ export default function RankingAnualPage() {
     const current = getCurrentPeriod();
     if (newPeriod === 'bruno-method' && SHOW_MIC_METHOD) {
       router.push('/bruno-method');
+    } else if (newPeriod === 'ggb') {
+      router.push('/ranking-ggb');
     } else if (newPeriod === 'mensal') {
       router.push(`/ranking/mensal/${current.year}/${current.month.toString().padStart(2, '0')}`);
     } else {
