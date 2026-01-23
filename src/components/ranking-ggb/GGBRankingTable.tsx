@@ -196,8 +196,137 @@ export function GGBRankingTable({ data, isLoading, isPro = false }: GGBRankingTa
           </div>
         )}
 
-        {/* Tabela com blur quando não PRO */}
-        <div className={`overflow-x-auto -mx-2 px-2 ${!isPro ? 'select-none' : ''}`} style={!isPro ? { filter: 'blur(4px)' } : {}}>
+        {/* Layout Mobile: Cards */}
+        <div className={`md:hidden space-y-3 ${!isPro ? 'select-none' : ''}`} style={!isPro ? { filter: 'blur(4px)' } : {}}>
+          {sortedData.map((item) => {
+            const isExpanded = expandedRows.has(item.rank);
+            const medal = getMedal(item.rank);
+            
+            return (
+              <div key={item.ticker} className="border rounded-lg p-4 bg-card">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {medal && <span className="text-xl">{medal}</span>}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm">#{item.rank}</span>
+                        <span className="font-mono font-bold text-base">{item.ticker}</span>
+                      </div>
+                      <div className="font-medium text-sm mt-0.5">{item.companyName || '-'}</div>
+                      {item.sector && (
+                        <div className="text-xs text-muted-foreground">{item.sector}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`text-xl font-bold ${getScoreColor(item.finalScore)}`}>
+                      {item.finalScore > 0 ? item.finalScore.toFixed(1) : '-'}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Score Final</div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-2 mb-3 pt-3 border-t">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Greenblatt</div>
+                    <div className={`text-sm font-semibold ${getScoreColor(item.greenblattScore)}`}>
+                      {item.greenblattScore > 0 ? item.greenblattScore.toFixed(1) : '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Graham</div>
+                    <div className={`text-sm font-semibold ${getScoreColor(item.grahamScore)}`}>
+                      {item.grahamScore > 0 ? item.grahamScore.toFixed(1) : '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Bazin</div>
+                    <div className={`text-sm font-semibold ${getScoreColor(item.bazinScore)}`}>
+                      {item.bazinScore > 0 ? item.bazinScore.toFixed(1) : '-'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">ROIC:</span>{' '}
+                    <span className="font-medium">
+                      {item.financialData.roic ? `${(item.financialData.roic * 100).toFixed(1)}%` : '-'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">DY:</span>{' '}
+                    <span className="font-medium">
+                      {item.financialData.dividendYield12m ? `${(item.financialData.dividendYield12m * 100).toFixed(1)}%` : '-'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">P/VP:</span>{' '}
+                    <span className="font-medium">
+                      {item.financialData.pvp ? item.financialData.pvp.toFixed(2) : '-'}
+                    </span>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="mt-4 pt-4 border-t">
+                    <GGBScoreBreakdown
+                      greenblattScore={item.greenblattScore}
+                      grahamScore={item.grahamScore}
+                      bazinScore={item.bazinScore}
+                      finalScore={item.finalScore}
+                      breakdown={item.breakdown}
+                      financialData={{
+                        roic: item.financialData.roic,
+                        roe: item.financialData.roe,
+                        earningsYield: item.financialData.earningsYield,
+                        evEbit: item.financialData.evEbit,
+                        ebit: item.financialData.ebit,
+                        enterpriseValue: item.financialData.enterpriseValue,
+                        dividaLiquidaEbitda: item.financialData.dividaLiquidaEbitda,
+                        dividaLiquidaPl: item.financialData.dividaLiquidaPl,
+                        totalDivida: item.financialData.totalDivida,
+                        patrimonioLiquido: item.financialData.patrimonioLiquido,
+                        liquidezCorrente: item.financialData.liquidezCorrente,
+                        totalCaixa: item.financialData.totalCaixa,
+                        ativoTotal: item.financialData.ativoTotal,
+                        lucroLiquido: item.financialData.lucroLiquido,
+                        pvp: item.financialData.pvp,
+                        dividendYield12m: item.financialData.dividendYield12m,
+                        payout: item.financialData.payout,
+                        historicoUltimosDividendos: item.financialData.historicoUltimosDividendos,
+                        sector: item.sector,
+                        historicalAverages: item.financialData.historicalAverages,
+                      }}
+                    />
+                  </div>
+                )}
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleRow(item.rank)}
+                  className="w-full mt-3"
+                >
+                  {isExpanded ? (
+                    <>
+                      <ChevronUp className="h-4 w-4 mr-2" />
+                      Ocultar detalhes
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4 mr-2" />
+                      Ver detalhes
+                    </>
+                  )}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Layout Desktop: Tabela */}
+        <div className={`hidden md:block overflow-x-auto -mx-2 px-2 ${!isPro ? 'select-none' : ''}`} style={!isPro ? { filter: 'blur(4px)' } : {}}>
           <table className="w-full min-w-[800px]">
             <thead>
               <tr className="border-b">
