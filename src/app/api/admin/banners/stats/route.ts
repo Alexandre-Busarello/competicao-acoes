@@ -149,10 +149,11 @@ export async function GET(request: NextRequest) {
     bannersWithStats.sort((a, b) => b.priority - a.priority);
 
     // Buscar estatísticas de eventos de conversão
-    const conversionEventTypes: Array<'blur_overlay' | 'profile_checkout' | 'signup_banner'> = [
+    const conversionEventTypes: Array<'blur_overlay' | 'profile_checkout' | 'signup_banner' | 'ggb_ranking'> = [
       'blur_overlay',
       'profile_checkout',
       'signup_banner',
+      'ggb_ranking',
     ];
 
     const conversionEventsStats: ConversionEventStats[] = await Promise.all(
@@ -205,6 +206,9 @@ export async function GET(request: NextRequest) {
         };
       })
     );
+
+    // Debug: verificar se ggb_ranking está sendo retornado
+    console.log('Conversion events stats:', conversionEventsStats.map(e => ({ type: e.type, views: e.views })));
 
     return NextResponse.json({
       banners: bannersWithStats,
