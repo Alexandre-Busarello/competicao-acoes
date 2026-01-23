@@ -494,38 +494,6 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
                   </p>
                 </Link>
                 <UserMedalsBadge medals={post.medals} />
-                {!isOwner && isAuthenticated && user && user.id !== post.userId && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (!isAuthenticated || !user) {
-                        router.push(`/auth/login?returnUrl=${encodeURIComponent(postUrl)}`);
-                        return;
-                      }
-                      followMutation.mutate();
-                    }}
-                    disabled={followMutation.isPending}
-                    className="h-6 px-2 text-xs flex-shrink-0 touch-manipulation"
-                    aria-label={isFollowing ? 'Deixar de seguir' : 'Seguir'}
-                  >
-                    {followMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : isFollowing ? (
-                      <>
-                        <UserMinus className="h-3 w-3 mr-1" />
-                        <span className="hidden sm:inline">Seguindo</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="h-3 w-3 mr-1" />
-                        <span className="hidden sm:inline">Seguir</span>
-                      </>
-                    )}
-                  </Button>
-                )}
               </div>
               <div className="flex items-center gap-2 flex-wrap mt-0.5">
                 <p className="text-xs text-muted-foreground">
@@ -542,8 +510,8 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
               </div>
             </div>
           </div>
-          {isOwner && (
-            <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {isOwner && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -558,33 +526,66 @@ export function FeedPost({ post, isOwner = false, truncateContent = false }: Fee
                   <EyeOff className="h-4 w-4" />
                 )}
               </Button>
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="flex-shrink-0"
-                    aria-label="Mais opções"
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleEdit}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setIsDeleteDialogOpen(true)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
+            )}
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="flex-shrink-0"
+                  aria-label="Mais opções"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isOwner ? (
+                  <>
+                    <DropdownMenuItem onClick={handleEdit}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  isAuthenticated && user && user.id !== post.userId && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!isAuthenticated || !user) {
+                          router.push(`/auth/login?returnUrl=${encodeURIComponent(postUrl)}`);
+                          return;
+                        }
+                        followMutation.mutate();
+                      }}
+                      disabled={followMutation.isPending}
+                    >
+                      {followMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : isFollowing ? (
+                        <>
+                          <UserMinus className="h-4 w-4 mr-2" />
+                          Deixar de seguir
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          Seguir
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                  )
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0 overflow-hidden max-w-full">
