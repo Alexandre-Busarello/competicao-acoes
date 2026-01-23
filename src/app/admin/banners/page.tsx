@@ -27,7 +27,7 @@ interface BannerStats {
 }
 
 interface ConversionEventStats {
-  type: 'blur_overlay' | 'profile_checkout' | 'signup_banner';
+  type: 'blur_overlay' | 'profile_checkout' | 'signup_banner' | 'ggb_ranking';
   views: number;
   clicks: number;
   conversions: number;
@@ -284,7 +284,9 @@ export default function AdminBannersPage() {
                           ? 'Blur Overlay (Carteira)' 
                           : event.type === 'profile_checkout'
                           ? 'Profile Checkout (Perfil)'
-                          : 'Signup Banner (Criação de Conta)'}
+                          : event.type === 'signup_banner'
+                          ? 'Signup Banner (Criação de Conta)'
+                          : 'GGB Ranking (Ranking GGB)'}
                       </Badge>
                     </td>
                     <td className="p-2 text-right">
@@ -318,6 +320,9 @@ export default function AdminBannersPage() {
             </p>
             <p>
               <strong>Signup Banner:</strong> Visualização do banner na página de login/criação de conta e clique no CTA
+            </p>
+            <p>
+              <strong>GGB Ranking:</strong> Visualização do ranking GGB com blur e clique no CTA de conversão
             </p>
             <p className="pt-2">
               <strong>Nota:</strong> Esses eventos não têm prioridade pois não aparecem no feed, são apenas para acompanhamento.

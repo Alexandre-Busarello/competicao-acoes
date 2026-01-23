@@ -579,7 +579,7 @@ model FeedBannerConversion {
 
 model ConversionEvent {
   id          String   @id @default(uuid())
-  type        String   // 'blur_overlay' | 'profile_checkout' | 'signup_banner'
+  type        String   // 'blur_overlay' | 'profile_checkout' | 'signup_banner' | 'ggb_ranking'
   userId      String?
   leadId      String?
   viewedAt    DateTime @default(now())

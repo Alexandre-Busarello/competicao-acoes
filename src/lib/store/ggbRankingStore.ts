@@ -34,6 +34,7 @@ interface GGBRankingResponse {
   fromCache?: boolean;
   warning?: string;
   error?: string;
+  isPro?: boolean;
 }
 
 /**
@@ -62,6 +63,7 @@ export function useGGBRankingStore() {
     totalStocks: data?.totalStocks || 0,
     fromCache: data?.fromCache || false,
     warning: data?.warning,
+    isPro: data?.isPro ?? false,
   };
 }
 

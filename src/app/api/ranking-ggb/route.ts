@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { financialDataService } from '@/lib/services/financial-data-service';
 import { calculateGGBRanking, shouldExcludeStock } from '@/lib/services/ggb-ranking-service';
+import { getServerSession } from '@/lib/auth/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,11 +28,28 @@ function needsUpdate(lastUpdated: Date | null): boolean {
 }
 
 /**
+ * Marca dados como ofuscados para usuários não-PRO (mas mantém estrutura visível)
+ * Os dados reais são mantidos para mostrar com blur no frontend
+ */
+function obfuscateRankingData(ranking: any[]): any[] {
+  return ranking.map((item) => ({
+    ...item,
+    // Manter todos os dados, mas marcar como ofuscado
+    // O frontend aplicará blur visualmente
+    _obfuscated: true,
+  }));
+}
+
+/**
  * GET /api/ranking-ggb
  * Retorna o ranking GGB, atualizando se necessário (cache de 24h)
  */
 export async function GET(request: NextRequest) {
   try {
+    // Verificar se usuário é PRO
+    const session = await getServerSession();
+    const isPro = session?.user?.isPremium ?? false;
+
     // Verificar se há dados no banco
     const existingData = await prisma.gGBRanking.findMany({
       orderBy: {
@@ -71,12 +89,16 @@ export async function GET(request: NextRequest) {
           };
         });
 
+      // Ofuscar dados se não for PRO
+      const finalRanking = isPro ? ranking : obfuscateRankingData(ranking);
+
       return NextResponse.json({
         success: true,
-        data: ranking,
+        data: finalRanking,
         lastUpdate: oldestUpdate?.lastUpdated.toISOString() || new Date().toISOString(),
-        totalStocks: ranking.length,
+        totalStocks: finalRanking.length,
         fromCache: true,
+        isPro,
       });
     }
 
@@ -89,27 +111,35 @@ export async function GET(request: NextRequest) {
       if (existingData.length > 0) {
         const ranking = existingData
           .filter(item => item.finalScore !== null)
-          .map((item, index) => ({
-            ticker: item.ticker,
-            companyName: item.companyName,
-            sector: item.sector,
-            industry: item.industry,
-            greenblattScore: item.greenblattScore?.toNumber() ?? 0,
-            grahamScore: item.grahamScore?.toNumber() ?? 0,
-            bazinScore: item.bazinScore?.toNumber() ?? 0,
-            finalScore: item.finalScore?.toNumber() ?? 0,
-            rank: item.rank ?? index + 1,
-            financialData: item.financialData as Record<string, any>,
-            lastUpdated: item.lastUpdated.toISOString(),
-          }));
+          .map((item, index) => {
+            const financialData = item.financialData as Record<string, any>;
+            return {
+              ticker: item.ticker,
+              companyName: item.companyName,
+              sector: item.sector,
+              industry: item.industry,
+              greenblattScore: item.greenblattScore?.toNumber() ?? 0,
+              grahamScore: item.grahamScore?.toNumber() ?? 0,
+              bazinScore: item.bazinScore?.toNumber() ?? 0,
+              finalScore: item.finalScore?.toNumber() ?? 0,
+              rank: item.rank ?? index + 1,
+              financialData: financialData,
+              breakdown: financialData?.breakdown,
+              lastUpdated: item.lastUpdated.toISOString(),
+            };
+          });
+
+        // Ofuscar dados se não for PRO
+        const finalRanking = isPro ? ranking : obfuscateRankingData(ranking);
 
         return NextResponse.json({
           success: true,
-          data: ranking,
+          data: finalRanking,
           lastUpdate: oldestUpdate?.lastUpdated.toISOString() || new Date().toISOString(),
-          totalStocks: ranking.length,
+          totalStocks: finalRanking.length,
           fromCache: true,
           warning: 'API indisponível, retornando dados do cache',
+          isPro,
         });
       }
 
@@ -200,12 +230,16 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Ofuscar dados se não for PRO
+    const finalRanking = isPro ? ranking : obfuscateRankingData(ranking);
+
     return NextResponse.json({
       success: true,
-      data: ranking,
+      data: finalRanking,
       lastUpdate: new Date().toISOString(),
-      totalStocks: ranking.length,
+      totalStocks: finalRanking.length,
       fromCache: false,
+      isPro,
     });
   } catch (error) {
     console.error('Erro ao buscar/calcular ranking GGB:', error);
@@ -219,29 +253,41 @@ export async function GET(request: NextRequest) {
       });
 
       if (existingData.length > 0) {
+        // Verificar se usuário é PRO (novamente em caso de erro)
+        const session = await getServerSession();
+        const isPro = session?.user?.isPremium ?? false;
+
         const ranking = existingData
           .filter(item => item.finalScore !== null)
-          .map((item, index) => ({
-            ticker: item.ticker,
-            companyName: item.companyName,
-            sector: item.sector,
-            industry: item.industry,
-            greenblattScore: item.greenblattScore?.toNumber() ?? 0,
-            grahamScore: item.grahamScore?.toNumber() ?? 0,
-            bazinScore: item.bazinScore?.toNumber() ?? 0,
-            finalScore: item.finalScore?.toNumber() ?? 0,
-            rank: item.rank ?? index + 1,
-            financialData: item.financialData as Record<string, any>,
-            lastUpdated: item.lastUpdated.toISOString(),
-          }));
+          .map((item, index) => {
+            const financialData = item.financialData as Record<string, any>;
+            return {
+              ticker: item.ticker,
+              companyName: item.companyName,
+              sector: item.sector,
+              industry: item.industry,
+              greenblattScore: item.greenblattScore?.toNumber() ?? 0,
+              grahamScore: item.grahamScore?.toNumber() ?? 0,
+              bazinScore: item.bazinScore?.toNumber() ?? 0,
+              finalScore: item.finalScore?.toNumber() ?? 0,
+              rank: item.rank ?? index + 1,
+              financialData: financialData,
+              breakdown: financialData?.breakdown,
+              lastUpdated: item.lastUpdated.toISOString(),
+            };
+          });
+
+        // Ofuscar dados se não for PRO
+        const finalRanking = isPro ? ranking : obfuscateRankingData(ranking);
 
         return NextResponse.json({
           success: true,
-          data: ranking,
+          data: finalRanking,
           lastUpdate: existingData[0]?.lastUpdated.toISOString() || new Date().toISOString(),
-          totalStocks: ranking.length,
+          totalStocks: finalRanking.length,
           fromCache: true,
           warning: 'Erro ao atualizar, retornando dados do cache',
+          isPro,
         });
       }
     } catch (cacheError) {

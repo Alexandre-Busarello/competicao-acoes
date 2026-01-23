@@ -21,7 +21,7 @@ interface BannerStats {
 }
 
 interface ConversionEventStats {
-  type: 'blur_overlay' | 'profile_checkout' | 'signup_banner';
+  type: 'blur_overlay' | 'profile_checkout' | 'signup_banner' | 'ggb_ranking';
   views: number;
   clicks: number;
   conversions: number;

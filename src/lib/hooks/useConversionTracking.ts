@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth/client';
 export function useConversionTracking() {
   const { user } = useAuth();
 
-  const trackView = async (type: 'blur_overlay' | 'profile_checkout' | 'signup_banner') => {
+  const trackView = async (type: 'blur_overlay' | 'profile_checkout' | 'signup_banner' | 'ggb_ranking') => {
     try {
       await fetch('/api/conversion-events/track', {
         method: 'POST',
@@ -25,7 +25,7 @@ export function useConversionTracking() {
   };
 
   const trackClick = async (
-    type: 'blur_overlay' | 'profile_checkout' | 'signup_banner',
+    type: 'blur_overlay' | 'profile_checkout' | 'signup_banner' | 'ggb_ranking',
     leadId?: string
   ) => {
     try {

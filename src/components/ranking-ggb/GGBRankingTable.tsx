@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, Fragment } from 'react';
+import { useState, Fragment, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GGBScoreBreakdown } from './GGBScoreBreakdown';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CheckoutCTA } from '@/components/checkout/CheckoutCTA';
+import { useConversionTracking } from '@/lib/hooks/useConversionTracking';
 
 interface GGBRankingItem {
   ticker: string;
@@ -48,12 +50,40 @@ interface GGBRankingItem {
 interface GGBRankingTableProps {
   data: GGBRankingItem[];
   isLoading?: boolean;
+  isPro?: boolean;
 }
 
-export function GGBRankingTable({ data, isLoading }: GGBRankingTableProps) {
+export function GGBRankingTable({ data, isLoading, isPro = false }: GGBRankingTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [sortBy, setSortBy] = useState<'rank' | 'finalScore' | 'ticker'>('rank');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const paywallRef = useRef<HTMLDivElement>(null);
+  const [hasTrackedView, setHasTrackedView] = useState(false);
+  const { trackView } = useConversionTracking();
+
+  // Tracking de visualização do paywall
+  useEffect(() => {
+    if (isPro || hasTrackedView || !paywallRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            trackView('ggb_ranking');
+            setHasTrackedView(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    observer.observe(paywallRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isPro, hasTrackedView, trackView]);
 
   const toggleRow = (rank: number) => {
     const newExpanded = new Set(expandedRows);
@@ -127,12 +157,45 @@ export function GGBRankingTable({ data, isLoading }: GGBRankingTableProps) {
   }
 
   return (
-    <Card>
+    <Card className="relative">
       <CardHeader>
         <CardTitle>Ranking GGB</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto -mx-2 px-2">
+      <CardContent className="relative">
+        {/* Paywall banner no topo quando não PRO */}
+        {!isPro && (
+          <div
+            ref={paywallRef}
+            className="mb-4 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/20 rounded-lg p-3 shadow-sm"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 flex-shrink-0">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-sm leading-tight">
+                    Ranking GGB Exclusivo para Membros Pro
+                  </h4>
+                  <p className="text-xs text-muted-foreground leading-tight mt-0.5">
+                    Desbloqueie acesso completo aos dados detalhados
+                  </p>
+                </div>
+              </div>
+              <div className="flex-shrink-0">
+                <CheckoutCTA
+                  source="ggb_ranking"
+                  buttonText="Desbloquear"
+                  size="sm"
+                  variant="default"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tabela com blur quando não PRO */}
+        <div className={`overflow-x-auto -mx-2 px-2 ${!isPro ? 'select-none' : ''}`} style={!isPro ? { filter: 'blur(4px)' } : {}}>
           <table className="w-full min-w-[800px]">
             <thead>
               <tr className="border-b">
@@ -206,7 +269,7 @@ export function GGBRankingTable({ data, isLoading }: GGBRankingTableProps) {
                     </td>
                     <td className="p-2">
                       <span className={`text-lg font-bold ${getScoreColor(item.finalScore)}`}>
-                        {item.finalScore.toFixed(1)}
+                        {item.finalScore > 0 ? item.finalScore.toFixed(1) : '-'}
                       </span>
                     </td>
                     <td className="p-2">
@@ -214,19 +277,19 @@ export function GGBRankingTable({ data, isLoading }: GGBRankingTableProps) {
                         <div>
                           <span className="text-muted-foreground">G:</span>{' '}
                           <span className={getScoreColor(item.greenblattScore)}>
-                            {item.greenblattScore.toFixed(1)}
+                            {item.greenblattScore > 0 ? item.greenblattScore.toFixed(1) : '-'}
                           </span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Gr:</span>{' '}
                           <span className={getScoreColor(item.grahamScore)}>
-                            {item.grahamScore.toFixed(1)}
+                            {item.grahamScore > 0 ? item.grahamScore.toFixed(1) : '-'}
                           </span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">B:</span>{' '}
                           <span className={getScoreColor(item.bazinScore)}>
-                            {item.bazinScore.toFixed(1)}
+                            {item.bazinScore > 0 ? item.bazinScore.toFixed(1) : '-'}
                           </span>
                         </div>
                       </div>

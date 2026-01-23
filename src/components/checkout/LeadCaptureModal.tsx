@@ -107,12 +107,14 @@ export function LeadCaptureModal({
         }
       } else {
         // Tracking de clique para eventos de conversão específicos
-        if (source === 'blur_overlay' || source === 'profile_page' || source === 'signup_banner') {
+        if (source === 'blur_overlay' || source === 'profile_page' || source === 'signup_banner' || source === 'ggb_ranking') {
           const eventType = source === 'blur_overlay' 
             ? 'blur_overlay' 
             : source === 'profile_page'
             ? 'profile_checkout'
-            : 'signup_banner';
+            : source === 'signup_banner'
+            ? 'signup_banner'
+            : 'ggb_ranking';
           await trackClick(eventType);
         }
         

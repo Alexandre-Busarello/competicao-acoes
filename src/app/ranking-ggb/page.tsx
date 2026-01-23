@@ -15,7 +15,7 @@ import { ptBR } from 'date-fns/locale';
 
 export default function RankingGGBPage() {
   const router = useRouter();
-  const { data, isLoading, lastUpdate } = useGGBRankingStore();
+  const { data, isLoading, lastUpdate, isPro } = useGGBRankingStore();
 
   const handlePeriodChange = (newPeriod: RankingPeriod) => {
     const current = getCurrentPeriod();
@@ -87,7 +87,7 @@ export default function RankingGGBPage() {
             description="Buscando dados financeiros e calculando scores..."
           />
         ) : (
-          <GGBRankingTable data={data || []} isLoading={isLoading} />
+          <GGBRankingTable data={data || []} isLoading={isLoading} isPro={isPro} />
         )}
       </div>
     </div>

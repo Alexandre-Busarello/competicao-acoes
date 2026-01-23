@@ -19,9 +19,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { type, event, userId, leadId } = body;
 
-    if (!type || (type !== 'blur_overlay' && type !== 'profile_checkout' && type !== 'signup_banner')) {
+    if (!type || (type !== 'blur_overlay' && type !== 'profile_checkout' && type !== 'signup_banner' && type !== 'ggb_ranking')) {
       return NextResponse.json(
-        { error: 'Tipo inválido. Deve ser "blur_overlay", "profile_checkout" ou "signup_banner"' },
+        { error: 'Tipo inválido. Deve ser "blur_overlay", "profile_checkout", "signup_banner" ou "ggb_ranking"' },
         { status: 400 }
       );
     }
