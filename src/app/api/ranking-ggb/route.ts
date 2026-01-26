@@ -72,6 +72,15 @@ export async function GET(request: NextRequest) {
 
     const shouldUpdate = needsUpdate(oldestUpdate?.lastUpdated || null);
 
+    // Log para debug
+    if (oldestUpdate) {
+      const diffMs = new Date().getTime() - oldestUpdate.lastUpdated.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
+      console.log(`[GGB Ranking] Última atualização: ${oldestUpdate.lastUpdated.toISOString()}, Diferença: ${diffHours.toFixed(2)} horas, Deve atualizar: ${shouldUpdate}`);
+    } else {
+      console.log('[GGB Ranking] Nenhum dado existente no banco, será necessário buscar da API');
+    }
+
     if (!shouldUpdate && existingData.length > 0) {
       // Retornar dados do cache
       const ranking = existingData
@@ -109,10 +118,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Buscar dados da API
-    console.log('Buscando dados financeiros da API...');
+    console.log('[GGB Ranking] Buscando dados financeiros da API...');
     const apiData = await financialDataService.fetchAllTickers(GGB_TICKERS);
+    console.log(`[GGB Ranking] Dados recebidos da API: ${apiData.length} tickers`);
 
     if (apiData.length === 0) {
+      console.warn('[GGB Ranking] API retornou dados vazios. Tentando retornar cache mesmo se antigo.');
       // Se API falhou mas temos cache, retornar cache mesmo se antigo
       if (existingData.length > 0) {
         const ranking = existingData
@@ -173,8 +184,9 @@ export async function GET(request: NextRequest) {
     }));
 
     // Calcular ranking
-    console.log('Calculando scores GGB...');
+    console.log('[GGB Ranking] Calculando scores GGB...');
     const rankingResults = calculateGGBRanking(stocksForCalculation);
+    console.log(`[GGB Ranking] Scores calculados para ${rankingResults.length} ações`);
 
     // Preparar dados para inserção em batch
     const dataToInsert = rankingResults.map(result => {
@@ -201,6 +213,7 @@ export async function GET(request: NextRequest) {
 
     // Salvar no banco (usar transação para garantir consistência)
     // Usar createMany em vez de múltiplos create() para evitar timeout de transação
+    console.log('[GGB Ranking] Salvando dados no banco...');
     await prisma.$transaction(async (tx) => {
       // Limpar dados antigos
       await tx.gGBRanking.deleteMany({});
@@ -215,6 +228,7 @@ export async function GET(request: NextRequest) {
     }, {
       timeout: 10000, // 10 segundos de timeout
     });
+    console.log('[GGB Ranking] Dados salvos com sucesso no banco');
 
     // Preparar resposta
     const ranking = rankingResults.map(result => {
