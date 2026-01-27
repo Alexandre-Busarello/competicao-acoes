@@ -127,6 +127,22 @@ export default function RankingGGBPage() {
             <div className="mb-6">
               <GGBDisclaimer />
             </div>
+
+            {/* Fonte de dados */}
+            <div className="mt-6 pt-6 border-t border-border">
+              <p className="text-xs text-muted-foreground text-center opacity-70">
+                Dados das empresas do GGB fornecidos por{' '}
+                <a 
+                  href="https://precojusto.ai/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  title="Preço Justo AI - Análise Fundamentalista de Ações da B3"
+                  className="hover:underline"
+                >
+                  Preço Justo AI
+                </a>
+              </p>
+            </div>
           </>
         )}
       </div>
