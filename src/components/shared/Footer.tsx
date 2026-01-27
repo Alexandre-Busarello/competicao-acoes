@@ -105,6 +105,18 @@ export function Footer() {
               <p className="text-muted-foreground text-xs">
                 © {currentYear} Hold Arena. Todos os direitos reservados.
               </p>
+              <p className="text-muted-foreground text-xs mt-2 opacity-70">
+                Dados das empresas do GGB fornecidos por{' '}
+                <a 
+                  href="https://precojusto.ai/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  title="Preço Justo AI - Análise Fundamentalista de Ações da B3"
+                  className="hover:underline"
+                >
+                  Preço Justo AI
+                </a>
+              </p>
             </div>
           </div>
         </div>
