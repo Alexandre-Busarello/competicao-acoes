@@ -341,8 +341,13 @@ export class MedalService {
   /**
    * Encontra períodos que ainda não foram apurados
    * Retorna lista de períodos únicos que têm rankings mas não têm MedalSettlement
+   * Filtra apenas períodos passados (não futuros ou atuais)
    */
   async findUnsettledPeriods(): Promise<Array<{ period: 'mensal' | 'anual'; year: number; month: number | null }>> {
+    const now = new Date();
+    const currentYear = now.getUTCFullYear();
+    const currentMonth = now.getUTCMonth() + 1; // getUTCMonth() retorna 0-11
+
     // Busca todos os rankings únicos
     const rankings = await prisma.rankingCalculation.findMany({
       select: {
@@ -371,11 +376,38 @@ export class MedalService {
       settlements.map(s => `${s.period}-${s.year}-${s.month ?? 'null'}`)
     );
 
-    // Filtra períodos que não têm settlement
+    // Filtra períodos que não têm settlement E são períodos passados válidos
     const unsettled = rankings
       .filter(r => {
         const key = `${r.period}-${r.year}-${r.month ?? 'null'}`;
-        return !settlementSet.has(key);
+        
+        // Se já foi apurado, não incluir
+        if (settlementSet.has(key)) {
+          return false;
+        }
+
+        // Para períodos mensais: apenas períodos anteriores ao mês atual
+        // (não incluir o mês atual ou meses futuros)
+        if (r.period === 'mensal' && r.month !== null) {
+          if (r.year < currentYear) {
+            return true; // Ano passado, sempre válido
+          }
+          if (r.year === currentYear) {
+            // Apenas meses anteriores ao mês atual (não incluir mês atual)
+            return r.month < currentMonth;
+          }
+          return false; // Ano futuro, não válido
+        }
+
+        // Para períodos anuais: apenas anos anteriores ao ano atual
+        // (não incluir o ano atual ou anos futuros)
+        // O catch-up não deve processar anos anuais - apenas o método principal processa em janeiro
+        if (r.period === 'anual' && r.month === null) {
+          // Não incluir anos anuais no catch-up - eles são processados apenas em janeiro pelo método principal
+          return false;
+        }
+
+        return false;
       })
       .map(r => ({
         period: r.period as 'mensal' | 'anual',
@@ -406,40 +438,62 @@ export class MedalService {
     // Determina período anterior em UTC
     const previousPeriod = getUTCPreviousPeriod();
     const isJanuary = isUTCJanuary();
+    const now = new Date();
+    const currentYear = now.getUTCFullYear();
+    const currentMonth = now.getUTCMonth() + 1; // getUTCMonth() retorna 0-11
 
     console.log(`[UTC] Iniciando apuração de medalhas. Período anterior: ${previousPeriod.year}/${previousPeriod.month}`);
+    console.log(`[UTC] Data atual: ${currentYear}/${currentMonth}`);
 
-    // Apura ranking mensal do mês anterior
-    const monthlyResult = await this.settleMedalsForPeriod(
-      'mensal',
-      previousPeriod.year,
-      previousPeriod.month
-    );
+    // Validação: garantir que o período anterior não é futuro ou atual
+    // O período anterior deve ser estritamente anterior ao mês atual
+    const isPreviousPeriodValid = 
+      previousPeriod.year < currentYear || 
+      (previousPeriod.year === currentYear && previousPeriod.month < currentMonth);
 
-    if (monthlyResult.settled) {
-      periodsSettled++;
-      totalMedalsCreated += monthlyResult.medalsCreated;
-      monthlySettled = {
-        year: previousPeriod.year,
-        month: previousPeriod.month,
-      };
+    if (!isPreviousPeriodValid) {
+      console.log(`[UTC] AVISO: Período anterior calculado (${previousPeriod.year}/${previousPeriod.month}) não é anterior ao período atual (${currentYear}/${currentMonth}). Pulando apuração mensal.`);
+    } else {
+      console.log(`[UTC] Processando apuração mensal para ${previousPeriod.year}/${previousPeriod.month}`);
+      // Apura ranking mensal do mês anterior
+      const monthlyResult = await this.settleMedalsForPeriod(
+        'mensal',
+        previousPeriod.year,
+        previousPeriod.month
+      );
+
+      if (monthlyResult.settled) {
+        periodsSettled++;
+        totalMedalsCreated += monthlyResult.medalsCreated;
+        monthlySettled = {
+          year: previousPeriod.year,
+          month: previousPeriod.month,
+        };
+      }
     }
 
     // Se é Janeiro em UTC, também apura ranking anual do ano anterior
+    // IMPORTANTE: Só apura anual se for janeiro E o ano anterior for realmente anterior
     if (isJanuary) {
       const previousYear = getUTCPreviousYear();
-      console.log(`[UTC] Janeiro detectado. Apurando ranking anual de ${previousYear}`);
       
-      const annualResult = await this.settleMedalsForPeriod(
-        'anual',
-        previousYear,
-        null
-      );
+      // Validação adicional: garantir que o ano anterior é realmente anterior
+      if (previousYear < currentYear) {
+        console.log(`[UTC] Janeiro detectado. Apurando ranking anual de ${previousYear}`);
+        
+        const annualResult = await this.settleMedalsForPeriod(
+          'anual',
+          previousYear,
+          null
+        );
 
-      if (annualResult.settled) {
-        periodsSettled++;
-        totalMedalsCreated += annualResult.medalsCreated;
-        annualSettled = { year: previousYear };
+        if (annualResult.settled) {
+          periodsSettled++;
+          totalMedalsCreated += annualResult.medalsCreated;
+          annualSettled = { year: previousYear };
+        }
+      } else {
+        console.log(`[UTC] AVISO: Ano anterior calculado (${previousYear}) não é anterior ao ano atual (${currentYear}). Pulando apuração anual.`);
       }
     }
 
