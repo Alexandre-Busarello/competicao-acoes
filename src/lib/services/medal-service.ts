@@ -53,10 +53,11 @@ export class MedalService {
     });
 
     for (const ranking of rankings) {
-      const rankingData = ranking.rankingData as unknown as RankingEntryForStorage[];
+      const rankingData = ranking.rankingData as any;
+      const rankingEntries = (rankingData?.ranking || []) as RankingEntryForStorage[];
       
       // Encontra posição do usuário no ranking
-      const userEntry = rankingData.find(entry => entry.userId === userId);
+      const userEntry = rankingEntries.find(entry => entry.userId === userId);
       
       if (!userEntry || userEntry.rank > 3) {
         // Usuário não está no top 3, não recebe medalha
@@ -187,8 +188,9 @@ export class MedalService {
     const userIds = new Set<string>();
     
     for (const ranking of rankings) {
-      const rankingData = ranking.rankingData as unknown as RankingEntryForStorage[];
-      rankingData.forEach(entry => {
+      const rankingData = ranking.rankingData as any;
+      const rankingEntries = (rankingData?.ranking || []) as RankingEntryForStorage[];
+      rankingEntries.forEach(entry => {
         if (entry.rank <= 3) {
           userIds.add(entry.userId);
         }
@@ -264,11 +266,12 @@ export class MedalService {
       return { settled: false, medalsCreated: 0 };
     }
 
-    const rankingData = lastRanking.rankingData as unknown as RankingEntryForStorage[];
+    const rankingData = lastRanking.rankingData as any;
+    const rankingEntries = (rankingData?.ranking || []) as RankingEntryForStorage[];
     
     // Processa top 3
     let medalsCreated = 0;
-    const top3 = rankingData.filter(entry => entry.rank <= 3).sort((a, b) => a.rank - b.rank);
+    const top3 = rankingEntries.filter(entry => entry.rank <= 3).sort((a, b) => a.rank - b.rank);
 
     for (const userEntry of top3) {
       const medalType = userEntry.rank === 1 ? 'gold' : userEntry.rank === 2 ? 'silver' : 'bronze';
