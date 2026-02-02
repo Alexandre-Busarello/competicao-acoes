@@ -137,14 +137,14 @@ export default function PortfolioAnualPage() {
         <>
           <AssetAllocationChart assets={competitor.portfolio} />
           <AssetList assets={competitor.portfolio} isPremium={canAccess} isOwner={isOwner} />
-          <ClosedPositionsList userId={competitor.id} isPremium={canAccess} isOwner={isOwner} hasActivePositions={competitor.portfolio.length > 0 && competitor.portfolio.reduce((sum, asset) => sum + (asset.currentPrice * asset.quantity), 0) > 0} portfolioLength={competitor.portfolio.length} />
+          <ClosedPositionsList userId={competitor.id} isPremium={canAccess} isOwner={isOwner} hasActivePositions={competitor.portfolio.length > 0 && competitor.portfolio.reduce((sum, asset) => sum + (asset.currentPrice * asset.quantity), 0) > 0} portfolioLength={competitor.portfolio.length} period="anual" year={year} />
           <UserTransactionList userId={competitor.id} isPremium={canAccess} isOwner={isOwner} period="anual" year={year} />
         </>
       ) : (
         <>
           <AssetAllocationChart assets={competitor.portfolio} />
           <AssetList assets={competitor.portfolio} isPremium={false} isOwner={false} />
-          <ClosedPositionsList userId={competitor.id} isPremium={false} isOwner={false} hasActivePositions={competitor.portfolio.length > 0 && competitor.portfolio.some(asset => asset.quantity > 0)} portfolioLength={competitor.portfolio.length} />
+          <ClosedPositionsList userId={competitor.id} isPremium={false} isOwner={false} hasActivePositions={competitor.portfolio.length > 0 && competitor.portfolio.some(asset => asset.quantity > 0)} portfolioLength={competitor.portfolio.length} period="anual" year={year} />
           <UserTransactionList userId={competitor.id} isPremium={false} isOwner={false} period="anual" year={year} />
           <BlurOverlay competitorName={competitor.name} />
         </>

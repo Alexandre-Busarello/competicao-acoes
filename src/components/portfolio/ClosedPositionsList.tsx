@@ -6,6 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TrendingUp, TrendingDown, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { isWithinInterval } from 'date-fns';
+import { getPeriodRange } from '@/lib/utils/period-utils';
 import type { Transaction } from '@/types';
 import { formatPrice } from '@/lib/utils/currency';
 import { normalizeTickerForGrouping } from '@/lib/utils/portfolio-calculator';
@@ -30,9 +32,12 @@ interface ClosedPositionsListProps {
   isOwner?: boolean;
   hasActivePositions?: boolean;
   portfolioLength?: number; // Quantidade de ativos na carteira
+  period?: 'mensal' | 'anual';
+  year?: number;
+  month?: number;
 }
 
-export function ClosedPositionsList({ userId, isPremium = false, isOwner = false, hasActivePositions = false, portfolioLength = 0 }: ClosedPositionsListProps) {
+export function ClosedPositionsList({ userId, isPremium = false, isOwner = false, hasActivePositions = false, portfolioLength = 0, period, year, month }: ClosedPositionsListProps) {
   const canView = isPremium || isOwner;
   // Se há apenas 1 ativo ou carteira zerada e usuário não é premium/owner, mostrar com blur
   const shouldShowWithBlur = !canView && (portfolioLength <= 1);
@@ -57,13 +62,25 @@ export function ClosedPositionsList({ userId, isPremium = false, isOwner = false
     staleTime: 30 * 1000, // 30 segundos
   });
 
+  // Filtrar transações por período específico se fornecido
+  const filteredTransactions = useMemo(() => {
+    if (period && year !== undefined) {
+      const { start, end } = getPeriodRange(period, year, month);
+      return transactions.filter((transaction) => {
+        return isWithinInterval(transaction.date, { start, end });
+      });
+    }
+    // Se não há período especificado, usar todas as transações (comportamento padrão)
+    return transactions;
+  }, [transactions, period, year, month]);
+
   const closedPositions = useMemo(() => {
-    if (!transactions.length) return [];
+    if (!filteredTransactions.length) return [];
 
     // Agrupar transações por ticker normalizado
     const tickerMap = new Map<string, Transaction[]>();
     
-    transactions.forEach((tx) => {
+    filteredTransactions.forEach((tx) => {
       const normalizedTicker = normalizeTickerForGrouping(tx.ticker);
       const existing = tickerMap.get(normalizedTicker) || [];
       tickerMap.set(normalizedTicker, [...existing, tx]);
@@ -115,7 +132,7 @@ export function ClosedPositionsList({ userId, isPremium = false, isOwner = false
 
     // Ordenar por rentabilidade (maior primeiro)
     return closed.sort((a, b) => b.returnPercentage - a.returnPercentage);
-  }, [transactions]);
+  }, [filteredTransactions]);
 
   if (isLoading) {
     return (

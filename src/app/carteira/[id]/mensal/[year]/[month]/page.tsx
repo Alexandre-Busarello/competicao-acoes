@@ -139,14 +139,14 @@ export default function PortfolioMensalPage() {
         <>
           <AssetAllocationChart assets={competitor.portfolio} />
           <AssetList assets={competitor.portfolio} isPremium={canAccess} isOwner={isOwner} />
-          <ClosedPositionsList userId={competitor.id} isPremium={canAccess} isOwner={isOwner} hasActivePositions={competitor.portfolio.length > 0 && competitor.portfolio.reduce((sum, asset) => sum + (asset.currentPrice * asset.quantity), 0) > 0} portfolioLength={competitor.portfolio.length} />
+          <ClosedPositionsList userId={competitor.id} isPremium={canAccess} isOwner={isOwner} hasActivePositions={competitor.portfolio.length > 0 && competitor.portfolio.reduce((sum, asset) => sum + (asset.currentPrice * asset.quantity), 0) > 0} portfolioLength={competitor.portfolio.length} period="mensal" year={year} month={month} />
           <UserTransactionList userId={competitor.id} isPremium={canAccess} isOwner={isOwner} period="mensal" year={year} month={month} />
         </>
       ) : (
         <>
           <AssetAllocationChart assets={competitor.portfolio} />
           <AssetList assets={competitor.portfolio} isPremium={false} isOwner={false} />
-          <ClosedPositionsList userId={competitor.id} isPremium={false} isOwner={false} hasActivePositions={competitor.portfolio.length > 0 && competitor.portfolio.some(asset => asset.quantity > 0)} portfolioLength={competitor.portfolio.length} />
+          <ClosedPositionsList userId={competitor.id} isPremium={false} isOwner={false} hasActivePositions={competitor.portfolio.length > 0 && competitor.portfolio.some(asset => asset.quantity > 0)} portfolioLength={competitor.portfolio.length} period="mensal" year={year} month={month} />
           <UserTransactionList userId={competitor.id} isPremium={false} isOwner={false} period="mensal" year={year} month={month} />
           <BlurOverlay competitorName={competitor.name} />
         </>
