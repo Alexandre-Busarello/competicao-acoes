@@ -9,6 +9,7 @@ import { format, startOfYear, endOfYear, startOfMonth, endOfMonth, isWithinInter
 import { getPeriodRange } from '@/lib/utils/period-utils';
 import { ptBR } from 'date-fns/locale';
 import { formatPrice } from '@/lib/utils/currency';
+import { getUTCDateString, formatTransactionDate } from '@/lib/utils/date-utils';
 import type { Transaction } from '@/types';
 
 // Mapeamento de números de mês para nomes em português
@@ -87,8 +88,10 @@ export function UserTransactionList({
     const grouped: GroupedTransactions = {};
 
     sorted.forEach((transaction) => {
-      const monthKey = format(transaction.date, 'yyyy-MM');
-      const dayKey = format(transaction.date, 'yyyy-MM-dd');
+      // Usar UTC para agrupamento para evitar problemas de timezone
+      const dateString = getUTCDateString(transaction.date);
+      const monthKey = dateString.substring(0, 7); // 'yyyy-MM'
+      const dayKey = dateString; // 'yyyy-MM-dd'
 
       if (!grouped[monthKey]) {
         grouped[monthKey] = {};
@@ -195,8 +198,10 @@ export function UserTransactionList({
               <div className="space-y-4">
                 {dayKeys.map((dayKey) => {
                   const dayTransactions = groupedTransactions[monthKey][dayKey];
-                  const dayDate = new Date(dayKey);
-                  const dayName = format(dayDate, "EEEE, dd 'de' MMMM", { locale: ptBR });
+                  // dayKey já está no formato 'yyyy-MM-dd' em UTC, criar data usando UTC
+                  const [year, month, day] = dayKey.split('-').map(Number);
+                  const dayDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+                  const dayName = formatTransactionDate(dayDate, "EEEE, dd 'de' MMMM", ptBR);
                   const dayNameCapitalized = dayName.charAt(0).toUpperCase() + dayName.slice(1);
 
                   return (

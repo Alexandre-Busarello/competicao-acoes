@@ -92,6 +92,87 @@ export function calculateTotalFromSales(
 }
 
 /**
+ * Calcula total recebido em vendas validando contra compras no mesmo período
+ * 
+ * Para ranking mensal, apenas vendas que têm compras correspondentes no mesmo mês
+ * devem ser consideradas. Vendas de ativos comprados em meses anteriores não devem
+ * entrar no cálculo de rentabilidade mensal.
+ * 
+ * A função agrupa compras e vendas por ticker e valida se há compras suficientes
+ * para cobrir as vendas. Se vendeu mais do que comprou no período, considera apenas
+ * o valor proporcional das vendas que correspondem às compras.
+ * 
+ * Exemplo:
+ * - Comprou 50 ações de PETR4 no mês
+ * - Vendeu 100 ações de PETR4 no mês
+ * - Resultado: considera apenas 50 vendas (valor de 50 * preço médio de venda)
+ * 
+ * @param transactions - Transações do período (mensal)
+ * @returns Valor total das vendas válidas (que têm compras correspondentes)
+ */
+export function calculateTotalFromSalesWithValidation(
+  transactions: Transaction[]
+): number {
+  // Agrupar compras e vendas por ticker
+  const tickerData = new Map<string, {
+    totalPurchases: number;
+    totalSales: number;
+    salesValue: number;
+    salesTransactions: Array<{ quantity: number; price: number }>;
+  }>();
+
+  for (const tx of transactions) {
+    const ticker = normalizeTickerForGrouping(tx.ticker);
+    const data = tickerData.get(ticker) || {
+      totalPurchases: 0,
+      totalSales: 0,
+      salesValue: 0,
+      salesTransactions: [],
+    };
+
+    if (tx.type === 'compra') {
+      data.totalPurchases += tx.quantity;
+    } else if (tx.type === 'venda') {
+      data.totalSales += tx.quantity;
+      data.salesValue += tx.quantity * tx.price;
+      data.salesTransactions.push({
+        quantity: tx.quantity,
+        price: tx.price,
+      });
+    }
+
+    tickerData.set(ticker, data);
+  }
+
+  // Calcular valor válido das vendas para cada ticker
+  let totalValidSalesValue = 0;
+
+  for (const [ticker, data] of tickerData.entries()) {
+    // Se não há vendas, pular
+    if (data.totalSales === 0) {
+      continue;
+    }
+
+    // Se não há compras, não considerar nenhuma venda
+    if (data.totalPurchases === 0) {
+      continue;
+    }
+
+    // Se vendas <= compras, considerar todas as vendas
+    if (data.totalSales <= data.totalPurchases) {
+      totalValidSalesValue += data.salesValue;
+    } else {
+      // Se vendas > compras, considerar apenas o valor proporcional
+      // Calcular proporção: compras / vendas
+      const ratio = data.totalPurchases / data.totalSales;
+      totalValidSalesValue += data.salesValue * ratio;
+    }
+  }
+
+  return totalValidSalesValue;
+}
+
+/**
  * Calcula posições atuais (agrupando por ticker)
  * 
  * IMPORTANTE: Quando há vendas, o totalValue é reduzido proporcionalmente

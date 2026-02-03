@@ -4,9 +4,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { useTransactionStore } from '@/lib/store/transactionStore';
 import { useUserStore } from '@/lib/store/userStore';
-import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatPrice, isUSDCurrency } from '@/lib/utils/currency';
+import { formatTransactionDate } from '@/lib/utils/date-utils';
 
 export function TransactionList() {
   const { user } = useUserStore();
@@ -92,9 +92,7 @@ export function TransactionList() {
                           {transaction.quantity} unidades × {formatPrice(transaction.price, transaction.ticker)}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {format(transaction.date, "dd 'de' MMMM 'de' yyyy", {
-                            locale: ptBR,
-                          })}
+                          {formatTransactionDate(transaction.date, "dd 'de' MMMM 'de' yyyy", ptBR)}
                         </p>
                       </div>
                       <div className="text-right">

@@ -1,5 +1,5 @@
 import { priceService } from './price-service';
-import { calculatePortfolio, calculateReturns, calculateTotalFromSales } from '@/lib/utils/portfolio-calculator';
+import { calculatePortfolio, calculateReturns, calculateTotalFromSales, calculateTotalFromSalesWithValidation } from '@/lib/utils/portfolio-calculator';
 import { prisma } from '@/lib/prisma/client';
 import { RankingCache } from '@/lib/cache/ranking-cache';
 import { determineAssetType, getAssetName, getETFCategory } from '@/lib/utils/asset-type';
@@ -287,8 +287,9 @@ export class RankingService {
       const monthlyPositionsValue = monthlyAssets.reduce((sum, asset) => {
         return sum + (asset.quantity * asset.currentPrice);
       }, 0);
+      // Para ranking mensal, usar validação de vendas contra compras
       const monthlyCashFromSales = monthlyTransactions && monthlyTransactions.length > 0
-        ? calculateTotalFromSales(monthlyTransactions)
+        ? calculateTotalFromSalesWithValidation(monthlyTransactions)
         : 0;
       const monthlyCurrentValue = monthlyPositionsValue + monthlyCashFromSales;
       
@@ -552,6 +553,10 @@ export class RankingService {
       // 13. Marcar checkpoint como completo
       await checkpointService.completeCheckpoint(checkpoint.id);
 
+      // 14. Detectar mudanças de ranking e enviar notificações
+      await this.detectRankingChanges(monthlyResult, 'mensal', current.year, current.month);
+      await this.detectRankingChanges(annualResult, 'anual', current.year, undefined);
+
       return {
         completed: true,
         monthly: monthlyResult,
@@ -789,8 +794,9 @@ export class RankingService {
       const monthlyPositionsValue = monthlyAssets.reduce((sum, asset) => {
         return sum + (asset.quantity * asset.currentPrice);
       }, 0);
+      // Para ranking mensal, usar validação de vendas contra compras
       const monthlyCashFromSales = monthlyTransactions && monthlyTransactions.length > 0
-        ? calculateTotalFromSales(monthlyTransactions)
+        ? calculateTotalFromSalesWithValidation(monthlyTransactions)
         : 0;
       const monthlyCurrentValue = monthlyPositionsValue + monthlyCashFromSales;
       
