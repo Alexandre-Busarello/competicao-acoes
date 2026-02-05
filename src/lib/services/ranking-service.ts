@@ -1027,31 +1027,40 @@ export class RankingService {
     try {
       const { pushNotificationService } = await import('./push-notification-service');
 
-      // Buscar histórico anterior de posições
-      const historyRecords = await prisma.userRankingHistory.findMany({
-        where: {
-          period,
-          year,
-          month: period === 'mensal' ? (month ?? null) : null,
-        },
-      });
+      // Array para armazenar notificações a serem criadas após a transação
+      const notificationsToCreate: Array<{
+        userId: string;
+        previousPosition: number;
+        currentPosition: number;
+        changeType: 'top3' | 'up' | 'down';
+      }> = [];
 
-      const previousPositions = new Map<string, number>();
-      historyRecords.forEach(record => {
-        previousPositions.set(record.userId, record.position);
-      });
+      // Usar transação para garantir atomicidade e evitar race conditions
+      await prisma.$transaction(async (tx) => {
+        // Buscar histórico anterior de posições dentro da transação
+        const historyRecords = await tx.userRankingHistory.findMany({
+          where: {
+            period,
+            year,
+            month: period === 'mensal' ? (month ?? null) : null,
+          },
+        });
 
-      // Comparar posições atuais com anteriores
-      for (const entry of ranking.ranking) {
-        const userId = entry.userId;
-        const currentPosition = entry.rank;
-        const previousPosition = previousPositions.get(userId);
+        const previousPositions = new Map<string, number>();
+        historyRecords.forEach(record => {
+          previousPositions.set(record.userId, record.position);
+        });
 
-        // Se não tinha posição anterior, é novo no ranking - não notificar
-        if (previousPosition === undefined) {
-          // Salvar posição atual no histórico
-          const monthValue = period === 'mensal' ? (month ?? null) : null;
-          await prisma.userRankingHistory.upsert({
+        const monthValue = period === 'mensal' ? (month ?? null) : null;
+
+        // Processar todas as mudanças e atualizar histórico dentro da transação
+        for (const entry of ranking.ranking) {
+          const userId = entry.userId;
+          const currentPosition = entry.rank;
+          const previousPosition = previousPositions.get(userId);
+
+          // Atualizar histórico ANTES de verificar mudanças (garante atomicidade)
+          await tx.userRankingHistory.upsert({
             where: {
               userId_period_year_month: {
                 userId,
@@ -1072,74 +1081,69 @@ export class RankingService {
               updatedAt: new Date(),
             },
           });
-          continue;
-        }
 
-        // Verificar se mudou de posição (qualquer mudança)
-        const positionChange = previousPosition - currentPosition; // positivo = subiu, negativo = desceu
-        
-        // Notificar sempre que houver mudança de posição
-        if (positionChange !== 0) {
-          let changeType: 'top3' | 'up' | 'down' = 'up';
-
-          // Entrou no top 3
-          if (currentPosition <= 3 && previousPosition > 3) {
-            changeType = 'top3';
-          }
-          // Subiu posições
-          else if (positionChange > 0) {
-            changeType = 'up';
-          }
-          // Desceu posições
-          else {
-            changeType = 'down';
+          // Se não tinha posição anterior, é novo no ranking - não notificar
+          if (previousPosition === undefined) {
+            continue;
           }
 
-          // Enviar notificação push (não bloquear se falhar)
-          pushNotificationService.sendRankingNotification(userId, {
-            previousPosition,
-            currentPosition,
-            changeType,
-            period,
-          }).catch(error => {
-            console.error(`Erro ao enviar notificação push de ranking para usuário ${userId}:`, error);
-          });
+          // Verificar se mudou de posição (qualquer mudança)
+          const positionChange = previousPosition - currentPosition; // positivo = subiu, negativo = desceu
+          
+          // Notificar sempre que houver mudança de posição
+          if (positionChange !== 0) {
+            let changeType: 'top3' | 'up' | 'down' = 'up';
 
-          // Criar notificação interna (bell/sininho) - não bloquear se falhar
-          const { internalNotificationService } = await import('./internal-notification-service');
-          internalNotificationService.createRankingNotification({
-            userId,
-            previousPosition,
-            currentPosition,
-            changeType,
-            period,
-          }).catch(error => {
-            console.error(`Erro ao criar notificação interna de ranking para usuário ${userId}:`, error);
-          });
-        }
+            // Entrou no top 3
+            if (currentPosition <= 3 && previousPosition > 3) {
+              changeType = 'top3';
+            }
+            // Subiu posições
+            else if (positionChange > 0) {
+              changeType = 'up';
+            }
+            // Desceu posições
+            else {
+              changeType = 'down';
+            }
 
-        // Atualizar histórico
-        const monthValue = period === 'mensal' ? (month ?? null) : null;
-        await prisma.userRankingHistory.upsert({
-          where: {
-            userId_period_year_month: {
+            // Armazenar notificação para criar depois da transação
+            notificationsToCreate.push({
               userId,
-              period,
-              year,
-              month: monthValue,
-            } as any,
-          },
-          create: {
-            userId,
-            period,
-            year,
-            month: monthValue,
-            position: currentPosition,
-          },
-          update: {
-            position: currentPosition,
-            updatedAt: new Date(),
-          },
+              previousPosition,
+              currentPosition,
+              changeType,
+            });
+          }
+        }
+      }, {
+        // Timeout de 30 segundos para a transação
+        timeout: 30000,
+      });
+
+      // Criar notificações APÓS a transação ser commitada (evita race conditions)
+      // Isso garante que o histórico já foi atualizado antes de qualquer outra execução ler
+      for (const notification of notificationsToCreate) {
+        // Enviar notificação push (não bloquear se falhar)
+        pushNotificationService.sendRankingNotification(notification.userId, {
+          previousPosition: notification.previousPosition,
+          currentPosition: notification.currentPosition,
+          changeType: notification.changeType,
+          period,
+        }).catch(error => {
+          console.error(`Erro ao enviar notificação push de ranking para usuário ${notification.userId}:`, error);
+        });
+
+        // Criar notificação interna (bell/sininho) - não bloquear se falhar
+        const { internalNotificationService } = await import('./internal-notification-service');
+        internalNotificationService.createRankingNotification({
+          userId: notification.userId,
+          previousPosition: notification.previousPosition,
+          currentPosition: notification.currentPosition,
+          changeType: notification.changeType,
+          period,
+        }).catch(error => {
+          console.error(`Erro ao criar notificação interna de ranking para usuário ${notification.userId}:`, error);
         });
       }
     } catch (error) {

@@ -72,6 +72,42 @@ export class InternalNotificationService {
     changeType: 'top3' | 'up' | 'down';
     period: 'mensal' | 'anual';
   }): Promise<void> {
+    // Verificar se já existe uma notificação de ranking muito recente (últimos 5 minutos)
+    // para evitar notificações duplicadas em caso de race conditions
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const recentNotification = await prisma.notification.findFirst({
+      where: {
+        userId: data.userId,
+        type: 'ranking',
+        createdAt: {
+          gte: fiveMinutesAgo,
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    // Se existe uma notificação recente, verificar se é para a mesma posição atual
+    // Se for, não criar outra notificação (evita duplicatas)
+    if (recentNotification && recentNotification.content) {
+      try {
+        const recentContent = JSON.parse(recentNotification.content);
+        if (
+          recentContent.currentPosition === data.currentPosition &&
+          recentContent.period === data.period
+        ) {
+          console.log(
+            `[InternalNotification] Pulando notificação duplicada de ranking para usuário ${data.userId} - já existe notificação recente para posição ${data.currentPosition}`
+          );
+          return;
+        }
+      } catch (error) {
+        // Se não conseguir parsear, continuar e criar a notificação
+        console.warn(`[InternalNotification] Erro ao verificar notificação recente:`, error);
+      }
+    }
+
     // Criar conteúdo JSON com informações da mudança de ranking
     const content = JSON.stringify({
       previousPosition: data.previousPosition,

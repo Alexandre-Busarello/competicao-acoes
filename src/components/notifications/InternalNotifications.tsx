@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import { Loader2, Heart, MessageCircle, Reply, CheckCheck, TrendingUp, TrendingD
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface AggregatedNotification {
   id: string;
@@ -50,6 +51,7 @@ export function InternalNotifications({
   compact = false,
 }: InternalNotificationsProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery<{
@@ -102,6 +104,28 @@ export function InternalNotifications({
       queryClient.invalidateQueries({ queryKey: ['notifications-badge'] });
     },
   });
+
+  // Ref para evitar múltiplas execuções na mesma montagem
+  const hasMarkedAsRead = useRef(false);
+
+  // Resetar o ref quando sair da página de notificações
+  useEffect(() => {
+    if (pathname !== '/notificacoes') {
+      hasMarkedAsRead.current = false;
+    }
+  }, [pathname]);
+
+  // Marcar todas as notificações como lidas ao abrir o componente
+  useEffect(() => {
+    // Só executar quando estiver na página de notificações, houver dados e ainda não tiver marcado
+    if (pathname === '/notificacoes' && !isLoading && data && !hasMarkedAsRead.current) {
+      const hasUnreadNotifications = data.notifications.some((n) => !n.read);
+      if (hasUnreadNotifications) {
+        hasMarkedAsRead.current = true;
+        markAllAsReadMutation.mutate();
+      }
+    }
+  }, [pathname, isLoading, data, markAllAsReadMutation]);
 
   const getInitials = (name: string) => {
     return name
