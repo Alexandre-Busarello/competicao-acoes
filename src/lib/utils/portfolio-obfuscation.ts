@@ -42,9 +42,23 @@ export function obfuscatePortfolioAssets(
     return [];
   }
 
-  // Se há apenas um ativo, oculta para usuários não premium
+  // Se há apenas um ativo, retornar com dados mockados (ofuscados)
+  // Isso evita que carteiras com 1 ativo apareçam como zeradas
+  // E garante que os dados reais não sejam expostos na resposta da API
   if (assets.length === 1) {
-    return [];
+    const asset = assets[0];
+    return [{
+      id: `mock-${asset.id}-0`,
+      ticker: generateMockTicker(1), // Mockar ticker para não expor dados reais
+      name: generateMockName(1), // Mockar nome para não expor dados reais
+      type: asset.type, // Manter o tipo para não quebrar a UI
+      etfCategory: asset.etfCategory,
+      quantity: asset.quantity, // Manter quantidade para cálculos de proporção
+      averagePrice: asset.averagePrice, // Manter para cálculos
+      currentPrice: asset.currentPrice, // Manter para cálculos
+      return: asset.return, // Manter retorno para cálculos
+      visible: false, // Marcar como não visível para aplicar blur
+    }];
   }
 
   // Pegar o primeiro ativo real

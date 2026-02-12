@@ -18,8 +18,8 @@ export function AssetList({ assets, isPremium, isOwner = false }: AssetListProps
   // Verificar se um ativo é mockado (começa com MOCK)
   const isMockedAsset = (ticker: string) => ticker.startsWith('MOCK');
   
-  // Se há apenas um ativo e usuário não é premium nem owner, não mostrar nada
-  if (!canView && assets.length === 1) {
+  // Se não há ativos, não mostrar nada
+  if (assets.length === 0) {
     return null;
   }
   
@@ -28,7 +28,11 @@ export function AssetList({ assets, isPremium, isOwner = false }: AssetListProps
       <h2 className="text-lg font-semibold mb-4">Carteira</h2>
       <div className="space-y-3">
         {assets.map((asset, index) => {
-          const isVisible = canView || asset.visible || index === 0;
+          // Se pode visualizar (premium ou owner), sempre visível
+          // Caso contrário:
+          // - Se asset.visible é explicitamente false, aplicar blur
+          // - Se asset.visible é true ou undefined, mostrar primeiro ativo sem blur
+          const isVisible = canView || (asset.visible !== false && index === 0);
           const isPositive = asset.return >= 0;
           const isMocked = isMockedAsset(asset.ticker);
 
