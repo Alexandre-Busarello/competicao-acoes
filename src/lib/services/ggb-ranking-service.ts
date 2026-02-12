@@ -120,22 +120,42 @@ function calculatePercentiles(values: number[]): { p25: number; p50: number; p75
 
 /**
  * Verifica se uma ação deve ser excluída do ranking
+ * Usa ROE como fallback quando ROIC for negativo ou ausente
  */
 export function shouldExcludeStock(financialData: FinancialData): boolean {
   const sector = financialData.sector;
   const isBank = isBankSector(sector);
   
-  // ROIC ≤ 0 → fora do ranking
-  // EXCEÇÃO: Bancos podem não ter ROIC (usam ROE), então não excluir se for banco e não tiver ROIC
-  if (!isBank) {
-    if (financialData.roic !== null && financialData.roic !== undefined && financialData.roic <= 0) {
-      return true;
+  const roic = financialData.roic;
+  const roe = financialData.roe;
+  
+  // Verificar ROIC primeiro
+  const hasValidRoic = roic !== null && roic !== undefined && roic > 0;
+  const hasNegativeRoic = roic !== null && roic !== undefined && roic <= 0;
+  
+  // Se ROIC for válido e positivo, não excluir
+  if (hasValidRoic) {
+    return false;
+  }
+  
+  // Se ROIC for negativo ou ausente, verificar ROE como fallback
+  if (hasNegativeRoic || roic === null || roic === undefined) {
+    const hasValidRoe = roe !== null && roe !== undefined && roe > 0;
+    
+    // Se ROE for válido e positivo, usar como fallback e não excluir
+    if (hasValidRoe) {
+      return false;
     }
-  } else {
-    // Para bancos, só excluir se ROIC for explicitamente negativo (não apenas ausente)
-    if (financialData.roic !== null && financialData.roic !== undefined && financialData.roic < 0) {
-      return true;
+    
+    // Se tanto ROIC quanto ROE forem negativos ou ausentes, excluir
+    // EXCEÇÃO: Para bancos, se ROIC não estiver disponível mas ROE também não estiver, não excluir
+    // (bancos podem não ter essas métricas disponíveis)
+    if (isBank && (roic === null || roic === undefined) && (roe === null || roe === undefined)) {
+      return false; // Não excluir bancos sem ROIC/ROE disponíveis
     }
+    
+    // Excluir se ambos forem negativos ou ausentes (exceto para bancos sem dados)
+    return true;
   }
   
   return false;
@@ -315,45 +335,41 @@ function calculateGreenblattScore(
   } else {
     roicValue = financialData.roic ?? null;
     
-    // Para bancos sem ROIC, usar ROE como alternativa (ROE é equivalente ao ROIC para bancos)
-    if (isBank && (roicValue === null || roicValue === undefined || roicValue <= 0)) {
+    // Se ROIC for negativo ou ausente, usar ROE como fallback (para bancos e não-bancos)
+    if (roicValue === null || roicValue === undefined || roicValue <= 0) {
       const roeValue = financialData.roe ?? null;
       
       if (roeValue !== null && roeValue !== undefined && roeValue > 0) {
-        roicValue = roeValue; // Usar ROE como proxy do ROIC para bancos
+        roicValue = roeValue; // Usar ROE como proxy do ROIC
         usingRoeAsProxy = true; // Marcar que estamos usando ROE como proxy
       }
     }
   }
   
   // Coletar ROICs de todas as ações (priorizando médias históricas para Commodities)
-  // Para bancos, usar ROE quando ROIC não estiver disponível
+  // Usar ROE como fallback quando ROIC for negativo ou ausente (para bancos e não-bancos)
   const roicValues = allStocks
     .map(s => {
       const isStockCommodities = isCommoditiesSector(s.financialData.sector);
-      const isStockBank = isBankSector(s.financialData.sector);
       
       // Para Commodities, priorizar média histórica
       if (isStockCommodities && s.historicalAverages?.roic !== null && s.historicalAverages?.roic !== undefined && s.historicalAverages.roic > 0) {
         return s.historicalAverages.roic;
       }
       
-      // Para bancos, usar ROE se não tiver ROIC
-      if (isStockBank) {
-        const stockRoic = s.financialData.roic;
-        if (stockRoic !== null && stockRoic !== undefined && stockRoic > 0) {
-          return stockRoic;
-        }
-        // Se banco não tem ROIC, usar ROE como proxy
-        const stockRoe = s.financialData.roe;
-        if (stockRoe !== null && stockRoe !== undefined && stockRoe > 0) {
-          return stockRoe;
-        }
-        return null;
+      // Tentar usar ROIC primeiro
+      const stockRoic = s.financialData.roic;
+      if (stockRoic !== null && stockRoic !== undefined && stockRoic > 0) {
+        return stockRoic;
       }
       
-      // Senão, usar valor TTM
-      return s.financialData.roic;
+      // Se ROIC não estiver disponível ou for negativo, usar ROE como fallback
+      const stockRoe = s.financialData.roe;
+      if (stockRoe !== null && stockRoe !== undefined && stockRoe > 0) {
+        return stockRoe;
+      }
+      
+      return null;
     })
     .filter((v): v is number => v !== null && v !== undefined && v > 0);
   
@@ -372,7 +388,7 @@ function calculateGreenblattScore(
     roicNormalized = 50; // Score neutro normalizado
     roicScore = (roicNormalized / 100) * 25; // 12.5 pontos (metade dos 25)
   }
-  // Se não é banco e não tem ROIC, score permanece 0 (já está excluído pela regra de exclusão)
+  // Se não tem ROIC nem ROE válidos, score permanece 0 (já está excluído pela regra de exclusão)
   
   // Earnings Yield (20 pts) - EBIT/EV
   // AJUSTE POR SETOR: Bancos → Remove EV/EBITDA (não usar Earnings Yield)
@@ -443,7 +459,15 @@ function calculateGreenblattScore(
   
   // Score total Greenblatt (máximo 45 pontos)
   // Para bancos, máximo é 25 (só ROIC), para outros é 45
-  const totalScore = finalRoicScore + finalEarningsYieldScore;
+  let totalScore = finalRoicScore + finalEarningsYieldScore;
+  
+  // PENALIZAÇÃO: Se está usando ROE como proxy do ROIC e não tem Earnings Yield,
+  // aplicar penalização de 15 pontos (exceto para bancos que não têm Earnings Yield mesmo)
+  if (usingRoeAsProxy && !canEvaluateEarningsYield && !isBank) {
+    const penalty = 15;
+    totalScore = Math.max(0, totalScore - penalty); // Garantir que não fique negativo
+    console.log(`[Greenblatt] Penalização aplicada: -${penalty} pontos (usando ROE como proxy e sem Earnings Yield)`);
+  }
   
   return {
     score: totalScore,
@@ -955,8 +979,17 @@ export function calculateGGBRanking(stocks: StockData[]): Array<{
   scores: GGBScores;
   rank: number;
 }> {
-  // Filtrar ações excluídas (ROIC ≤ 0)
-  const validStocks = stocks.filter(s => !shouldExcludeStock(s.financialData));
+  console.log(`[GGB Ranking] Calculando ranking para ${stocks.length} ações`);
+  
+  // Identificar ações excluídas (ROIC ≤ 0) mas não filtrar - incluir todas com score 0
+  const excludedStocks = stocks.filter(s => shouldExcludeStock(s.financialData));
+  if (excludedStocks.length > 0) {
+    console.log(`[GGB Ranking] ${excludedStocks.length} ações serão incluídas com score 0:`, excludedStocks.map(s => `${s.ticker} (ROIC: ${s.financialData.roic})`).join(', '));
+  }
+  
+  // Incluir TODAS as ações, mesmo as excluídas (elas terão score 0)
+  const validStocks = stocks;
+  console.log(`[GGB Ranking] Processando todas as ${validStocks.length} ações (incluindo ${excludedStocks.length} com score 0)`);
   
   // Preparar stocks com historicalAverages disponível
   const stocksWithHistory = validStocks.map(stock => ({
@@ -996,6 +1029,8 @@ export function calculateGGBRanking(stocks: StockData[]): Array<{
   stocksWithScores.forEach((stock, index) => {
     stock.rank = index + 1;
   });
+  
+  console.log(`[GGB Ranking] Ranking calculado: ${stocksWithScores.length} ações com scores`);
   
   return stocksWithScores;
 }

@@ -184,10 +184,22 @@ export async function GET(request: NextRequest) {
       historicalAverages: (item as any).historicalAverages || null,
     }));
 
+    console.log(`[GGB Ranking] Preparando ${stocksForCalculation.length} ações para cálculo`);
+    console.log(`[GGB Ranking] Tickers sendo processados: ${stocksForCalculation.map(s => s.ticker).join(', ')}`);
+
     // Calcular ranking
     console.log('[GGB Ranking] Calculando scores GGB...');
     const rankingResults = calculateGGBRanking(stocksForCalculation);
     console.log(`[GGB Ranking] Scores calculados para ${rankingResults.length} ações`);
+    
+    // Verificar diferença
+    if (stocksForCalculation.length !== rankingResults.length) {
+      const processedTickers = new Set(rankingResults.map(r => r.ticker));
+      const missingTickers = stocksForCalculation
+        .filter(s => !processedTickers.has(s.ticker))
+        .map(s => s.ticker);
+      console.warn(`[GGB Ranking] ATENÇÃO: ${stocksForCalculation.length - rankingResults.length} ações não foram incluídas no ranking: ${missingTickers.join(', ')}`);
+    }
 
     // Preparar dados para inserção em batch
     const dataToInsert = rankingResults.map(result => {

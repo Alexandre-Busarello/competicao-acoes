@@ -98,13 +98,22 @@ export class FinancialDataService {
       batches.push(tickers.slice(i, i + maxBatchSize));
     }
 
+    console.log(`[Financial Data Service] Total de tickers: ${tickers.length}, Total de batches: ${batches.length}`);
+    batches.forEach((batch, index) => {
+      console.log(`[Financial Data Service] Batch ${index + 1}/${batches.length}: ${batch.length} tickers (${batch[0]} até ${batch[batch.length - 1]})`);
+    });
+
     const allResults: FinancialDataResponse['data'] = [];
     const notFound: string[] = [];
 
-    for (const batch of batches) {
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
       try {
+        console.log(`[Financial Data Service] Processando batch ${batchIndex + 1}/${batches.length} com ${batch.length} tickers...`);
         const tickersStr = batch.join(',');
         const url = `${API_BASE_URL}?tickers=${encodeURIComponent(tickersStr)}`;
+
+        console.log(`${API_BASE_URL}?tickers=${encodeURIComponent(tickersStr)}`);
         
         const response = await retryWithBackoff(async () => {
           const res = await fetch(url, {
@@ -136,15 +145,34 @@ export class FinancialDataService {
 
         if (data.data) {
           allResults.push(...data.data);
+          console.log(`[Financial Data Service] Batch ${batchIndex + 1}/${batches.length} processado com sucesso: ${data.data.length} resultados`);
+        } else {
+          console.warn(`[Financial Data Service] Batch ${batchIndex + 1}/${batches.length} retornou sem dados`);
         }
 
         if (data.notFound && data.notFound.length > 0) {
           notFound.push(...data.notFound);
+          console.warn(`[Financial Data Service] Batch ${batchIndex + 1}/${batches.length} - Tickers não encontrados: ${data.notFound.join(', ')}`);
         }
       } catch (error) {
-        console.error(`Erro ao buscar dados do batch ${batch.join(',')}:`, error);
+        console.error(`[Financial Data Service] Erro ao buscar dados do batch ${batchIndex + 1}/${batches.length} (${batch.join(',')}):`, error);
         // Continuar com outros batches mesmo se um falhar
       }
+    }
+
+    console.log(`[Financial Data Service] Processamento concluído: ${allResults.length} resultados totais, ${notFound.length} tickers não encontrados`);
+    
+    // Verificar se todos os batches foram processados
+    // Alguns tickers podem não retornar dados mesmo não estando em notFound (dados indisponíveis)
+    const expectedTickers = tickers.length - notFound.length;
+    const missingTickers = expectedTickers - allResults.length;
+    
+    // Só avisar se a diferença for significativa (mais de 5% ou mais de 5 tickers)
+    if (missingTickers > 0 && (missingTickers > 5 || (missingTickers / tickers.length) > 0.05)) {
+      console.warn(`[Financial Data Service] ATENÇÃO: Esperado aproximadamente ${expectedTickers} resultados, mas recebido apenas ${allResults.length} (faltam ${missingTickers} tickers). Alguns batches podem não ter sido processados completamente.`);
+      console.warn(`[Financial Data Service] Total de batches criados: ${batches.length}, Total de tickers enviados: ${tickers.length}`);
+    } else if (missingTickers > 0) {
+      console.log(`[Financial Data Service] Nota: ${missingTickers} ticker(s) não retornaram dados (pode ser normal se dados não estiverem disponíveis)`);
     }
 
     if (notFound.length > 0) {
