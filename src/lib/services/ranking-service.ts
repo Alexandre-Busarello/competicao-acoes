@@ -1087,15 +1087,19 @@ export class RankingService {
             continue;
           }
 
-          // Verificar se mudou de posição (qualquer mudança)
+          // Verificar se mudou de posição
           const positionChange = previousPosition - currentPosition; // positivo = subiu, negativo = desceu
+          const absoluteChange = Math.abs(positionChange);
           
-          // Notificar sempre que houver mudança de posição
-          if (positionChange !== 0) {
+          // Verificar se entrou no top 3 (sempre notificar, independente da diferença)
+          const enteredTop3 = currentPosition <= 3 && previousPosition > 3;
+          
+          // Notificar apenas se mudou 2 ou mais posições OU entrou no top 3
+          if (absoluteChange >= 2 || enteredTop3) {
             let changeType: 'top3' | 'up' | 'down' = 'up';
 
             // Entrou no top 3
-            if (currentPosition <= 3 && previousPosition > 3) {
+            if (enteredTop3) {
               changeType = 'top3';
             }
             // Subiu posições

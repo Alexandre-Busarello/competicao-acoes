@@ -14,7 +14,7 @@ import { HomePageClient } from './HomePageClient';
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 export const metadata: Metadata = {
-  title: "Hold Arena - Compete no Ranking de Investidores e Seja Premiado",
+  title: "Hold Arena - Compita no Ranking de Investidores e Seja Premiado",
   description: "Teste sua estratégia de investimentos e compita no ranking público. Prêmios em dinheiro para os melhores. Cadastre-se agora e comece a competir.",
   keywords: [
     "ranking de investidores",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     url: baseUrl,
     siteName: "Hold Arena",
-    title: "Hold Arena - Compete no Ranking de Investidores",
+    title: "Hold Arena - Compita no Ranking de Investidores",
     description: "Teste sua estratégia e seja premiado. Onde investidores se testam.",
     images: [
       {
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Hold Arena - Compete no Ranking de Investidores",
+    title: "Hold Arena - Compita no Ranking de Investidores",
     description: "Teste sua estratégia e seja premiado",
     images: [`${baseUrl}/logo-combinada-claro.svg`],
   },
@@ -111,7 +111,7 @@ export default async function HomePage() {
             "@context": "https://schema.org",
             "@type": "WebPage",
             name: "Hold Arena - Ranking de Investidores",
-            description: "Compete no ranking de investidores e seja premiado por sua performance",
+            description: "Compita no ranking de investidores e seja premiado por sua performance",
             url: baseUrl,
             mainEntity: {
               "@type": "Organization",
@@ -131,7 +131,7 @@ export default async function HomePage() {
                 Onde Investidores se Testam
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-                Compete no ranking público e seja premiado por sua performance real
+                Compita no ranking público e seja premiado por sua performance real
               </p>
               
               {/* Email Capture Form */}
