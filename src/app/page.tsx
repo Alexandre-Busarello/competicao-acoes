@@ -15,7 +15,7 @@ const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 export const metadata: Metadata = {
   title: "Hold Arena - Compete no Ranking de Investidores e Seja Premiado",
-  description: "Teste sua estratégia de investimentos e competa no ranking público. Prêmios em dinheiro para os melhores. Cadastre-se agora e comece a competir.",
+  description: "Teste sua estratégia de investimentos e compita no ranking público. Prêmios em dinheiro para os melhores. Cadastre-se agora e comece a competir.",
   keywords: [
     "ranking de investidores",
     "competição de investimentos",

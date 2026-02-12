@@ -4,7 +4,7 @@ const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 export const metadata: Metadata = {
   title: "Hold Arena - Rede Social do Investidor | Teste sua Estratégia e Seja Premiado",
-  description: "Hold Arena é a rede social do investidor. Teste sua estratégia de investimentos, compartilhe sua carteira pública e competa no ranking com premiação por performance. Onde investidores se testam.",
+  description: "Hold Arena é a rede social do investidor. Teste sua estratégia de investimentos, compartilhe sua carteira pública e compita no ranking com premiação por performance. Onde investidores se testam.",
   keywords: [
     "rede social de investimentos",
     "ranking de investidores",

@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     default: "Hold Arena - Rede Social do Investidor | Ranking de Investimentos",
     template: "%s | Hold Arena",
   },
-  description: "Hold Arena é a rede social do investidor. Teste sua estratégia de investimentos, compartilhe sua carteira e competa no ranking público com premiação por performance. Onde investidores se testam.",
+  description: "Hold Arena é a rede social do investidor. Teste sua estratégia de investimentos, compartilhe sua carteira e compita no ranking público com premiação por performance. Onde investidores se testam.",
   keywords: [
     "rede social de investimentos",
     "ranking de investidores",

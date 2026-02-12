@@ -92,7 +92,7 @@ export function Footer() {
               <h3 className="font-semibold text-lg mb-4">Sobre</h3>
               <p className="text-muted-foreground text-sm">
                 Hold Arena é a rede social do investidor. Teste sua estratégia de investimentos, 
-                compartilhe sua carteira e competa no ranking público com premiação por performance.
+                compartilhe sua carteira e compita no ranking público com premiação por performance.
               </p>
             </div>
 
