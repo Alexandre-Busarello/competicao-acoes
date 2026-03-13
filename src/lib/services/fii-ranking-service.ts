@@ -214,31 +214,31 @@ export function calculateFIIScore(
 
   const dyR = calculateDY(
     fd.dividendYield ?? null,
-    allFIIs.map((f) => (f.financialData as FIIFinancialData).dividendYield)
+    allFIIs.map((f) => (f.financialData as FIIFinancialData).dividendYield ?? null)
   );
   const pvpR = calculatePVP(
     fd.pvp ?? null,
-    allFIIs.map((f) => (f.financialData as FIIFinancialData).pvp)
+    allFIIs.map((f) => (f.financialData as FIIFinancialData).pvp ?? null)
   );
   const vacancyR = calculateVacancy(
     fd.vacanciaMedia ?? null,
-    allFIIs.map((f) => (f.financialData as FIIFinancialData).vacanciaMedia)
+    allFIIs.map((f) => (f.financialData as FIIFinancialData).vacanciaMedia ?? null)
   );
   const capRateR = calculateCapRate(
     fd.capRate ?? null,
-    allFIIs.map((f) => (f.financialData as FIIFinancialData).capRate)
+    allFIIs.map((f) => (f.financialData as FIIFinancialData).capRate ?? null)
   );
   const ffoR = calculateFFOYield(
     fd.ffoYield ?? null,
-    allFIIs.map((f) => (f.financialData as FIIFinancialData).ffoYield)
+    allFIIs.map((f) => (f.financialData as FIIFinancialData).ffoYield ?? null)
   );
   const liquidityR = calculateLiquidity(
     fd.liquidez ?? null,
-    allFIIs.map((f) => (f.financialData as FIIFinancialData).liquidez)
+    allFIIs.map((f) => (f.financialData as FIIFinancialData).liquidez ?? null)
   );
   const diversificationR = calculateDiversification(
     fd.qtdImoveis ?? null,
-    allFIIs.map((f) => (f.financialData as FIIFinancialData).qtdImoveis)
+    allFIIs.map((f) => (f.financialData as FIIFinancialData).qtdImoveis ?? null)
   );
 
   const dyScore = (dyR.normalized100 / 100) * w.dy;
