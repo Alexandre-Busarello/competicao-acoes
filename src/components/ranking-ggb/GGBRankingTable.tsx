@@ -95,6 +95,11 @@ export function GGBRankingTable({ data, isLoading, isPro = false }: GGBRankingTa
     setExpandedRows(newExpanded);
   };
 
+  const handleRowClickWithRank = (rank: number) => {
+    if (typeof window !== 'undefined' && window.getSelection()?.toString()) return;
+    toggleRow(rank);
+  };
+
   const handleSort = (field: 'rank' | 'finalScore' | 'ticker') => {
     if (sortBy === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -382,7 +387,13 @@ export function GGBRankingTable({ data, isLoading, isPro = false }: GGBRankingTa
                 
                 return (
                   <Fragment key={item.ticker}>
-                    <tr className="border-b hover:bg-muted/50">
+                    <tr
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleRowClickWithRank(item.rank)}
+                      onKeyDown={(e) => e.key === 'Enter' && toggleRow(item.rank)}
+                      className="border-b hover:bg-muted/50 cursor-pointer"
+                    >
                     <td className="p-2">
                       <div className="flex items-center gap-1">
                         {medal && <span>{medal}</span>}
@@ -438,11 +449,11 @@ export function GGBRankingTable({ data, isLoading, isPro = false }: GGBRankingTa
                         </div>
                       </div>
                     </td>
-                    <td className="p-2">
+                    <td className="p-2" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleRow(item.rank)}
+                        onClick={(e) => { e.stopPropagation(); toggleRow(item.rank); }}
                         className="h-8 w-8 p-0"
                       >
                         {isExpanded ? (

@@ -34,13 +34,15 @@ export function CheckoutCTA({
   const handleClick = async () => {
     // Tracking de clique para eventos de conversão específicos
     let eventId: string | null = null;
-    if (source === 'blur_overlay' || source === 'profile_page' || source === 'signup_banner' || source === 'ggb_ranking') {
+    if (source === 'blur_overlay' || source === 'profile_page' || source === 'signup_banner' || source === 'ggb_ranking' || source === 'fii_ranking') {
       const eventType = source === 'blur_overlay' 
         ? 'blur_overlay' 
         : source === 'profile_page'
         ? 'profile_checkout'
         : source === 'signup_banner'
         ? 'signup_banner'
+        : source === 'fii_ranking'
+        ? 'fii_ranking'
         : 'ggb_ranking';
       eventId = await trackClick(eventType);
     }

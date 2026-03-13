@@ -55,6 +55,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${cleanBaseUrl}/ranking-ggb`,
+      lastModified: new Date(),
+      changeFrequency: 'daily' as const,
+      priority: 0.8,
+    },
+    {
+      url: `${cleanBaseUrl}/ranking-fii`,
+      lastModified: new Date(),
+      changeFrequency: 'daily' as const,
+      priority: 0.8,
+    },
+    {
       url: `${cleanBaseUrl}/como-funciona`,
       lastModified: new Date(),
       changeFrequency: 'monthly' as const,

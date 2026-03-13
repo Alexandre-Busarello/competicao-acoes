@@ -5,18 +5,28 @@ import { RankingHeader } from '@/components/ranking/RankingHeader';
 import { PageLoading } from '@/components/ui/page-loading';
 import { GGBRankingTable } from '@/components/ranking-ggb/GGBRankingTable';
 import { GGBDisclaimer } from '@/components/ranking-ggb/GGBDisclaimer';
+import { FIIRankingTable } from '@/components/ranking-fii/FIIRankingTable';
 import { useGGBRankingStore } from '@/lib/store/ggbRankingStore';
+import { useFIIRankingStore } from '@/lib/store/fiiRankingStore';
 import type { RankingPeriod } from '@/types';
 import { SHOW_MIC_METHOD } from '@/lib/config/features';
 import { getCurrentPeriod } from '@/lib/utils/period-utils';
-import { TrendingUp, Clock, BookOpen, ArrowUp } from 'lucide-react';
+import { TrendingUp, Clock, BookOpen, ArrowUp, Building2, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import Link from 'next/link';
 
 export default function RankingGGBPage() {
   const router = useRouter();
   const { data, isLoading, lastUpdate, isPro } = useGGBRankingStore();
+  const {
+    data: fiiData,
+    isLoading: fiiLoading,
+    lastUpdate: fiiLastUpdate,
+    isPro: fiiIsPro,
+  } = useFIIRankingStore();
 
   const handlePeriodChange = (newPeriod: RankingPeriod) => {
     const current = getCurrentPeriod();
@@ -59,30 +69,46 @@ export default function RankingGGBPage() {
       />
       
       <div className="container mx-auto px-4 py-4 sm:py-6 max-w-4xl">
-        {/* Link rápido para metodologia */}
-        {!isLoading && (
-          <div className="mb-4 flex justify-center">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={scrollToMethodology}
-              className="gap-2"
-            >
-              <BookOpen className="h-4 w-4" />
-              Entendendo a metodologia
-            </Button>
-          </div>
-        )}
+        {/* Abas Ações | FIIs */}
+        <Tabs defaultValue="acoes" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-4 h-11">
+            <TabsTrigger value="acoes" className="gap-2 min-w-0">
+              <BarChart3 className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">Ações</span>
+            </TabsTrigger>
+            <TabsTrigger value="fiis" className="gap-2 min-w-0">
+              <Building2 className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">FIIs</span>
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Ranking direto */}
-        {isLoading ? (
-          <PageLoading 
-            title="Carregando Ranking GGB"
-            description="Buscando dados financeiros e calculando scores..."
-          />
-        ) : (
-          <>
-            <GGBRankingTable data={data || []} isLoading={isLoading} isPro={isPro} />
+          <TabsContent value="acoes" className="mt-0">
+            {/* Link rápido para metodologia (só na aba Ações) */}
+            {!isLoading && (
+              <div className="mb-4 flex justify-center gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={scrollToMethodology}
+                  className="gap-2"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Entendendo a metodologia
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/ranking-fii">Ver Ranking FII</Link>
+                </Button>
+              </div>
+            )}
+
+            {isLoading ? (
+              <PageLoading 
+                title="Carregando Ranking GGB"
+                description="Buscando dados financeiros e calculando scores..."
+              />
+            ) : (
+              <>
+                <GGBRankingTable data={data || []} isLoading={isLoading} isPro={isPro} />
             
             {/* Header explicativo no final */}
             <div id="metodologia-ggb" className="mt-8 mb-6 scroll-mt-20">
@@ -143,8 +169,39 @@ export default function RankingGGBPage() {
                 </a>
               </p>
             </div>
-          </>
-        )}
+              </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="fiis" className="mt-0">
+            {!fiiLoading && (
+              <div className="mb-4 flex justify-center">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/ranking-fii" className="gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Metodologia e página completa
+                  </Link>
+                </Button>
+              </div>
+            )}
+            {fiiLoading ? (
+              <PageLoading
+                title="Carregando Ranking FII"
+                description="Buscando dados do Fundamentus e calculando scores..."
+              />
+            ) : (
+              <>
+                <FIIRankingTable data={fiiData || []} isLoading={fiiLoading} isPro={fiiIsPro} />
+                {fiiLastUpdate && (
+                  <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground justify-center">
+                    <Clock className="h-4 w-4" />
+                    <span>FIIs atualizados: {formatLastUpdate(fiiLastUpdate)}</span>
+                  </div>
+                )}
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

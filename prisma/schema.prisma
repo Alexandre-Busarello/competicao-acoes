@@ -14,37 +14,37 @@ model User {
   name                        String
   email                       String?                      @unique
   avatarUrl                   String?
-  slug                        String?                      @unique
   isPremium                   Boolean                      @default(false)
-  pwaInstalledAt              DateTime?
-  lastAccessAt                DateTime?
-  notificationVariationIndex  Int                          @default(0)
   createdAt                   DateTime                     @default(now())
   updatedAt                   DateTime                     @updatedAt
-  subscription                Subscription?
-  transactions                Transaction[]
-  perpetualProfitability      UserPerpetualProfitability?
-  feedPosts                   FeedPost[]
-  feedComments                FeedComment[]
-  feedLikes                   FeedLike[]
-  followers                   UserFollow[]                 @relation("Follower")
-  following                   UserFollow[]                 @relation("Following")
-  blocker                     UserBlock[]                  @relation("Blocker")
-  blocked                     UserBlock[]                  @relation("Blocked")
-  notifications               Notification[]
-  notificationsAsActor        Notification[]               @relation("NotificationActor")
-  medals                      UserMedal[]
-  stats                       UserStats?
-  timeline                    FeedTimeline[]
-  feedViews                   FeedView[]
-  pollVotes                   FeedPollVote[]
-  pushSubscriptions           PushSubscription[]
-  pushNotificationLogs        PushNotificationLog[]
-  pushNotificationPreferences PushNotificationPreferences?
-  rankingHistory              UserRankingHistory[]
+  slug                        String?                      @unique
+  lastAccessAt                DateTime?
+  notificationVariationIndex  Int                          @default(0)
+  pwaInstalledAt              DateTime?
+  conversionEvents            ConversionEvent[]
   bannerClicks                FeedBannerClick[]
   bannerConversions           FeedBannerConversion[]
-  conversionEvents            ConversionEvent[]
+  feedComments                FeedComment[]
+  feedLikes                   FeedLike[]
+  pollVotes                   FeedPollVote[]
+  feedPosts                   FeedPost[]
+  timeline                    FeedTimeline[]
+  feedViews                   FeedView[]
+  notificationsAsActor        Notification[]               @relation("NotificationActor")
+  notifications               Notification[]
+  pushNotificationLogs        PushNotificationLog[]
+  pushNotificationPreferences PushNotificationPreferences?
+  pushSubscriptions           PushSubscription[]
+  subscription                Subscription?
+  transactions                Transaction[]
+  blocked                     UserBlock[]                  @relation("Blocked")
+  blocker                     UserBlock[]                  @relation("Blocker")
+  followers                   UserFollow[]                 @relation("Follower")
+  following                   UserFollow[]                 @relation("Following")
+  medals                      UserMedal[]
+  perpetualProfitability      UserPerpetualProfitability?
+  rankingHistory              UserRankingHistory[]
+  stats                       UserStats?
 
   @@index([authUserId])
   @@index([email])
@@ -58,11 +58,11 @@ model Transaction {
   type      String
   quantity  Decimal   @db.Decimal(18, 8)
   price     Decimal   @db.Decimal(10, 2)
-  currency  String? // Moeda do ativo (BRL, USD, EUR, etc.) obtida do Yahoo Finance
   date      DateTime
   createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currency  String?
   feedPost  FeedPost?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([ticker])
@@ -88,19 +88,20 @@ model Subscription {
 }
 
 model Lead {
-  id              String                  @id @default(uuid())
-  email           String                  @unique
-  name            String?
-  source          String?
-  checkoutStarted Boolean                 @default(false)
-  converted       Boolean                 @default(false)
-  convertedAt     DateTime?
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
-  bannerClickId  String?                 @unique
-  bannerClick     FeedBannerClick?        @relation("LeadBannerClick")
-  bannerConversions FeedBannerConversion[]
-  conversionEvents ConversionEvent[]
+  id                                                  String                 @id @default(uuid())
+  email                                               String                 @unique
+  name                                                String?
+  source                                              String?
+  checkoutStarted                                     Boolean                @default(false)
+  converted                                           Boolean                @default(false)
+  convertedAt                                         DateTime?
+  createdAt                                           DateTime               @default(now())
+  updatedAt                                           DateTime               @updatedAt
+  bannerClickId                                       String?                @unique
+  conversionEvents                                    ConversionEvent[]
+  bannerClick                                         FeedBannerClick?       @relation("LeadBannerClick")
+  bannerConversions                                   FeedBannerConversion[]
+  FeedBannerClick_Lead_bannerClickIdToFeedBannerClick FeedBannerClick?       @relation("Lead_bannerClickIdToFeedBannerClick", fields: [bannerClickId], references: [id])
 
   @@index([email])
   @@index([converted])
@@ -135,11 +136,11 @@ model BrunoPortfolioAsset {
 model RankingCalculation {
   id                String   @id @default(uuid())
   period            String
-  year              Int
-  month             Int?
   rankingData       Json
   totalParticipants Int
   calculatedAt      DateTime @default(now())
+  month             Int?
+  year              Int
 
   @@index([period, year, month, calculatedAt])
   @@index([period, calculatedAt])
@@ -148,11 +149,11 @@ model RankingCalculation {
 
 model PriceUpdateCheckpoint {
   id               String    @id @default(uuid())
-  status           String // 'in_progress' | 'completed' | 'failed'
-  phase            String // 'prices' | 'ranking'
-  processedUserIds String[] // IDs dos usuários já processados
-  monthlyRankings  Json? // Rankings mensais parciais
-  annualRankings   Json? // Rankings anuais parciais
+  status           String
+  phase            String
+  processedUserIds String[]
+  monthlyRankings  Json?
+  annualRankings   Json?
   pricesLastUpdate DateTime?
   startedAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -182,7 +183,7 @@ model FeedPost {
   transactionId String?        @unique
   slug          String         @unique
   content       String
-  type          String         @default("transaction") // 'transaction' | 'custom' | 'share'
+  type          String         @default("transaction")
   metadata      Json?
   isPublic      Boolean        @default(true)
   likeCount     Int            @default(0)
@@ -192,14 +193,14 @@ model FeedPost {
   updatedAt     DateTime       @updatedAt
   deletedAt     DateTime?
   reportedAt    DateTime?
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transaction   Transaction?   @relation(fields: [transactionId], references: [id], onDelete: SetNull)
   comments      FeedComment[]
   likes         FeedLike[]
-  notifications Notification[]
+  poll          FeedPoll?
+  transaction   Transaction?   @relation(fields: [transactionId], references: [id])
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   timeline      FeedTimeline[]
   views         FeedView[]
-  poll          FeedPoll?
+  notifications Notification[]
 
   @@index([userId])
   @@index([slug])
@@ -220,10 +221,10 @@ model FeedComment {
   updatedAt       DateTime       @updatedAt
   deletedAt       DateTime?
   reportedAt      DateTime?
-  post            FeedPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   parentComment   FeedComment?   @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
   replies         FeedComment[]  @relation("CommentReplies")
+  post            FeedPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   notifications   Notification[]
 
   @@index([postId])
@@ -279,8 +280,8 @@ model UserBlock {
   blockerId String
   blockedId String
   createdAt DateTime @default(now())
-  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
   blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
 
   @@unique([blockerId, blockedId])
   @@index([blockerId])
@@ -290,7 +291,7 @@ model UserBlock {
 model Notification {
   id        String       @id @default(uuid())
   userId    String
-  type      String // 'like' | 'comment' | 'follow' | 'mention' | 'reply'
+  type      String
   actorId   String
   postId    String?
   commentId String?
@@ -298,11 +299,11 @@ model Notification {
   read      Boolean      @default(false)
   readAt    DateTime?
   createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime     @default(now()) @updatedAt
   actor     User         @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
-  post      FeedPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
   comment   FeedComment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  post      FeedPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([read])
@@ -316,10 +317,10 @@ model FeedTimeline {
   postId     String
   postUserId String
   score      Decimal? @db.Decimal(10, 2)
-  createdAt  DateTime // Data do post original
+  createdAt  DateTime
   addedAt    DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   post       FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, createdAt(sort: Desc)])
@@ -332,8 +333,8 @@ model FeedView {
   userId   String
   postId   String
   viewedAt DateTime @default(now())
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   post     FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId])
   @@index([userId, viewedAt(sort: Desc)])
@@ -343,11 +344,11 @@ model FeedView {
 model UserMedal {
   id           String   @id @default(uuid())
   userId       String
-  period       String // 'mensal' | 'anual'
+  period       String
   year         Int
   month        Int?
-  position     Int // 1=ouro, 2=prata, 3=bronze
-  medalType    String // 'gold' | 'silver' | 'bronze'
+  position     Int
+  medalType    String
   calculatedAt DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -359,10 +360,10 @@ model UserMedal {
 
 model MedalSettlement {
   id        String   @id @default(uuid())
-  period    String // 'mensal' | 'anual'
+  period    String
   year      Int
-  month     Int? // null para anual
-  settledAt DateTime @default(now()) // Timestamp UTC do banco
+  month     Int?
+  settledAt DateTime @default(now())
 
   @@unique([period, year, month])
   @@index([period, year, month])
@@ -371,9 +372,9 @@ model MedalSettlement {
 
 model ActionQueue {
   id           String    @id @default(uuid())
-  actionType   String // 'like' | 'comment' | 'follow' | 'unfollow' | 'notification' | 'timeline_update'
+  actionType   String
   payload      Json
-  status       String    @default("pending") // 'pending' | 'processing' | 'completed' | 'failed'
+  status       String    @default("pending")
   priority     Int       @default(0)
   retryCount   Int       @default(0)
   maxRetries   Int       @default(3)
@@ -385,25 +386,25 @@ model ActionQueue {
   lockedBy     String?
 
   @@index([status])
-  @@index([status, priority(sort: Desc), createdAt(sort: Asc)])
+  @@index([status, priority(sort: Desc), createdAt])
   @@index([actionType])
   @@index([createdAt])
 }
 
 model KiwifyWebhookQueue {
   id               String    @id @default(uuid())
-  webhookEventType String // 'order_approved' | 'order_refunded' | 'chargeback' | etc
-  orderId          String? // order_id do Kiwify para facilitar busca
-  customerEmail    String? // email do cliente para facilitar busca
-  payload          Json // Body completo do webhook
-  status           String    @default("pending") // 'pending' | 'processing' | 'completed' | 'error'
-  errorMessage     String? // Mensagem de erro se status = 'error'
+  webhookEventType String
+  orderId          String?
+  customerEmail    String?
+  payload          Json
+  status           String    @default("pending")
+  errorMessage     String?
   processedAt      DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
   @@index([status])
-  @@index([status, createdAt(sort: Asc)])
+  @@index([status, createdAt])
   @@index([webhookEventType])
   @@index([orderId])
   @@index([customerEmail])
@@ -414,7 +415,7 @@ model FeedPoll {
   id         String         @id @default(uuid())
   postId     String         @unique
   question   String
-  options    Json // Array de strings: ["opção1", "opção2", ...]
+  options    Json
   totalVotes Int            @default(0)
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
@@ -428,7 +429,7 @@ model FeedPollVote {
   id          String   @id @default(uuid())
   pollId      String
   userId      String
-  optionIndex Int // Índice da opção votada (0-5)
+  optionIndex Int
   createdAt   DateTime @default(now())
   poll        FeedPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -441,18 +442,17 @@ model FeedPollVote {
 model PushSubscription {
   id         String   @id @default(uuid())
   userId     String
-  endpoint   String
-  keys       Json // { p256dh: string, auth: string }
-  deviceId   String?
-  deviceName String   @default("Outro")
-  deviceType String   @default("unknown") // "desktop" | "mobile" | "unknown"
-  enabled    Boolean  @default(true)
-  userAgent  String?
+  endpoint   String   @unique
+  keys       Json
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  deviceId   String?
+  deviceName String   @default("Outro")
+  deviceType String   @default("unknown")
+  enabled    Boolean  @default(true)
+  userAgent  String?
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([endpoint])
   @@index([userId])
   @@index([endpoint])
   @@index([userId, deviceId])
@@ -461,7 +461,7 @@ model PushSubscription {
 model PushNotificationLog {
   id     String   @id @default(uuid())
   userId String
-  type   String // 'ranking' | 'engagement' | 'following' | 'test'
+  type   String
   sentAt DateTime @default(now())
   user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -471,15 +471,15 @@ model PushNotificationLog {
 }
 
 model PushNotificationPreferences {
-  id                 String   @id @default(uuid())
-  userId             String   @unique
-  rankingEnabled     Boolean  @default(true)
-  engagementEnabled  Boolean  @default(true)
-  followingEnabled   Boolean  @default(true)
-  interactionsEnabled Boolean @default(true)
-  allEnabled         Boolean  @default(true)
-  updatedAt          DateTime @updatedAt
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  rankingEnabled      Boolean  @default(true)
+  engagementEnabled   Boolean  @default(true)
+  followingEnabled    Boolean  @default(true)
+  allEnabled          Boolean  @default(true)
+  updatedAt           DateTime @updatedAt
+  interactionsEnabled Boolean  @default(true)
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -487,7 +487,7 @@ model PushNotificationPreferences {
 model UserRankingHistory {
   id        String   @id @default(uuid())
   userId    String
-  period    String // 'mensal' | 'anual'
+  period    String
   year      Int
   month     Int?
   position  Int
@@ -502,8 +502,8 @@ model UserRankingHistory {
 
 model NotificationMessageVariation {
   id        String   @id @default(uuid())
-  type      String // 'ranking_top3', 'ranking_up', 'ranking_down', 'engagement', 'following', 'reengagement'
-  variation String // 'A', 'B', 'C', 'D', 'F'
+  type      String
+  variation String
   title     String
   body      String
   isActive  Boolean  @default(true)
@@ -515,30 +515,30 @@ model NotificationMessageVariation {
 }
 
 model FeedBanner {
-  id          String                  @id @default(uuid())
-  variation   String                  @unique // 'A', 'B', 'C', 'D', 'E'
+  id          String                 @id @default(uuid())
+  variation   String                 @unique
   title       String
   description String
-  benefit     String                  // Benefício focado neste banner
+  benefit     String
   ctaText     String
-  isActive    Boolean                 @default(true)
-  priority    Int                     @default(0) // Calculado dinamicamente
-  createdAt   DateTime                @default(now())
-  updatedAt   DateTime                @updatedAt
-  impressions FeedBannerImpression[]
+  isActive    Boolean                @default(true)
+  priority    Int                    @default(0)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
   clicks      FeedBannerClick[]
   conversions FeedBannerConversion[]
+  impressions FeedBannerImpression[]
 
   @@index([variation])
   @@index([isActive, priority(sort: Desc)])
 }
 
 model FeedBannerImpression {
-  id        String     @id @default(uuid())
-  bannerId  String
-  userId    String?    // null se não logado
-  viewedAt  DateTime   @default(now())
-  banner    FeedBanner @relation(fields: [bannerId], references: [id], onDelete: Cascade)
+  id       String     @id @default(uuid())
+  bannerId String
+  userId   String?
+  viewedAt DateTime   @default(now())
+  banner   FeedBanner @relation(fields: [bannerId], references: [id], onDelete: Cascade)
 
   @@index([bannerId])
   @@index([userId])
@@ -546,14 +546,15 @@ model FeedBannerImpression {
 }
 
 model FeedBannerClick {
-  id        String     @id @default(uuid())
-  bannerId  String
-  userId    String?    // null se não logado
-  leadId    String?    @unique // ID do lead criado
-  clickedAt DateTime   @default(now())
-  banner    FeedBanner @relation(fields: [bannerId], references: [id], onDelete: Cascade)
-  lead      Lead?      @relation("LeadBannerClick", fields: [leadId], references: [id], onDelete: SetNull)
-  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id                                       String     @id @default(uuid())
+  bannerId                                 String
+  userId                                   String?
+  leadId                                   String?    @unique
+  clickedAt                                DateTime   @default(now())
+  banner                                   FeedBanner @relation(fields: [bannerId], references: [id], onDelete: Cascade)
+  lead                                     Lead?      @relation("LeadBannerClick", fields: [leadId], references: [id])
+  user                                     User?      @relation(fields: [userId], references: [id])
+  Lead_Lead_bannerClickIdToFeedBannerClick Lead?      @relation("Lead_bannerClickIdToFeedBannerClick")
 
   @@index([bannerId])
   @@index([userId])
@@ -562,14 +563,14 @@ model FeedBannerClick {
 }
 
 model FeedBannerConversion {
-  id          String            @id @default(uuid())
-  bannerId   String
-  userId     String
-  leadId     String
-  convertedAt DateTime          @default(now())
-  banner     FeedBanner        @relation(fields: [bannerId], references: [id], onDelete: Cascade)
-  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lead       Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  id          String     @id @default(uuid())
+  bannerId    String
+  userId      String
+  leadId      String
+  convertedAt DateTime   @default(now())
+  banner      FeedBanner @relation(fields: [bannerId], references: [id], onDelete: Cascade)
+  lead        Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([bannerId])
   @@index([userId])
@@ -578,15 +579,15 @@ model FeedBannerConversion {
 }
 
 model ConversionEvent {
-  id          String   @id @default(uuid())
-  type        String   // 'blur_overlay' | 'profile_checkout' | 'signup_banner' | 'ggb_ranking'
+  id          String    @id @default(uuid())
+  type        String
   userId      String?
   leadId      String?
-  viewedAt    DateTime @default(now())
+  viewedAt    DateTime  @default(now())
   clickedAt   DateTime?
   convertedAt DateTime?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  lead        Lead?     @relation(fields: [leadId], references: [id])
+  user        User?     @relation(fields: [userId], references: [id])
 
   @@index([type])
   @@index([userId])
@@ -597,25 +598,40 @@ model ConversionEvent {
 }
 
 model GGBRanking {
-  ticker           String   @id // Chave primária
-  companyName      String?
-  sector           String?
-  industry         String?
-  
-  // Dados financeiros brutos (JSON)
-  financialData    Json
-  
-  // Scores calculados
-  greenblattScore  Decimal? @db.Decimal(5, 2)
-  grahamScore      Decimal? @db.Decimal(5, 2)
-  bazinScore       Decimal? @db.Decimal(5, 2)
-  finalScore       Decimal? @db.Decimal(5, 2)
-  rank             Int?
-  
-  // Metadados
-  lastUpdated      DateTime @default(now()) @updatedAt
-  dataSource       String?  // "api" ou "cache"
-  
+  ticker          String   @id
+  companyName     String?
+  sector          String?
+  industry        String?
+  financialData   Json
+  greenblattScore Decimal? @db.Decimal(5, 2)
+  grahamScore     Decimal? @db.Decimal(5, 2)
+  bazinScore      Decimal? @db.Decimal(5, 2)
+  finalScore      Decimal? @db.Decimal(5, 2)
+  rank            Int?
+  lastUpdated     DateTime @default(now()) @updatedAt
+  dataSource      String?
+
+  @@index([finalScore(sort: Desc)])
+  @@index([rank])
+  @@index([lastUpdated])
+}
+
+model FIIRanking {
+  ticker         String   @id
+  fundName       String?
+  segment        String?
+  financialData  Json
+  dyScore        Decimal? @db.Decimal(5, 2)
+  pvpScore       Decimal? @db.Decimal(5, 2)
+  vacancyScore   Decimal? @db.Decimal(5, 2)
+  debtScore      Decimal? @db.Decimal(5, 2)
+  payoutScore    Decimal? @db.Decimal(5, 2)
+  liquidityScore Decimal? @db.Decimal(5, 2)
+  finalScore     Decimal? @db.Decimal(5, 2)
+  rank           Int?
+  lastUpdated    DateTime @default(now()) @updatedAt
+  dataSource     String?
+
   @@index([finalScore(sort: Desc)])
   @@index([rank])
   @@index([lastUpdated])
