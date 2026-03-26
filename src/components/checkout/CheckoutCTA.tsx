@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { LeadCaptureModal } from './LeadCaptureModal';
 import { Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth/client';
-import { redirectToKiwifyCheckout } from '@/lib/utils/checkout';
+import { redirectToCheckout } from '@/lib/utils/checkout';
 import { useConversionTracking } from '@/lib/hooks/useConversionTracking';
 
 interface CheckoutCTAProps {
@@ -69,12 +69,12 @@ export function CheckoutCTA({
             return;
           }
           // Redirecionar para checkout com email do usuário logado
-          redirectToKiwifyCheckout(user.email, source);
+          redirectToCheckout(user.email, source);
         })
         .catch((error) => {
           console.error('Error creating lead:', error);
           // Mesmo com erro, redirecionar para checkout
-          redirectToKiwifyCheckout(user.email, source);
+          redirectToCheckout(user.email, source);
         });
     } else {
       // Usuário não logado - sempre usar modal para capturar email

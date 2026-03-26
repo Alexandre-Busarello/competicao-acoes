@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, CheckCircle2 } from 'lucide-react';
-import { redirectToKiwifyCheckout } from '@/lib/utils/checkout';
+import { redirectToCheckout } from '@/lib/utils/checkout';
 
 interface EmailCaptureFormProps {
   source?: string;
@@ -104,7 +104,7 @@ export function EmailCaptureForm({
 
       if (!magicLinkResponse.ok) {
         // Se falhar ao enviar magic link, ainda redirecionar para checkout
-        redirectToKiwifyCheckout(email.trim(), source);
+        redirectToCheckout(email.trim(), source);
         return;
       }
 

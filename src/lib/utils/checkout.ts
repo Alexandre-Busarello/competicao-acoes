@@ -1,14 +1,13 @@
 /**
- * Redireciona para checkout Kiwify
+ * Redireciona para checkout Cakto
  * Se a URL não estiver configurada, redireciona para página fake de simulação
  * @param email - Email do usuário (opcional, para pré-preencher)
  * @param source - Origem do checkout (para tracking)
  */
-export function redirectToKiwifyCheckout(email?: string, source?: string) {
-  const kiwifyProductUrl = process.env.NEXT_PUBLIC_KIWIFY_PRODUCT_URL;
+export function redirectToCheckout(email?: string, source?: string) {
+  const checkoutUrl = process.env.NEXT_PUBLIC_CAKTO_PRODUCT_URL;
   
-  if (!kiwifyProductUrl) {
-    // Se não houver URL configurada, redirecionar para página fake
+  if (!checkoutUrl) {
     const fakeUrl = new URL('/checkout/fake', window.location.origin);
     
     if (email) {
@@ -25,8 +24,7 @@ export function redirectToKiwifyCheckout(email?: string, source?: string) {
     return;
   }
 
-  // Adicionar parâmetros de query se necessário
-  const url = new URL(kiwifyProductUrl);
+  const url = new URL(checkoutUrl);
   
   if (email) {
     url.searchParams.set('email', email);
@@ -36,9 +34,11 @@ export function redirectToKiwifyCheckout(email?: string, source?: string) {
     url.searchParams.set('source', source);
   }
 
-  // Redirecionar para checkout
   if (typeof window !== 'undefined') {
     window.location.href = url.toString();
   }
 }
+
+/** @deprecated Use redirectToCheckout instead */
+export const redirectToKiwifyCheckout = redirectToCheckout;
 

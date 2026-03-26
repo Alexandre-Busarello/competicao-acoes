@@ -21,7 +21,7 @@ export default function TestCreateUserPage() {
     setResult(null);
 
     try {
-      const response = await fetch('/api/webhooks/kiwify/test', {
+      const response = await fetch('/api/webhooks/cakto/test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,7 +74,7 @@ export default function TestCreateUserPage() {
           <CardHeader>
             <CardTitle>🧪 Teste de Criação de Usuário</CardTitle>
             <CardDescription>
-              Simula o webhook do Kiwify para testar a criação de usuário localmente.
+              Simula o webhook da Cakto para testar a criação de usuário localmente.
               Esta página só funciona em modo de desenvolvimento.
             </CardDescription>
           </CardHeader>

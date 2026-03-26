@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth/client';
-import { redirectToKiwifyCheckout } from '@/lib/utils/checkout';
+import { redirectToCheckout } from '@/lib/utils/checkout';
 import { Sparkles, TrendingUp, Lock, Award, Zap } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
 
@@ -150,7 +150,7 @@ export function FeedBanner({ banner }: FeedBannerProps) {
       }
 
       // Redirecionar para checkout
-      redirectToKiwifyCheckout(
+      redirectToCheckout(
         user?.email,
         `feed_banner_${banner.variation}`
       );
@@ -158,7 +158,7 @@ export function FeedBanner({ banner }: FeedBannerProps) {
       console.error('Error handling banner click:', error);
       setIsClicking(false);
       // Mesmo com erro, redirecionar para checkout
-      redirectToKiwifyCheckout(
+      redirectToCheckout(
         user?.email,
         `feed_banner_${banner.variation}`
       );

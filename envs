@@ -4,8 +4,14 @@ SUPABASE_SERVICE_ROLE_KEY=sb_secret_NgyX1YKRHM9W2G_ua1QqWw_LBP8To6J
 DATABASE_URL=postgresql://postgres.gkciedlgmbrrxlpxhlae:Ght%24%24%401234%26%26T@aws-1-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true
 DIRECT_DATABASE_URL=postgresql://postgres:Ght%24%24%401234%26%26T@db.gkciedlgmbrrxlpxhlae.supabase.co:5432/postgres
 ALLOW_TEST_WEBHOOK=true
-# KIWIFY_WEBHOOK_SECRET=...
-# NEXT_PUBLIC_KIWIFY_PRODUCT_URL=...
+# KIWIFY_WEBHOOK_SECRET=...  (legado, manter para webhooks existentes)
+# NEXT_PUBLIC_KIWIFY_PRODUCT_URL=...  (legado, substituído por CAKTO)
+
+# Cakto - Plataforma de checkout e pagamento
+# Secret do webhook: campo "fields.secret" retornado ao criar o webhook no painel Cakto
+# CAKTO_WEBHOOK_SECRET=...
+# URL de checkout do produto na Cakto
+NEXT_PUBLIC_CAKTO_PRODUCT_URL=https://pay.cakto.com.br/3b3ioq6_820592
 NEXT_PUBLIC_APP_URL=https://competicao-acoes.vercel.app
 # APP_URL é usado em rotas de API (server-side) para magic links
 # Se não definido, usa NEXT_PUBLIC_APP_URL como fallback

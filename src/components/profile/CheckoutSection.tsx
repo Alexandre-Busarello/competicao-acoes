@@ -7,7 +7,7 @@ import { Check, Trophy, Eye, Star, AlertTriangle, Gift } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
 import { useAuth } from '@/lib/auth/client';
 import { SHOW_MIC_METHOD } from '@/lib/config/features';
-import { redirectToKiwifyCheckout } from '@/lib/utils/checkout';
+import { redirectToCheckout } from '@/lib/utils/checkout';
 import { CheckoutCTA } from '@/components/checkout/CheckoutCTA';
 import { useConversionTracking } from '@/lib/hooks/useConversionTracking';
 
@@ -50,7 +50,7 @@ export function CheckoutSection() {
     // Tracking de clique
     await trackClick('profile_checkout');
     
-    redirectToKiwifyCheckout(user?.email, 'profile');
+    redirectToCheckout(user?.email, 'profile');
   };
 
   return (

@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Mail, AlertTriangle } from 'lucide-react';
-import { redirectToKiwifyCheckout } from '@/lib/utils/checkout';
+import { redirectToCheckout } from '@/lib/utils/checkout';
 import { useAuth } from '@/lib/auth/client';
 import { useConversionTracking } from '@/lib/hooks/useConversionTracking';
 
@@ -121,7 +121,7 @@ export function LeadCaptureModal({
         }
         
         // Redirecionar para checkout Kiwify
-        redirectToKiwifyCheckout(email.trim(), source);
+        redirectToCheckout(email.trim(), source);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao processar solicitação');

@@ -23,7 +23,7 @@ function FakeKiwifyCheckoutContent() {
 
     try {
       // Chamar webhook de teste para simular o checkout
-      const response = await fetch('/api/webhooks/kiwify/test', {
+      const response = await fetch('/api/webhooks/cakto/test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,7 +59,7 @@ function FakeKiwifyCheckoutContent() {
                 Modo de Simulação
               </p>
               <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                Esta é uma página de simulação do checkout Kiwify. A URL do Kiwify não está configurada. 
+                Esta é uma página de simulação do checkout. A URL do checkout não está configurada. 
                 Você pode testar o fluxo completo de cadastro e compra aqui.
               </p>
             </div>
