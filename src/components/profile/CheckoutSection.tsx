@@ -133,7 +133,7 @@ export function CheckoutSection() {
                     ⚠️ IMPORTANTE
                   </p>
                   <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                    No checkout do Kiwify, use o mesmo email da sua conta (<strong>{user.email}</strong>) para garantir que sua assinatura seja vinculada corretamente.
+                    No checkout do Cakto, use o mesmo email da sua conta (<strong>{user.email}</strong>) para garantir que sua assinatura seja vinculada corretamente.
                   </p>
                 </div>
               </div>

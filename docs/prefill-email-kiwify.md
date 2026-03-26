@@ -3,7 +3,7 @@
 ## Data: 09/01/2026
 
 ## Resumo
-Documentação sobre como o email do usuário é pré-preenchido automaticamente no checkout do Kiwify através de query parameters na URL.
+Documentação sobre como o email do usuário é pré-preenchido automaticamente no checkout do Cakto através de query parameters na URL.
 
 ## Funcionalidade
 

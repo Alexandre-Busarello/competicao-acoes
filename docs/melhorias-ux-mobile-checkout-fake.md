@@ -58,7 +58,7 @@ Criada uma página fake do Kiwify (`/checkout/fake`) que simula o checkout e per
 #### Arquivos Criados/Modificados
 
 **1. Nova Página: `src/app/checkout/fake/page.tsx`**
-- Página que simula o checkout do Kiwify
+- Página que simula o checkout do Cakto
 - Formulário para email e nome (opcional)
 - Exibe informações do plano (gratuito em modo de teste)
 - Chama o webhook de teste (`/api/webhooks/kiwify/test`) ao finalizar

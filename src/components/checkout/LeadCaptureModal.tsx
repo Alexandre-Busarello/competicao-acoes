@@ -205,7 +205,7 @@ export function LeadCaptureModal({
                       ⚠️ IMPORTANTE
                     </p>
                     <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                      Use o mesmo email informado aqui (<strong>{email || 'seu email'}</strong>) no checkout do Kiwify para garantir que sua assinatura seja vinculada corretamente à sua conta.
+                      Use o mesmo email informado aqui (<strong>{email || 'seu email'}</strong>) no checkout do Cakto para garantir que sua assinatura seja vinculada corretamente à sua conta.
                     </p>
                   </div>
                 </div>
