@@ -1,0 +1,22 @@
+---
+description: Arquitetura real do repo e direção alvo (Clean Architecture)
+alwaysApply: true
+---
+
+# Arquitetura
+
+## Estado atual (honesto)
+
+- Monólito **Next.js 14** App Router: páginas e API em **`src/app/`**.
+- Lógica de negócio concentrada em **`src/lib/services/`**; utilitários em **`src/lib/utils/`**; Prisma em **`src/lib/prisma/`**; Supabase em **`src/lib/supabase/`**.
+- Não há separação completa Domain/Application/Infrastructure em todo o código.
+
+## Direção alvo (dívida técnica / roadmap)
+
+- Refatoração incremental para **Clean Architecture + DDD** com **inversão de dependências**, conforme **`docs/arch-reference.md`**.
+- Novos módulos grandes devem **preferir** interfaces e camadas do guia quando o escopo for adequado.
+
+## Regras práticas
+
+- Não impor pastas da arquitetura alvo em arquivos que ainda não foram migrados.
+- Ao extrair lógica nova, **preferir** testabilidade e dependências apontando para domínio (ver `arch-reference.md`).

@@ -1,0 +1,11 @@
+---
+description: Regras de negócio vêm de docs/features e copy oficial
+alwaysApply: true
+---
+
+# Regras de negócio
+
+- Comportamento de produto: **`docs/features/*.md`** e **`docs/produto/OVERVIEW.md`**.
+- Detalhes numéricos e de ranking/premiação: alinhar com **`src/app/como-funciona/ComoFuncionaContent.tsx`** e **`docs/features/RANKING-COMPETICAO.md`**.
+- **Não** inventar regra de monetização, ranking ou PRO sem atualizar a documentação correspondente.
+- Assinatura PRO, blur e checkout: **`docs/features/PRO-PREMIUM.md`**, **`docs/features/CHECKOUT-E-CAKTO.md`**, **`docs/business/MONETIZATION.md`**.

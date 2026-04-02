@@ -1,0 +1,11 @@
+---
+description: Spec-Driven Design — documentação é fonte de verdade
+alwaysApply: true
+---
+
+# Spec-Driven Workflow
+
+- **`docs/`** define o comportamento esperado e o contexto de produto. O código deve **seguir** a documentação acordada, não o contrário.
+- Antes de implementar **feature nova** ou mudança de regra de negócio: ler **`docs/HUB.md`**, o doc da feature em **`docs/features/`**, e **`docs/development/ROADMAP.md`** para saber a versão/escopo.
+- Depois de implementar: **atualizar** o(s) arquivo(s) de doc correspondente(s) e, se necessário, o ROADMAP.
+- Se algo não estiver documentado e for necessário para a mudança, **documentar primeiro** (ou marcar `⚠️ DECISÃO PENDENTE` no doc até fechar).

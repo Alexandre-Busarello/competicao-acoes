@@ -1,0 +1,16 @@
+---
+description: UI — Tailwind, Radix, padrões de componentes
+globs:
+  - "src/**/*.tsx"
+  - "src/**/*.ts"
+alwaysApply: false
+---
+
+# Design system e UI
+
+- **Tailwind CSS** + componentes no estilo **shadcn/ui** (`src/components/ui/`, Radix, `class-variance-authority`, `tailwind-merge`).
+- **Ícones:** `lucide-react`.
+- **Gráficos:** `recharts` onde aplicável.
+- Manter consistência com telas existentes (mobile-first, espaçamento e tipografia já usados no app).
+- Preferir **acessibilidade** (Radix, labels, foco) como nos componentes atuais.
+- Novos fluxos de dados no **client** (`use client`): preferir **TanStack React Query** para GET e mutations, conforme convenção do projeto.

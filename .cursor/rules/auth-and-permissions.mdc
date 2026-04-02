@@ -1,0 +1,12 @@
+---
+description: Autenticação Supabase e rotas protegidas
+alwaysApply: true
+---
+
+# Auth e permissões
+
+- Autenticação via **Supabase**; usuário de aplicação em **`User`** (`authUserId`).
+- Cliente browser: **`src/lib/supabase/client.ts`** e **`src/lib/auth/client.ts`**.
+- Server: **`src/lib/supabase/server.ts`** — validar sessão/usuário em **route handlers** que exigem login.
+- Não expor operações sensíveis apenas por ocultar no UI; **sempre** checar autorização no servidor para ações de escrita/deleção.
+- Perfis admin: ver **`docs/features/ADMIN.md`** — tratar permissões conforme implementação real (env/role).

@@ -1,0 +1,12 @@
+---
+description: PRO, assinatura, Cakto e legado Kiwify
+alwaysApply: true
+---
+
+# Billing e PRO
+
+- **Checkout ativo:** **Cakto** — webhooks e fluxo em `src/app/api/webhooks/cakto/`.
+- **Kiwify:** descontinuado no negócio; código/schema podem persistir como **legado** até remoção (**ver ROADMAP v1.1.0**).
+- Estado premium: modelo **`Subscription`** e flag **`User.isPremium`** — manter coerência com webhooks e jobs de expiração.
+- Regras de **prêmio em dobro** para anual: ver **`docs/features/RANKING-COMPETICAO.md`** e UI “Como funciona”.
+- Ao alterar billing: atualizar **`docs/features/CHECKOUT-E-CAKTO.md`**, **`docs/business/MONETIZATION.md`**, e **`docs/tech/DATABASE-SCHEMA.md`** se o schema mudar.

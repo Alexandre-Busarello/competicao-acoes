@@ -1,0 +1,11 @@
+---
+description: Manter documentação sincronizada com o código
+alwaysApply: true
+---
+
+# Sincronização de documentação
+
+- Mudança de comportamento visível ao usuário ou contrato de API: atualizar **`docs/features/`** ou **`docs/tech/`** na mesma entrega (ou PR associado).
+- Renomear ou mover features: ajustar links em **`docs/HUB.md`**.
+- Integrações (Supabase, Cakto, Yahoo, Push): manter **`docs/tech/INTEGRACAO-*.md`** alinhados aos env vars e rotas reais.
+- Nomenclatura: arquivos em `docs/features/` em **MAIÚSCULAS-COM-HÍFEN.md** para consistência com o hub.

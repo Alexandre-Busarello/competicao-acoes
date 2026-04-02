@@ -1,0 +1,18 @@
+---
+description: Stack técnica fixada do projeto
+alwaysApply: true
+---
+
+# Tech stack
+
+- **Runtime:** Node; **framework:** Next.js 14 (App Router); **linguagem:** TypeScript.
+- **Banco:** PostgreSQL (Supabase) com **Prisma**.
+- **Auth:** Supabase Auth.
+- **Pagamento ativo:** Cakto; **Kiwify** é legado até remoção.
+- **Estado:** Zustand onde já usado; **TanStack React Query** em client para dados remotos.
+- **PWA:** next-pwa; **push:** web-push.
+- **Mercado:** yahoo-finance2 (e utilitários como cheerio quando aplicável).
+
+## Dependências
+
+- Não adicionar dependências novas sem necessidade e sem refletir em documentação (**`docs/tech/`** ou feature) quando mudarem o contrato do sistema.

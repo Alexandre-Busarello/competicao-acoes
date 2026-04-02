@@ -1,0 +1,11 @@
+---
+description: Trabalho amarrado a versão e ROADMAP
+alwaysApply: true
+---
+
+# Versionamento e escopo
+
+- Toda entrega relevante deve estar relacionada a uma **versão** descrita em **`docs/development/ROADMAP.md`**.
+- Fluxo sugerido: **ler ROADMAP** → confirmar escopo da mudança → implementar → marcar tarefas concluídas no doc de versão ou ROADMAP → atualizar **`docs/features/`** quando aplicável.
+- **Bugfix:** pode ser patch na versão ativa; documentar em commit/PR e, se o bug era comportamento documentado, ajustar doc só se a correção mudar o contrato esperado.
+- **Fora de escopo:** mudanças que não estão na versão planejada exigem atualização de ROADMAP ou acordo explícito antes de expandir o PR.
